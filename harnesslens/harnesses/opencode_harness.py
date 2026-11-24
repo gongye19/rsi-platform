@@ -10,7 +10,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
-from harnesslens.harnesses.opencode_components import COMPONENTS, PROPOSAL_ONLY, config_component, config_leaves, protocol_manifest
+from harnesslens.harnesses.opencode_components import COMPONENTS, PROPOSAL_ONLY, config_component, config_leaves, protocol_manifest, file_component
 
 
 DEFAULT_OPENCODE_PREFIX = "~/.opencode"
@@ -316,6 +316,7 @@ _OPENCODE_OPERATIONS.update({
     "context_management": {"kind": "harness_config_patch", "manifest_field": "config_patch", "key_prefix": "compaction."},
     "execution_policy": {"kind": "harness_config_patch", "manifest_field": "config_patch", "key": "subagent_depth"},
 })
+_OPENCODE_OPERATIONS = {key: {**value, "component_id": key} for key, value in _OPENCODE_OPERATIONS.items()}
 
 
 _OPENCODE_REQUEST_OBSERVATIONS: Mapping[str, tuple[str, ...]] = {
@@ -323,7 +324,8 @@ _OPENCODE_REQUEST_OBSERVATIONS: Mapping[str, tuple[str, ...]] = {
     "system_prompt": ("content_present_in_agent_request",),
     "skills": (
         "skill_tool_present_in_agent_request",
-        "skill_metadata_and_body_absent_from_startup_request",
+        "skill_description_discoverable_in_tool_catalog",
+        "skill_body_loads_on_demand",
     ),
 }
 
@@ -549,18 +551,16 @@ class OpencodeHarnessAdapter:
             channels.add("instructions_rules")
         for item in manifest["files"]:
             path = str(item.get("path") or "")
-            if path.startswith(".opencode/skills/"):
-                channels.add("skills")
-            elif path.startswith(".opencode/agents/"):
-                channels.add("agent_definitions")
-            elif path.startswith(".opencode/commands/"):
-                channels.add("commands")
-            elif path.startswith(".opencode/plugins/"):
-                channels.add("plugin_tool_system")
-            elif path.startswith(".opencode/tools/"):
-                channels.add("custom_tools")
+            if path in {"opencode.json", "config.json", ".opencode/opencode.json"}:
+                channels.update(config_component(key) for key, _ in config_leaves(json.loads(item["content"])))
             else:
-                channels.add("reference_sources")
+                owner = file_component("project", path)
+                channels.add(owner)
+                if owner == "agent_definitions":
+                    from .candidate_config_runtime import parse_opencode_agent_definition
+                    agent = parse_opencode_agent_definition(path, item["content"])
+                    agent.pop("prompt", None)
+                    channels.update(config_component(key) for key, _ in config_leaves({"agent": {Path(path).stem: agent}}))
         for key in manifest["config_patch"]:
             text = str(key)
             if text == "tools.skill" or text.startswith("permission.skill."):
@@ -682,8 +682,10 @@ def _validate_config_patch(config: Mapping[str, Any]) -> None:
         "tool_output.",
         "attachment.",
         "references.",
+        "instructions.",
+        "skills.",
     )
-    allowed_exact = {"plugin", "mcp", "experimental", "default_agent", "subagent_depth", "references", "tool_output", "attachment"}
+    allowed_exact = {"plugin", "mcp", "experimental", "default_agent", "subagent_depth", "references", "tool_output", "attachment", "instructions", "skills", "tools", "permission", "command", "agent", "compaction"}
     for key in config:
         text = str(key)
         if config_component(text) in PROPOSAL_ONLY:

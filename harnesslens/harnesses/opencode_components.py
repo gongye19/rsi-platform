@@ -6,6 +6,8 @@ Legacy channel IDs remain readable through aliases; archived trials are not rewr
 from __future__ import annotations
 
 from typing import Any, Mapping
+from pathlib import Path
+import json
 
 PROTOCOL = "harnesslens.opencode-components.v1"
 OPENCODE_VERSION = "1.18.32"
@@ -81,11 +83,16 @@ def config_component(path: str) -> str:
     if head == "agent" and len(parts) < 3:
         return "agent_definitions"
     if head == "agent" and len(parts) >= 3:
-        if parts[2] in {"model", "provider", "temperature", "top_p", "options"}:
+        if parts[2] in {"model", "provider", "temperature", "top_p", "options", "variant"}:
             return "model_provider"
         return {"prompt": "system_prompt", "tools": "tool_availability",
                 "permission": "permissions", "steps": "execution_policy",
-                "maxSteps": "execution_policy"}.get(parts[2], "agent_definitions")
+                "maxSteps": "execution_policy"}.get(parts[2], "agent_definitions" if parts[2] in {
+                    "description", "mode", "hidden", "disable", "color"} else "model_provider")
+    if head == "command" and len(parts) >= 3 and parts[2] in {"model", "variant"}:
+        return "model_provider"
+    if head == "experimental" and len(parts) >= 2 and parts[1] in {"openTelemetry", "policies"}:
+        return "diagnostic" if parts[1] == "openTelemetry" else "model_provider"
     return {"instructions": "instructions_rules", "skills": "skills",
             "default_agent": "execution_policy", "subagent_depth": "execution_policy",
             "tools": "tool_availability", "permission": "permissions", "command": "commands",
@@ -117,43 +124,70 @@ def validate_config(config: Mapping[str, Any], allowed: set[str] | frozenset[str
             raise ValueError(f"OpenCode candidate field {path!r} belongs to non-editable component {owner!r}")
 
 
+def file_component(scope: str, path: str, config=None) -> str:
+    parts = path.split("/")
+    if path == "AGENTS.md" or (scope == "project" and path in (config or {}).get("instructions", [])):
+        return "instructions_rules"
+    if parts[0] == ".opencode" and len(parts) > 1:
+        return {"skill": "skills", "skills": "skills", "agent": "agent_definitions", "agents": "agent_definitions",
+                "command": "commands", "commands": "commands", "plugin": "plugin_tool_system", "plugins": "plugin_tool_system",
+                "tool": "custom_tools", "tools": "custom_tools", "mcp": "mcp_servers"}.get(parts[1], "reference_sources")
+    if scope == "home" and len(parts) > 1:
+        return {"skill": "skills", "skills": "skills", "agent": "agent_definitions", "agents": "agent_definitions",
+                "plugin": "plugin_tool_system", "plugins": "plugin_tool_system", "tool": "custom_tools", "tools": "custom_tools",
+                "command": "commands", "commands": "commands", "mcp": "mcp_servers"}.get(parts[0], "reference_sources")
+    return "reference_sources"
+
+
+def artifact_values(scope, path, content, config=None):
+    """One semantic owner per field, including Agent Markdown frontmatter."""
+    if path in {"opencode.json", "config.json", ".opencode/opencode.json"}:
+        return {(config_component(key), key): value for key, value in config_leaves(json.loads(content)) if key != "$schema"}
+    owner = file_component(scope, path, config)
+    if owner == "agent_definitions":
+        from .candidate_config_runtime import parse_opencode_agent_definition
+        agent = parse_opencode_agent_definition(path, content)
+        return {("agent_definitions" if key == "prompt" else config_component("agent." + Path(path).stem + "." + key), key): value
+                for key, value in config_leaves(agent)}
+    return {(owner, ""): content}
+
+
 def validate_bundle(files: Mapping[str, Mapping[str, str]], config: Mapping[str, Any], allowed) -> None:
     allowed = {component_id(value) for value in allowed}
     validate_config(config, allowed)
-    references = set(config.get("instructions", []))
     for scope, entries in files.items():
         for path, content in entries.items():
             if not content.strip():
                 continue
             if path in {"opencode.json", "config.json", ".opencode/opencode.json"}:
                 continue  # Already parsed and checked as config, not an opaque reference file.
-            parts = path.split("/")
-            owner = "reference_sources"
-            if path == "AGENTS.md" or (scope == "project" and path in references):
-                owner = "instructions_rules"
-            elif parts[0] == ".opencode" and len(parts) > 1:
-                owner = {"skill": "skills", "skills": "skills", "agent": "agent_definitions", "agents": "agent_definitions",
-                         "command": "commands", "commands": "commands", "plugin": "plugin_tool_system",
-                         "plugins": "plugin_tool_system", "tool": "custom_tools", "tools": "custom_tools"}.get(parts[1], owner)
-            elif scope == "home" and len(parts) > 1:
-                owner = {"skills": "skills", "agents": "agent_definitions", "plugins": "plugin_tool_system",
-                         "tools": "custom_tools", "commands": "commands"}.get(parts[0], owner)
+            owner = file_component(scope, path, config)
             if owner not in allowed:
                 raise ValueError(f"Candidate file {scope}/{path} belongs to non-editable component {owner!r}")
             if owner == "agent_definitions":
                 from harnesslens.harnesses.candidate_config_runtime import parse_opencode_agent_definition
-                parse_opencode_agent_definition(path, content)
+                agent = parse_opencode_agent_definition(path, content)
+                agent.pop("prompt", None)  # The body is owned by this Agent definition.
+                agent.pop("description", None)
+                agent.pop("mode", None)
+                if agent:
+                    validate_config({"agent": {Path(path).stem: agent}}, allowed)
+            if owner == "commands" and path.endswith(".md"):
+                from harnesslens.harnesses.candidate_config_runtime import parse_opencode_command
+                command = parse_opencode_command(path, content)
+                validate_config({"command": {Path(path).stem: command}}, allowed)
 
 
 def runtime_contract(*, business: Mapping[str, Any] | None = None, loader_facts=None) -> dict[str, Any]:
     # These describe the actual backend, not a benchmark-specific edit whitelist.
     declared = sorted({component_id(v) for v in business["capabilities"]["channels"]}) if business else None
-    return {"component_protocol": protocol_manifest(), "declared_channels": declared,
+    from .component_policy import policy_contract
+    return {"component_protocol": protocol_manifest(), "declared_channels": declared, "component_policy": policy_contract(business),
             "fixed": ["model", "provider", "budget", "task inputs", "host grading"],
             "proposal_only": sorted(PROPOSAL_ONLY),
             "loader_facts": loader_facts or {
                 "config_loading": "Candidate JSON configs and flat patches are merged into the prepared bundle; a business service must explicitly load delivered files.",
-                "implemented_lane": "Prompt and versioned-file delivery. Remote native prompt/skill/agent loading requires a matching receipt, runtime report and request evidence.",
+                "implemented_lane": "All 16 component payloads can be delivered. The receiving service must load them (shared receiver helper available) and return actual native callbacks/model-request evidence.",
                 "fixed_config": ["model", "small_model", "provider"],
                 "disabled_features": [],
                 "tool_transport": "Defined by the configured business service; inspect its actual runtime evidence.",

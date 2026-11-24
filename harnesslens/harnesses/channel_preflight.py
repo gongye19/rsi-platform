@@ -10,7 +10,7 @@ from typing import Any, Mapping, Sequence
 
 from harnesslens.core.artifacts import write_json
 from harnesslens.harnesses.tool_schema import patch_mcp_tool_schemas
-from harnesslens.harnesses.opencode_components import protocol_manifest
+from harnesslens.harnesses.opencode_components import protocol_manifest, EDITABLE_IDS, PROMPT_LANE_COMPONENTS
 
 
 PREFLIGHT_REPEAT_COUNT = 1
@@ -46,6 +46,13 @@ class ChannelPreflightError(RuntimeError):
             if isinstance(item, Mapping) and not item.get("passed")
         ]
         super().__init__("; ".join(failures) or "candidate channel preflight failed")
+
+
+class CandidateRuntimeError(ChannelPreflightError):
+    """A candidate extension failed; no score or promotion is justified."""
+    def __init__(self, detail, retained_at):
+        super().__init__({"passed": False, "candidate_execution_failed": True, "retained_at": str(retained_at),
+                         "checks": [{"channel_id": "runtime", "passed": False, "detail": detail}]})
 
 
 def build_runtime_load_report(
@@ -89,6 +96,7 @@ def build_runtime_load_report(
         "project_root": str(project),
         "project_instruction_files": instruction_files,
         "candidate_project_files": _candidate_project_files(manifest, project),
+        "candidate_files": _candidate_files(manifest, project, home),
         "effective_config": _effective_runtime_config(str(harness), project, home),
         "agent_definitions": _discover_agent_definitions(str(harness), project),
         "runtime_events": _discover_runtime_events(project),
@@ -130,6 +138,26 @@ def validate_channel_preflight(
         if isinstance(item, Mapping)
     }
     rows = _retained_rows(rollout)
+    if len(rows) == 1:
+        context = rows[0].get("model_context") or {}
+        if context.get("harness") == "opencode" and channels <= EDITABLE_IDS and (
+            "native_component_events" in context or channels - PROMPT_LANE_COMPONENTS
+        ):
+            from .component_preflight import check_components
+            checks = check_components(channels, candidate, context, rows[0])
+            from .component_policy import allowed_components
+            for item in checks:
+                if item["channel_id"] not in allowed_components():
+                    item.update(passed=False, detail="Component forbidden by experiment policy")
+            report = {"schema": "harnesslens.channel-preflight.v1", "candidate_id": str(candidate.get("id") or ""),
+                "harness_version": str(decision.get("harness_version") or ""), "changed_channels": sorted(channels),
+                "checked_channels": sorted(channels), "unchecked_channels": [], "checks": checks,
+                "request_evidence_available": bool(_model_request_text(rows[0])),
+                "rollout_output": str(rollout.get("summary_json") or ""),
+                "passed": bool(checks) and all(item["passed"] for item in checks)}
+            write_json(output_path, report)
+            if not report["passed"]: raise ChannelPreflightError(report)
+            return report
     checks: list[dict[str, Any]] = []
     checked_channels: set[str] = set()
     if len(rows) != 1:
@@ -1000,6 +1028,22 @@ def _candidate_project_files(
                     "content": content,
                 }
             )
+    return result
+
+
+def _candidate_files(manifest, project, home):
+    result = []
+    declared = {"home": [], "project": []}
+    for item in (manifest.get("_workspace") or {}).get("files", []):
+        if item.get("scope") in declared: declared[item["scope"]].append(item["path"])
+    declared["project"].extend(item["path"] for item in manifest.get("files", []))
+    for scope, entries in declared.items():
+        root = project if scope == "project" else home
+        if root is None: continue
+        for relative in entries:
+            path = (root / relative).resolve()
+            if path.is_relative_to(root.resolve()) and path.is_file():
+                result.append({"scope": scope, "path": relative, "content": path.read_text()})
     return result
 
 

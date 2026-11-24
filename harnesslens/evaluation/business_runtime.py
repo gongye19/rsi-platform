@@ -13,7 +13,8 @@ from harnesslens.harnesses.candidate_config_runtime import load_json_configs, me
 from harnesslens.harnesses.channel_preflight import build_runtime_load_report
 from harnesslens.harnesses.native_harness_driver import stable_hash
 from harnesslens.benchmarks.adapters import sha
-from harnesslens.harnesses.opencode_components import PROMPT_LANE_COMPONENTS, component_id, validate_config, validate_bundle, protocol_manifest
+from harnesslens.harnesses.opencode_components import validate_config, validate_bundle, protocol_manifest
+from harnesslens.harnesses.component_policy import allowed_components, policy_contract
 
 
 def prepare_harness(workspace, manifest):
@@ -25,8 +26,13 @@ def prepare_harness(workspace, manifest):
     payload = normalize_opencode_manifest({key: value for key, value in manifest.items() if key != "_workspace"})
     manifest = native_manifest("opencode", {key: value for key, value in payload.items()
                               if key not in {"removals", "replace_channels"}} | {"_workspace": captured})
-    if manifest.get("tool_desc_patches"):
-        raise ValueError("This business delivery lane has no tool-schema-patch bridge")
+    from harnesslens.harnesses.opencode_execution import validate_manifest
+    business = load_config()
+    validate_manifest(manifest, business=business)
+    if manifest.get("tool_desc_patches") and business:
+        mapping = business["agent"]["arguments"] if business["agent"]["type"] == "python" else business["agent"]["body"]
+        if "{tool_patches}" not in json.dumps(mapping):
+            raise ValueError("Tool patches require a mapped {tool_patches} business argument/body field")
     root = workspace / "harness"
     home, project = root / "home", root / "project"
     home.mkdir(parents=True)
@@ -38,8 +44,7 @@ def prepare_harness(workspace, manifest):
         p.write_text(item["content"])
     config = load_json_configs((home / "config.json", home / "opencode.json", project / ".opencode/opencode.json", project / "opencode.json"))
     config = merge_candidate_config(config, legacy_flat_patch=manifest.get("config_patch") or {}, fixed={})
-    business = load_config()
-    allowed = PROMPT_LANE_COMPONENTS if not business else {component_id(v) for v in business["capabilities"]["channels"]} & PROMPT_LANE_COMPONENTS
+    allowed = allowed_components(business)
     for path in (home / "config.json", home / "opencode.json", project / ".opencode/opencode.json", project / "opencode.json"):
         if path.is_file():
             validate_config(json.loads(path.read_text()), allowed)
@@ -101,7 +106,8 @@ def run_trial(*, adapter, resources, trial_root, task_id, trial, pairing_slot, s
                        "harness_digest": stable_hash(files), "task": adapter.public_task(task_id), "task_id": task_id,
                        "request_id": identity, "trial_id": f"{identity}-{trial}", "seed": seed, "scope": scope,
                        "model": config["agent"]["name"], "steps": limits.max_steps, "timeout": config["agent"]["timeout"]}
-            context.update(harness_version=version, component_protocol=protocol_manifest())
+            context.update(harness_version=version, component_protocol=protocol_manifest(),
+                           tool_patches=manifest.get("tool_desc_patches") or {}, component_policy=policy_contract(config))
             context.update(_private_roots=prepared.get("private_roots", []), _private_ports=prepared.get("private_ports", []))
             result = invoke(config, context, workspace)
             if result.get("runtime_report"):

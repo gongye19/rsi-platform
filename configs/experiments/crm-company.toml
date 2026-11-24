@@ -8,6 +8,10 @@ env_file = "../../.env"
 # Change to ready in YOUR private profile only after data/tools/trace smoke passes.
 readiness = "draft"
 
+[components]
+allowed = ["*"]
+denied = []
+
 [environment]
 HAI_MAX_ROLLOUT_CONCURRENCY = 1
 HAI_MAX_ANALYSIS_CONCURRENCY = 1

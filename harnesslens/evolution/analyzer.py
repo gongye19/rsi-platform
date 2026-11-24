@@ -1557,6 +1557,8 @@ def _query_channel_contracts(
 def _operation_materialized(
     delta: Mapping[str, Any], operation: Mapping[str, Any]
 ) -> bool:
+    if operation.get("component_id"):
+        return str(operation["component_id"]) in OpencodeHarnessAdapter().materialized_channel_ids(delta)
     kind = str(operation.get("kind") or "")
     field = str(operation.get("manifest_field") or "")
     if kind == "project_file":

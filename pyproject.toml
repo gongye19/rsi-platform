@@ -26,6 +26,7 @@ include = ["harnesslens*"]
 
 [tool.setuptools.package-data]
 "harnesslens.benchmarks" = ["*.mjs"]
+"harnesslens.harnesses" = ["*.mjs"]
 
 [tool.pytest.ini_options]
 # Tests import both `harnesslens.*` and the public top-level entrypoints, so the

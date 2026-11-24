@@ -93,24 +93,23 @@ _CANDIDATE_RUNTIME_LOADING = {
             "project/opencode.json",
         ],
         "preserved_behavior": [
-            "agent.build.prompt from candidate config is appended to the task system prompt",
+            "agent.<name>.prompt stays a native system prompt; it is not flattened into resident rules",
             "candidate opencode.json instructions entries load referenced project files",
             "candidate agent definitions are discovered from .opencode/agents",
             "candidate project files are materialized before OpenCode starts",
         ],
         "fixed_overrides": [
             "model and provider",
-            "task tools and permissions",
-            "the task MCP server binding",
+            "host data/sandbox and grading boundaries",
+            "experiment budget and wall timeout ceilings",
         ],
-        "fixed_surface_ids": ["tool_availability", "permissions", "mcp_servers", "execution_policy"],
-        "conditional_surface_ids": ["context_management"],
+        "fixed_surface_ids": sorted(PROPOSAL_ONLY),
+        "conditional_surface_ids": [],
         "disabled_behavior": [
             (
                 "automatic native project-config discovery beyond the captured "
                 "candidate config explicitly merged by the controller"
             ),
-            "automatic compaction and pruning",
         ],
     },
     "pi": {
@@ -376,6 +375,10 @@ class DiscoveryModule:
         adapter = harness_query_adapter(self.harness, repo_root=self.repo_root)
         probe = adapter.architecture_probe()
         evidence_catalog = adapter.query_evidence_catalog(probe)
+        native_tools = (task_input.get("environment") or {}).get("native_tools") or []
+        if native_tools:
+            evidence_catalog.append({"id": "runtime:baseline-tool-catalog", "kind": "model_request_tool_catalog",
+                "source": "Actual retained TRAIN model requests; not a prepared tool list", "value": native_tools})
         if self.harness == "opencode" and (self.run_root / "initial_harness.json").is_file():
             from harnesslens.harnesses.initial_harness import freeze_initial_harness
             initial = freeze_initial_harness(run_root=self.run_root, cell=self.cell)
@@ -389,6 +392,9 @@ class DiscoveryModule:
             # Backend facts are evidence for the explorer, not a benchmark whitelist.
             runtime_loading["fixed_surface_ids"] = sorted(PROPOSAL_ONLY)
             runtime_loading["execution_contract"] = contract
+            facts = contract.get("loader_facts") or {}
+            runtime_loading["fixed_overrides"] = list(dict.fromkeys([*contract.get("fixed", []), *facts.get("fixed_config", [])]))
+            runtime_loading["disabled_behavior"] = list(facts.get("disabled_features", []))
             runtime_loading["preserved_behavior"] = [
                 "candidate native agent prompt stays in agent.<name>.prompt; it is not flattened into AGENTS.md",
                 "candidate instructions and skills load from the delivered versioned workspace",
@@ -436,6 +442,10 @@ class DiscoveryModule:
         fixed_surface_ids = {
             str(item) for item in runtime_loading.get("fixed_surface_ids") or []
         }
+        if isinstance(contract, Mapping) and isinstance(contract.get("component_policy"), Mapping):
+            effective = set(contract["component_policy"]["effective_allowed"])
+            fixed_surface_ids |= {str(item["id"]) for item in inventory if item["id"] not in effective}
+            runtime_loading["fixed_surface_ids"] = sorted(fixed_surface_ids)
         conditional_surface_ids = {
             str(item) for item in runtime_loading.get("conditional_surface_ids") or []
         }
@@ -492,6 +502,7 @@ class DiscoveryModule:
                 "runtime_loading_evidence_ref": "runtime:candidate-workspace-loader",
             },
             "public_runtime": {
+                "native_tools": native_tools,
                 "benchmark_kind": str(task_input.get("benchmark_kind") or ""),
                 "task_tool_names": [
                     str(item.get("name"))
@@ -1216,17 +1227,7 @@ _SANDBOX_PENDING_CHANNELS = frozenset(
 )
 
 _NATIVE_CHANNEL_POLICY = {
-    "opencode": {
-        "agent_tool_config": "forbidden",
-        "tool_availability": "forbidden",
-        "commands": "conditional",
-        "execution_policy": "conditional",
-        "context_management": "conditional",
-        "reference_sources": "conditional",
-        "plugin_tool_system": "conditional",
-        "custom_tools": "conditional",
-        "experimental_policies": "forbidden",
-    },
+    "opencode": {},  # Per-experiment policy and real loader evidence decide.
     "pi": {
         "extensions": "conditional",
     },

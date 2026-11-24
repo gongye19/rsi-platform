@@ -20,6 +20,8 @@ harness_files = "{harness_files}"
 harness_version = "{harness_version}"
 harness_digest = "{harness_digest}"
 component_protocol = "{component_protocol}"
+component_policy = "{component_policy}"
+tool_patches = "{tool_patches}"
 seed = "{seed}"
 # Add the service's EXISTING isolated-session/test-environment options here.
 # Do not send platform-local harness_dir, workspace, paths or localhost DSNs.
@@ -27,6 +29,8 @@ seed = "{seed}"
 [capabilities]
 channels = ["instructions_rules"]
 # Declare additional native channels only if this service can load them.
+# A service using prepare_received_harness can declare all 16 component IDs.
+# No four-component cap is applied by HarnessLens.
 
 [trace]
 url = "https://business-trace.example/requests/{request_id}"

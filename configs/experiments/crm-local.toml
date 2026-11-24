@@ -6,6 +6,12 @@ readiness = "ready"
 # Native local experiment: no company HTTP endpoint is required.
 # Optional initial_harness = "../../harnesses/business-agent"
 
+[components]
+# Discovery considers every component; this does not force all of them to change.
+allowed = ["*"]
+denied = []
+experimental_fields = ["primary_tools", "continue_loop_on_deny", "mcp_timeout"]
+
 [environment]
 HAI_TOTAL_CREATION_BUDGET = 200
 HAI_TRAIN_ROLLOUT_REPEATS = 2

@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from .config import ROOT, run_id
-from harnesslens.harnesses.opencode_components import COMPONENTS, config_component, config_leaves
+from harnesslens.harnesses.opencode_components import COMPONENTS, config_component, config_leaves, file_component, artifact_values
 
 
 def read(path, default=None):
@@ -112,18 +112,29 @@ def read_text_json(text):
 
 def grouped_files(workspace, manifest):
     grouped = {key: [] for key, _ in COMPONENTS}
+    config = {}
+    for item in workspace.get("files", []):
+        if item["path"] == "opencode.json": config = read_text_json(item["content"])
     for item in workspace.get("files", []):
         name, content = item["path"], item["content"]
-        if name.endswith("opencode.json") or name == "config.json":
-            for field, value in config_leaves(read_text_json(content)):
-                owner = config_component(field)
-                if owner in grouped:
-                    grouped[owner].append({"path": name + "#" + field, "content": json.dumps(value, ensure_ascii=False)})
-        else:
-            owner = ("skills" if "/skills/" in name else "agent_definitions" if "/agents/" in name else
-                     "commands" if "/commands/" in name else "plugin_tool_system" if "/plugins/" in name else
-                     "custom_tools" if "/tools/" in name else "instructions_rules" if name == "AGENTS.md" else "reference_sources")
-            grouped[owner].append({"path": name, "content": content})
+        try:
+            parts = artifact_values(item.get("scope", "project"), name, content, config)
+        except ValueError:
+            parts = {(file_component(item.get("scope", "project"), name), ""): content}
+        for (owner, field), value in parts.items():
+            if owner in grouped:
+                grouped[owner].append({"path": name + ("#" + field if field else ""),
+                                       "content": json.dumps(value, ensure_ascii=False) if field else value})
+    from harnesslens.harnesses.native_candidate_runtime import apply_flat_config
+    for field, value in config_leaves(apply_flat_config({}, manifest.get("config_patch") or {})):
+        owner = config_component(field)
+        if owner in grouped:
+            grouped[owner].append({"path": "manifest/config_patch#" + field, "content": json.dumps(value, ensure_ascii=False)})
+    for name, patch in manifest.get("tool_desc_patches", {}).items():
+        if patch.get("desc"):
+            grouped["tool_description"].append({"path": "manifest/tool_desc_patches#" + name, "content": patch["desc"]})
+        if patch.get("params"):
+            grouped["tool_parameter_description"].append({"path": "manifest/tool_desc_patches#" + name + ".params", "content": json.dumps(patch["params"], ensure_ascii=False)})
     for text in [*manifest.get("instructions", []), *manifest.get("prompt_appends", [])]:
         grouped["instructions_rules"].append({"path": "manifest/instructions", "content": text})
     return grouped

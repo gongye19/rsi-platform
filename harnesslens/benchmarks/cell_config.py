@@ -14,6 +14,10 @@ DEFAULT_RETAIL_TRAIN_TASK_IDS = (
 )
 
 BASELINE_RUNTIME_FILES = (
+    "harnesslens/harnesses/component_policy.py",
+    "harnesslens/harnesses/component_preflight.py",
+    "harnesslens/harnesses/opencode_execution.py",
+    "harnesslens/harnesses/opencode_bridge.mjs",
     "harnesslens/infrastructure/trace_watch.py",
     "harnesslens/harnesses/initial_harness.py",
     "harnesslens/evaluation/rollout_bridge.py",
@@ -47,6 +51,10 @@ class BenchmarkConfig:
 
     def runtime_files(self) -> tuple[str, ...]:
         common = (
+            "harnesslens/harnesses/component_policy.py",
+            "harnesslens/harnesses/component_preflight.py",
+            "harnesslens/harnesses/opencode_execution.py",
+            "harnesslens/harnesses/opencode_bridge.mjs",
             "harnesslens/infrastructure/trace_watch.py",
             "harnesslens/harnesses/initial_harness.py",
             "harnesslens/evaluation/rollout_bridge.py",

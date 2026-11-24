@@ -11,7 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from harnesslens.core.config import load_repo_env
 from harnesslens.evaluation.rollout_bridge import TrainRolloutService, RolloutRequest, CellHarnessRepository
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,7 +56,6 @@ class Handler(BaseHTTPRequestHandler):
 
 @pytest.mark.parametrize("with_initial", [False, True])
 def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch, with_initial):
-    load_repo_env(ROOT)
     Handler.requests = []
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

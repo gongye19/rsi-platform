@@ -58,7 +58,8 @@ def test_fields_have_one_semantic_owner(path, owner):
     {"permission": {"bash": "allow"}}, {"tools": {"webfetch": True}}, {"mcp": {}},
     {"tool_output": {"max_bytes": 1}}, {"attachment": {}}, {"experimental": {"anything": True}},
 ])
-def test_crm_rejects_fixed_config_before_runtime_overwrites_it(tmp_path, config):
+def test_crm_rejects_config_outside_explicit_prompt_only_experiment_policy(tmp_path, monkeypatch, config):
+    monkeypatch.setenv("HAI_COMPONENT_POLICY", json.dumps({"allowed": sorted(CRM_EDITABLE)}))
     manifest = attach_candidate_workspace({}, {"files": [{"scope": "project", "path": "opencode.json", "content": json.dumps(config)}]})
     with pytest.raises(ValueError, match="non-editable"):
         prepare_harness(tmp_path, manifest, 12345, CrmLimits())
@@ -111,7 +112,7 @@ def test_selected_package_is_self_contained_and_detects_mutation(tmp_path):
 @pytest.mark.parametrize("extra", ["model: other/model", "steps: 999", "permission: allow", "tools: {bash: true}"])
 def test_agent_markdown_cannot_bypass_frozen_config(extra):
     files = {"project": {".opencode/agents/probe.md": f"---\ndescription: Probe\n{extra}\n---\nPrompt"}}
-    with pytest.raises(ValueError, match="Prompt-only"):
+    with pytest.raises(ValueError, match="non-editable|cannot edit"):
         validate_bundle(files, {}, CRM_EDITABLE)
 
 

@@ -232,6 +232,7 @@ def test_opencode_query_exposes_observed_project_instruction_contract():
     }
     assert inventory["instructions_rules"]["operation"] == {
         "kind": "workspace_config",
+        "component_id": "instructions_rules",
         **contracts["instructions_rules"],
     }
 

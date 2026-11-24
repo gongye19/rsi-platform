@@ -134,4 +134,5 @@ scripts/run_tests.sh
 ## 许可证
 
 HarnessLens 使用 [MIT License](LICENSE)。`assets/` 下 vendored 的文档沿用上游条款；
-benchmark 数据和 agent runtime 不随仓库分发。
+OpenCode插件/工具的离线JavaScript依赖包保留各包许可证，来源与固定版本见 `configs/opencode-plugin-runtime.json`。
+benchmark 数据和OpenCode主程序不随Git仓库分发。

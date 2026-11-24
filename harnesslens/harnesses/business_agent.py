@@ -20,14 +20,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit, quote
-from harnesslens.harnesses.opencode_components import PROMPT_LANE_COMPONENTS, component_id, OPENCODE_VERSION, PROTOCOL
+from harnesslens.harnesses.opencode_components import EDITABLE_IDS, component_id, OPENCODE_VERSION, PROTOCOL
 
 from harnesslens.core.artifacts import write_json
 from harnesslens.infrastructure.process_isolation import seatbelt_command, bubblewrap_command
 from harnesslens.harnesses.native_harness_driver import stop_process, stable_hash
 
 CONFIG_ENV = "HAI_AGENT_CONFIG"
-CHANNELS = PROMPT_LANE_COMPONENTS
+CHANNELS = EDITABLE_IDS
 _MISSING = object()
 
 
@@ -133,13 +133,15 @@ def load_config(path=None):
     if set(capabilities) - {"channels"}:
         raise ValueError("Unknown capability settings")
     channels = capabilities.get("channels", ["instructions_rules"])
+    if channels == ["*"]:
+        channels = sorted(CHANNELS)
     if not isinstance(channels, list) or any(not isinstance(v, str) for v in channels) or {component_id(v) for v in channels} - CHANNELS:
         raise ValueError("Unsupported business harness channels")
     channels = sorted({component_id(v) for v in channels})
     if type(agent["require_harness_receipt"]) is not bool:
         raise ValueError("require_harness_receipt must be boolean")
     # All templates are checked before a process or HTTP request can be launched.
-    names = {n: None for n in ("prompt", "instructions", "harness_files", "harness_dir", "harness_digest", "workspace",
+    names = {n: None for n in ("prompt", "instructions", "harness_files", "harness_dir", "harness_digest", "tool_patches", "component_policy", "workspace",
                                "task", "task_id", "request_id", "trial_id", "seed", "scope", "model", "steps", "timeout", "harness_version", "component_protocol")}
     template(agent["arguments"], names)
     template(agent["body"], names)
@@ -187,7 +189,8 @@ def fingerprint(config):
                         files[str(p)] = hashlib.sha256(p.read_bytes()).hexdigest()
                         if len(files) > 10000:
                             raise ValueError("python_paths is too broad; select the business package directory")
-    return {"agent": agent, "capabilities": config["capabilities"], "trace": config.get("trace", {}), "python_sources": files,
+    from .component_policy import policy_contract
+    return {"agent": agent, "capabilities": config["capabilities"], "component_policy": policy_contract(config), "trace": config.get("trace", {}), "python_sources": files,
             "adapter_sha256": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
                                 for name in ("business_agent.py", "business_worker.py")}}
 

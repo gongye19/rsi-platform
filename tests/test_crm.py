@@ -76,7 +76,7 @@ def test_candidate_instructions_and_skills_materialize_with_fixed_runtime(tmp_pa
     assert report["skills_available"][0]["name"] == "probe"
 
 
-@pytest.mark.parametrize("path", ["source/task.json", "output/answer.txt", "../escape", "/tmp/escape", ".opencode/plugins/evil.ts"])
+@pytest.mark.parametrize("path", ["source/task.json", "output/answer.txt", "../escape", "/tmp/escape", ".runtime/harnesslens/bridge.mjs"])
 def test_protected_candidate_files_are_rejected(path):
     with pytest.raises(ValueError):
         _validate_manifest({"_workspace": {"files": [{"scope": "project", "path": path, "content": "bad"}]}})
@@ -96,6 +96,14 @@ def test_message_normalization_preserves_calls_and_observations():
     assert messages[0]["tool_calls"][0]["name"] == "bash"
     assert messages[1]["content"] == "result"
     assert messages[-1]["content"] == "answer"
+
+
+def test_main_trace_is_not_replaced_by_late_title_or_other_subagent():
+    def event(session, agent, answer):
+        return {"session_id": session, "agent_name": agent, "request": {"messages": [{"role": "user", "content": agent}]},
+                "response": {"choices": [{"message": {"role": "assistant", "content": answer}}]}}
+    events = [event("parent", "build", "main answer"), event("child", "worker", "child answer"), event("parent", "title", "session title")]
+    assert _messages(events, "parent")[-1]["content"] == "main answer"
 
 
 def test_train_rollout_routes_candidate_to_crm_adapter(tmp_path, monkeypatch):

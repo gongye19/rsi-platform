@@ -64,7 +64,7 @@ def run(*, profile_path, identity, live=False, smoke_only=False):
         "optimizer_model": env.get("HAI_MODEL", "deepseek/deepseek-v4-flash"),
         "solver_model": env.get("HAI_CRM_MODEL", "crm/glm-5.2"),
         "provider_key_configured": bool(env.get("DEEPSEEK_API_KEY")),
-        "mode": "live" if live or smoke_only else "offline-check", "settings": profile.get("environment", {})}, ensure_ascii=False, indent=2), flush=True)
+        "mode": "live" if live or smoke_only else "offline-check", "components": profile["components"], "settings": profile.get("environment", {})}, ensure_ascii=False, indent=2), flush=True)
     python = sys.executable
     execute([python, "scripts/run_crm.py", "--run-id", identity + "-check"], env, "offline_preflight", directory)
     if profile.get("initial_harness"):

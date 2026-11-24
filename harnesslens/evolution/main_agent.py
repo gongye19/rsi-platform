@@ -495,6 +495,11 @@ def materialize_selected_problem(
                     "Harness Editor must remove changes outside discovered channels: "
                     + ",".join(sorted(unclassified_channel_ids))
                 )
+            if getattr(repository, "harness", harness_query.get("harness")) == "opencode":
+                from harnesslens.harnesses.opencode_execution import validate_manifest
+                from harnesslens.harnesses.business_agent import load_config
+                validate_manifest({**parent_manifest, "_workspace": workspace,
+                    "tool_desc_patches": mcp_tool_patches}, business=load_config())
             break
         except (RuntimeError, ValueError) as exc:
             if attempt:
@@ -730,6 +735,7 @@ def actual_editor_channel_diffs(
         actual.setdefault(channel_id, set()).update(refs)
 
     base_tool_patches = base_mcp_tool_patches or {}
+    native_tool_channels = harness_query.get("harness") == "opencode" and not harness_query.get("mcp_editable_points")
     if any(
         isinstance(patch, Mapping)
         and "desc" in patch
@@ -741,7 +747,7 @@ def actual_editor_channel_diffs(
         )
         for tool_name, patch in mcp_tool_patches.items()
     ):
-        add("mcp_tool_description")
+        add("tool_description" if native_tool_channels else "mcp_tool_description")
     if any(
         isinstance(patch, Mapping)
         and isinstance(patch.get("params"), Mapping)
@@ -759,17 +765,34 @@ def actual_editor_channel_diffs(
         )
         for tool_name, patch in mcp_tool_patches.items()
     ):
-        add("mcp_tool_parameter_description")
+        add("tool_parameter_description" if native_tool_channels else "mcp_tool_parameter_description")
 
     modules = [
         item
         for item in harness_query.get("modifiable_modules") or []
         if isinstance(item, Mapping) and isinstance(item.get("edit_contract"), Mapping)
     ]
+    native_components = harness_query.get("harness") == "opencode"
+    discovered = {str(module.get("id")) for module in modules}
     for change in workspace_changes:
         scope = str(change.get("scope") or "")
         path = str(change.get("path") or "")
         if scope == "project" and path == ".harness-autoiter/mcp-tool-patches.json":
+            continue
+        if native_components and candidate_workspace is not None:
+            from harnesslens.harnesses.opencode_components import artifact_values
+            before = _workspace_file_content(base_workspace, scope=scope, path=path)
+            after = _workspace_file_content(candidate_workspace, scope=scope, path=path)
+            config_text = _workspace_file_content(candidate_workspace, scope="project", path="opencode.json")
+            config = json.loads(config_text) if config_text else {}
+            a = artifact_values(scope, path, before, config) if before is not None else {}
+            b = artifact_values(scope, path, after, config) if after is not None else {}
+            for key in set(a) | set(b):
+                if key in a and key in b and a[key] == b[key]: continue
+                owner = key[0]
+                if owner not in discovered:
+                    raise ValueError(f"Harness Editor changed undiscovered/forbidden component {owner!r} in {path}")
+                add(owner)
             continue
         if (
             "instructions_rules" in declared_refs

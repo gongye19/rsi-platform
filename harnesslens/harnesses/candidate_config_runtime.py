@@ -98,30 +98,55 @@ def relocate_opencode_instruction_paths(
 
 
 def compile_opencode_agent_definitions(project_root: str | Path) -> dict[str, Any]:
-    """Compile project agent files without admitting model, tool, or permission overrides."""
-    root = Path(project_root) / ".opencode" / "agents"
+    """Compile versioned Agent files; per-component policy is checked by the caller."""
+    base = Path(project_root)
     result: dict[str, Any] = {}
-    for path in sorted(root.glob("*.md")) if root.is_dir() else []:
-        content = path.read_text(encoding="utf-8", errors="replace")
-        result[path.stem] = parse_opencode_agent_definition(str(path), content)
+    for root in (base / ".opencode/agent", base / ".opencode/agents", base / "agent", base / "agents"):
+        for path in sorted(root.glob("*.md")) if root.is_dir() else []:
+            result[path.stem] = parse_opencode_agent_definition(str(path), path.read_text())
     return result
 
 
 def parse_opencode_agent_definition(path: str, content: str) -> dict[str, Any]:
-    """The current prompt-only worker lane does not admit hidden capability edits."""
+    """Reject model/sampling overrides even when hidden in Markdown frontmatter."""
     import yaml
     if Path(path).stem in _OPENCODE_RESERVED_AGENTS:
         raise ValueError("Reserved OpenCode agents must be changed through explicit config contracts")
     match = re.match(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", content, re.S)
     if not match:
         raise ValueError("OpenCode agent requires YAML frontmatter")
-    metadata = yaml.safe_load(match[1])
-    if not isinstance(metadata, Mapping) or set(metadata) - {"description", "mode"}:
-        raise ValueError("Prompt-only Agent definition cannot edit model, permissions, tools, budget or unsupported fields")
+    try:
+        metadata = yaml.safe_load(match[1])
+    except yaml.YAMLError as exc:
+        raise ValueError("Invalid Agent YAML frontmatter") from exc
+    if not isinstance(metadata, Mapping) or set(metadata) - {"description", "mode", "hidden", "disable", "color", "steps", "maxSteps", "tools", "permission"}:
+        raise ValueError("Agent definition cannot edit model/provider/sampling or unsupported fields")
     description = metadata.get("description")
-    if not isinstance(description, str) or not description.strip() or metadata.get("mode", "subagent") != "subagent":
-        raise ValueError("Prompt-only Agent requires a description and subagent mode")
-    return {"description": description.strip(), "mode": "subagent", **({"prompt": match[2].strip()} if match[2].strip() else {})}
+    if not isinstance(description, str) or not description.strip() or metadata.get("mode", "subagent") not in {"subagent", "primary", "all"}:
+        raise ValueError("Agent requires a description and valid mode")
+    return {**metadata, "description": description.strip(), "mode": metadata.get("mode", "subagent"),
+            **({"prompt": match[2].strip()} if match[2].strip() else {})}
+
+
+def parse_opencode_command(path: str, content: str) -> dict[str, Any]:
+    import yaml
+    match = re.match(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", content, re.S)
+    try:
+        metadata = yaml.safe_load(match[1]) or {} if match else {}
+    except yaml.YAMLError as exc:
+        raise ValueError("Invalid Command YAML frontmatter") from exc
+    if not isinstance(metadata, Mapping) or set(metadata) - {"description", "agent", "subtask"}:
+        raise ValueError("Command cannot edit model/provider/sampling or unsupported fields")
+    return {**metadata, "template": match[2].strip() if match else content.strip()}
+
+
+def compile_opencode_commands(project_root: str | Path) -> dict[str, Any]:
+    base = Path(project_root)
+    result = {}
+    for root in (base / "command", base / "commands", base / ".opencode/command", base / ".opencode/commands"):
+        for path in sorted(root.glob("*.md")) if root.is_dir() else []:
+            result[path.stem] = parse_opencode_command(str(path), path.read_text())
+    return result
 
 
 def deep_merge(left: Mapping[str, Any], right: Mapping[str, Any]) -> dict[str, Any]:

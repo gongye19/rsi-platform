@@ -302,11 +302,12 @@ class IterationController:
                 cell=self.config.cell,
                 harness=self.harness,
             )
-            preflight = rollout_module.run_channel_preflight_from_main(
-                main_decision=decision.output_path,
-                label=f"{label}-{decision.harness_version}-channel-preflight",
-            )
+            preflight = None
             try:
+                preflight = rollout_module.run_channel_preflight_from_main(
+                    main_decision=decision.output_path,
+                    label=f"{label}-{decision.harness_version}-channel-preflight",
+                )
                 preflight_report = validate_channel_preflight(
                     decision=decision.output,
                     rollout=preflight.output,
@@ -327,9 +328,9 @@ class IterationController:
                     "promotion_eligible": False,
                     "promotion_metric": self.promotion_metric,
                     "rollout_task_ids": list(
-                        preflight.output.get("requested_task_ids") or []
+                        (preflight.output if preflight else {}).get("requested_task_ids") or []
                     ),
-                    "rollout_metrics": dict(preflight.output.get("metrics") or {}),
+                    "rollout_metrics": dict((preflight.output if preflight else {}).get("metrics") or {}),
                     "review_decision": "channel_preflight_failed",
                     "selected_version": current_version,
                     "review_rationale": str(exc),

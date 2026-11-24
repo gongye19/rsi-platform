@@ -18,7 +18,7 @@ def run_id(value):
 def load_profile(path):
     path = Path(path).resolve()
     raw = tomllib.loads(path.read_text())
-    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness"} or raw.get("schema") != "harnesslens.experiment.v1":
+    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components"} or raw.get("schema") != "harnesslens.experiment.v1":
         raise ValueError("Unsupported experiment profile")
     mode = raw.get("mode", "train")
     if mode not in {"train", "test_baseline", "test_candidate"}:
@@ -30,6 +30,9 @@ def load_profile(path):
         benchmark = str((path.parent / benchmark).resolve())
     files = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()}
     result = {**raw, "mode": mode, "benchmark": benchmark, "profile_path": str(path)}
+    from harnesslens.harnesses.component_policy import normalize_policy
+    policy = normalize_policy(raw.get("components"))
+    result["components"] = {k: policy[k] for k in ("allowed", "denied", "experimental_fields")}
     initial = raw.get("initial_harness", "")
     if not isinstance(initial, str):
         raise ValueError("initial_harness must be a directory/package path")
@@ -80,6 +83,8 @@ def invocation(profile, identity):
                     raise ValueError("Invalid env_file variable")
                 env[key] = value.strip().strip('"').strip("'")
     env.update({key: str(value) for key, value in profile.get("environment", {}).items()})
+    from harnesslens.harnesses.component_policy import ENV
+    env[ENV] = json.dumps(profile["components"], sort_keys=True)
     env["HARNESSLENS_ROOT"] = str(ROOT)
     if profile["agent_config"]:
         env["HAI_AGENT_CONFIG"] = profile["agent_config"]

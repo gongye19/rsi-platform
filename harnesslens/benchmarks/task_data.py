@@ -100,6 +100,28 @@ def benchmark_task_explorer_input(
     else:
         raise ValueError(f"unsupported benchmark kind: {config.kind}")
     payload["evaluation_contract"] = evaluation_contract(config.outcome_authority)
+    # Native tool surfaces come from retained TRAIN requests, not assumptions
+    # about a benchmark's name or the CLI used inside its tools.
+    observed = {}
+    for reference in baseline.trajectory_paths:
+        trajectory = Path(reference)
+        for line in trajectory.read_text().splitlines():
+            if not line.strip(): continue
+            row = json.loads(line)
+            trace_name = row.get("api_calls_jsonl")
+            if not trace_name: continue
+            trace = Path(trace_name)
+            if not trace.is_absolute(): trace = trajectory.parent / trace
+            if not trace.is_file(): continue
+            for raw in trace.read_text().splitlines():
+                if not raw.strip(): continue
+                event = json.loads(raw)
+                for tool in (event.get("request") or {}).get("tools", []):
+                    value = tool.get("function", tool)
+                    if isinstance(value, Mapping) and value.get("name"):
+                        observed[str(value["name"])] = {key: value[key] for key in ("name", "description", "parameters", "inputSchema") if key in value}
+    if observed:
+        payload.setdefault("environment", {})["native_tools"] = list(observed.values())
     return payload
 
 

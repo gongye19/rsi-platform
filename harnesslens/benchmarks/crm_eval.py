@@ -21,14 +21,14 @@ from pathlib import Path
 from .crm import TASK_IDS, PG_DATABASE, PG_READER, dataset_root, load_tasks, data_fingerprint, grade, sha
 from .crm_postgres import ReadOnlyPostgresProxy, fingerprint as pg_fingerprint
 from harnesslens.core.artifacts import write_json
-from harnesslens.harnesses.harness_workspace import materialize_workspace, normalize_workspace_snapshot
+from harnesslens.harnesses.harness_workspace import materialize_workspace
 from harnesslens.harnesses.native_harness_driver import parse_opencode_text, stable_hash, summarize_records, stop_process
 from harnesslens.harnesses.native_candidate_runtime import candidate_workspace
-from harnesslens.harnesses.candidate_config_runtime import load_json_configs, deep_merge, merge_candidate_config, relocate_opencode_instruction_paths, compile_opencode_agent_definitions
+from harnesslens.harnesses.candidate_config_runtime import deep_merge
 from harnesslens.harnesses.channel_preflight import build_runtime_load_report
 from harnesslens.harnesses.opencode_runtime import _start_proxy, _stop_process, validate_api_trace
 from harnesslens.evaluation.rollout_outcome import harness_execution_error
-from harnesslens.harnesses.opencode_components import PROMPT_LANE_COMPONENTS, validate_config, validate_bundle, protocol_manifest
+from harnesslens.harnesses.opencode_components import protocol_manifest
 
 
 @dataclass(frozen=True)
@@ -75,6 +75,9 @@ def executable() -> Path:
 def runtime_fingerprint(repo_root: Path) -> dict:
     from harnesslens.benchmarks.adapters import runtime_sources
     shared = {name: sha(Path(name)) for name in runtime_sources()}
+    from harnesslens.harnesses.component_policy import policy_contract
+    shared["experiment_component_policy"] = policy_contract()
+    shared["plugin_helper_pin"] = json.loads((repo_root / "configs/opencode-plugin-runtime.json").read_text())
     from harnesslens.harnesses.business_agent import load_config, fingerprint
     business = load_config()
     if business:
@@ -127,46 +130,17 @@ def prepare_task(repo_root: Path, workspace: Path, task_id: str, pg_proxy_port: 
 
 
 def _validate_manifest(manifest: dict):
-    if manifest.get("tool_desc_patches"):
-        raise ValueError("CRM uses fixed CLI tools; MCP tool-description patches are unavailable")
-    declared = {"home": {}, "project": {}}
-    for item in candidate_workspace(manifest)["files"]:
-        declared[item["scope"]][item["path"]] = item["content"]
-    for item in manifest.get("files") or []:
-        declared["project"][item["path"]] = item["content"]
-    # Validate every declared config file independently, including files shadowed
-    # by a later config path. A forbidden edit must not disappear during merging.
-    config_names = {"config.json", "opencode.json", ".opencode/opencode.json"}
-    configs = {}
-    import json
-    for scope, files in declared.items():
-        for name, content in files.items():
-            if name in config_names:
-                value = json.loads(content)
-                validate_config(value, PROMPT_LANE_COMPONENTS)
-                configs = deep_merge(configs, value)
-    from harnesslens.harnesses.native_candidate_runtime import apply_flat_config
-    configs = apply_flat_config(configs, manifest.get("config_patch") or {})
-    validate_bundle(declared, configs, PROMPT_LANE_COMPONENTS)
-    for item in candidate_workspace(manifest)["files"]:
-        name = item["path"]
-        if item["scope"] == "project" and (name.split("/")[0] in {"source", "output", ".runtime", ".git"}):
-            raise ValueError("Candidate cannot replace task inputs, output, or runtime files")
-        if "/plugins/" in "/" + name or "/tools/" in "/" + name:
-            raise ValueError("CRM does not enable executable plugins or custom tools")
-    # Legacy manifest files are project-relative too.
-    normalize_workspace_snapshot({"files": [{"scope": "project", "path": item["path"], "content": item["content"]} for item in manifest.get("files") or []]})
-    for item in manifest.get("files") or []:
-        if item["path"].split("/")[0] in {"source", "output", ".runtime", ".git"}:
-            raise ValueError("Candidate cannot replace protected task files")
-        if "/plugins/" in "/" + item["path"] or "/tools/" in "/" + item["path"]:
-            raise ValueError("CRM does not enable executable plugins or custom tools")
+    from harnesslens.harnesses.business_agent import load_config
+    from harnesslens.harnesses.opencode_execution import validate_manifest
+    return validate_manifest(manifest, business=load_config(), max_steps=CrmLimits().max_steps)
 
 
 def prepare_harness(trial: Path, manifest: dict, port: int, limits: CrmLimits) -> tuple[Path, dict, dict]:
-    _validate_manifest(manifest)
+    from harnesslens.harnesses.opencode_execution import (validate_manifest, candidate_config,
+        relocate, prepare_extensions, lower_tool_visibility)
+    validate_manifest(manifest, max_steps=limits.max_steps)
     workspace = trial / "workspace"
-    home = workspace / ".runtime/config/opencode"
+    home = workspace / ".runtime/candidate-home"
     home.mkdir(parents=True)
     (workspace / ".opencode").mkdir(exist_ok=True)
     materialize_workspace(candidate_workspace(manifest), home_root=home, project_root=workspace)
@@ -177,42 +151,33 @@ def prepare_harness(trial: Path, manifest: dict, port: int, limits: CrmLimits) -
     agents = workspace / "AGENTS.md"
     instructions = [agents.read_text() if agents.is_file() else "", *manifest.get("instructions", []), *manifest.get("prompt_appends", [])]
     agents.write_text("\n\n".join(instructions) + "\n")
-    config_paths = (home / "config.json", home / "opencode.json", workspace / ".opencode/opencode.json", workspace / "opencode.json")
-    candidate = load_json_configs(config_paths)
-    candidate = relocate_opencode_instruction_paths(candidate, project_root=workspace)
-    candidate = deep_merge(candidate, {"agent": compile_opencode_agent_definitions(workspace)})
-    candidate = merge_candidate_config(candidate, legacy_flat_patch=manifest.get("config_patch") or {}, fixed={})
-    validate_config(candidate, PROMPT_LANE_COMPONENTS)
+    candidate = relocate(candidate_config(home, workspace, manifest), home=home, project=workspace)
     provider_id, model_id = model().split("/", 1)
-    config = deep_merge(candidate, {
-        "$schema": "https://opencode.ai/config.json", "autoupdate": False, "share": "disabled",
+    # Defaults are below candidate behavioral edits. Only infrastructure/model
+    # settings are fixed above them; the sandbox enforces data/network boundaries.
+    defaults = {"agent": {"build": {"steps": limits.max_steps}},
+        "permission": {"*": "allow", "question": "deny", "webfetch": "deny", "websearch": "deny"},
+        "compaction": {"auto": False, "prune": False}, "mcp": {}, "plugin": [],
+        "tools": {name: name not in {"webfetch", "websearch"} for name in (
+            "bash", "read", "write", "edit", "glob", "grep", "list", "task", "skill", "todowrite", "webfetch", "websearch")}}
+    config = deep_merge(defaults, candidate)
+    fixed = {"$schema": "https://opencode.ai/config.json", "autoupdate": False, "share": "disabled",
         "model": model(), "small_model": model(), "enabled_providers": [provider_id],
         "provider": {provider_id: {"npm": "@ai-sdk/openai-compatible", "name": "CRM provider",
             "options": {"baseURL": f"http://127.0.0.1:{port}/v1", "apiKey": "local-proxy", "timeout": 300000},
             "models": {model_id: {"name": model_id, "limit": {"context": 200000, "output": limits.output_tokens},
-                                    "options": {"thinking": {"type": "disabled"}}}}}},
-        "agent": {"build": {"steps": limits.max_steps}},
-        "permission": {"*": "allow", "question": "deny", "webfetch": "deny", "websearch": "deny"},
-        "tools": {"webfetch": False, "websearch": False},
-    })
-    # These are complete replacements: merging must not leave alternate providers,
-    # extra MCP servers, plugin code, or candidate capability/permission overrides.
-    config["provider"] = {provider_id: config["provider"][provider_id]}
-    config["mcp"] = {}
-    config["plugin"] = []
-    config["tools"] = {name: name not in {"webfetch", "websearch"} for name in (
-        "bash", "read", "write", "edit", "glob", "grep", "list", "task", "skill", "todowrite", "webfetch", "websearch")}
-    config["permission"] = {"*": "allow", "question": "deny", "webfetch": "deny", "websearch": "deny"}
+                                    "options": {"thinking": {"type": "disabled"}}}}}}}
+    config = deep_merge(config, fixed)
     config["instructions"] = list(dict.fromkeys([str(agents.resolve()), *config.get("instructions", [])]))
-    for name, agent in config.get("agent", {}).items():
-        if isinstance(agent, dict):
-            for key in ("model", "provider", "tools", "permission", "steps"):
-                agent.pop(key, None)
-            agent["steps"] = limits.max_steps
+    # Skills delivered in HOME remain discoverable without loading uncontrolled
+    # config/plugin directories from the machine running the experiment.
+    skill_paths = list(config.get("skills", {}).get("paths", []))
+    for folder in (home / "skills", home / "skill", workspace / ".opencode/skills", workspace / ".opencode/skill"):
+        if folder.is_dir(): skill_paths.append(str(folder.resolve()))
+    if skill_paths: config.setdefault("skills", {})["paths"] = list(dict.fromkeys(skill_paths))
+    lower_tool_visibility(config)
+    prepare_extensions(workspace=workspace, home=home, config=config, manifest=manifest, max_steps=limits.max_steps)
     write_json(workspace / "opencode.json", config)
-    for path in config_paths[:-1]:
-        if path.is_file():
-            write_json(path, config)
     report = build_runtime_load_report(harness="opencode", project_root=workspace, home_root=home,
                                        manifest=manifest, tool_definitions=[])
     return home, config, report
@@ -223,7 +188,9 @@ def sandbox_command(command: list[str], workspace: Path, ports: list[int]) -> li
         raise RuntimeError("CRM native adapter currently requires macOS Seatbelt")
     binary = executable()
     runtime = Path(os.environ.get("HAI_CRM_RUNTIME_ROOT") or binary.parent.parent).resolve()
-    roots = [Path(sys.prefix).resolve(), Path(sys.base_prefix).resolve(), runtime,
+    from harnesslens.harnesses.opencode_execution import install_plugin_helpers
+    helper = install_plugin_helpers(workspace / ".runtime/native")
+    roots = [Path(sys.prefix).resolve(), Path(sys.base_prefix).resolve(), runtime, helper,
              Path(shutil.which("bun") or binary).resolve().parent.parent]
     q = json.dumps
     rules = ["(version 1)", "(allow default)"]
@@ -235,14 +202,26 @@ def sandbox_command(command: list[str], workspace: Path, ports: list[int]) -> li
     for root in roots:
         rules.append(f"(allow file-read* (subpath {q(str(root))}))")
     rules.append(f"(allow file-read* file-write* (subpath {q(str(workspace))}))")
-    for path in [workspace / "source", workspace / "AGENTS.md", workspace / "opencode.json", *[p for p in (workspace / ".opencode").rglob("*") if p.is_file()]]:
+    settings = workspace / ".runtime/harnesslens/settings.json"
+    protected = json.loads(settings.read_text()).get("protected_files", []) if settings.is_file() else []
+    for path in protected:
+        rules.append(f"(deny file-write* (subpath {q(str(Path(path).resolve()))}))")
+    for path in [workspace / "source", workspace / "AGENTS.md", workspace / "opencode.json", workspace / "node_modules",
+                 workspace / ".runtime/candidate-home", workspace / ".runtime/native",
+                 *[p for p in (workspace / ".opencode").rglob("*") if p.is_file()],
+                 *[p for p in (workspace / ".runtime/harnesslens").glob("*") if p.suffix != ".jsonl"]]:
         rules.append(f"(deny file-write* (subpath {q(str(path))}))")
     rules += ["(deny network-outbound)", "(allow network-outbound " + " ".join(f'(remote tcp "localhost:{port}")' for port in ports) + ")"]
     return ["/usr/bin/sandbox-exec", "-p", "\n".join(rules), *command]
 
 
-def _messages(events: list[dict]) -> list[dict]:
+def _messages(events: list[dict], session_id=None) -> list[dict]:
     completed = [item for item in events if isinstance(item.get("request"), dict)]
+    primary = [item for item in completed if item.get("agent_name") not in {"title", "summary", "compaction"}]
+    if primary: completed = primary
+    if session_id:
+        matching = [item for item in completed if item.get("session_id") == session_id]
+        if matching: completed = matching
     if not completed:
         return []
     last = completed[-1]
@@ -280,6 +259,12 @@ def run_process(command, *, cwd, env, timeout_s):
                 time.sleep(0.2)
     finally:
         stop_process(process)
+        if process is not None:
+            # MCP/tool descendants may outlive a normally exited CLI. This
+            # group was created exclusively for this trial with setsid.
+            import signal
+            try: os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError: pass
     return ((root / "stdout.jsonl").read_text(), (root / "stderr.log").read_text() + error,
             process.returncode if process and not error else None)
 
@@ -297,6 +282,9 @@ def _trial(*, repo_root: Path, trial_root: Path, task_id: str, trial: int, pairi
             row = json.loads(row_path.read_text())
             if row.get("identity_sha256") != identity_hash:
                 raise ValueError("CRM cached trial configuration changed; choose a new run-id")
+            if row.get("candidate_execution_failed"):
+                from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
+                raise CandidateRuntimeError(row.get("error", "Candidate component failed"), trial_root)
             if row.get("infrastructure_error"):
                 raise RuntimeError("Prior CRM infrastructure failure retained; use a new run-id after resolving it")
             if validate_api_trace(trial_root / "api_calls.jsonl") or row.get("api_trace_sha256") != sha(trial_root / "api_calls.jsonl"):
@@ -318,20 +306,24 @@ def _trial(*, repo_root: Path, trial_root: Path, task_id: str, trial: int, pairi
             proxy, port = _start_proxy(run_root=trial_root, call_id=f"crm/{task_id}/slot-{pairing_slot}")
             home, config, report = prepare_harness(trial_root, manifest, port, limits)
             fixed = {str(p.relative_to(workspace)): sha(p) for p in [workspace / "AGENTS.md", workspace / "opencode.json", *[p for p in home.rglob("*") if p.is_file()], *[p for p in (workspace / ".opencode").rglob("*") if p.is_file()]]}
+            settings = json.loads((workspace / ".runtime/harnesslens/settings.json").read_text())
+            fixed.update({str(Path(p).relative_to(workspace)): sha(Path(p)) for p in settings["protected_files"]})
             env = {k: os.environ[k] for k in ("PATH", "LANG", "LC_ALL", "TZ") if k in os.environ}
             for name in ("home", "tmp", "cache", "data", "state"):
                 (workspace / ".runtime" / name).mkdir(parents=True, exist_ok=True)
             env.update(HOME=str(workspace / ".runtime/home"), TMPDIR=str(workspace / ".runtime/tmp"),
-                       XDG_CONFIG_HOME=str(home.parent), XDG_DATA_HOME=str(workspace / ".runtime/data"),
+                       XDG_CONFIG_HOME=str(workspace / ".runtime/platform-config"), XDG_DATA_HOME=str(workspace / ".runtime/data"),
                        XDG_CACHE_HOME=str(workspace / ".runtime/cache"), XDG_STATE_HOME=str(workspace / ".runtime/state"),
                        OPENCODE_CONFIG=str(workspace / "opencode.json"), OPENCODE_DISABLE_PROJECT_CONFIG="1",
-                       OPENCODE_DISABLE_AUTOCOMPACT="1", OPENCODE_DISABLE_PRUNE="1", OPENCODE_DISABLE_DEFAULT_PLUGINS="1")
+                       OPENCODE_DISABLE_DEFAULT_PLUGINS="1")
             env["OPENCODE_DISABLE_MODELS_FETCH"] = "1"
             env["OPENCODE_DISABLE_AUTOUPDATE"] = "1"
-            env["OPENCODE_CONFIG_DIR"] = str(workspace / ".opencode")
+            env["OPENCODE_CONFIG_DIR"] = str(workspace / ".runtime/native")
             env["OPENCODE_CONFIG_CONTENT"] = json.dumps(config)
             env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
-            command = [str(executable()), "run", "--pure", "--format", "json", "--model", model(), "--dir", str(workspace), prompt]
+            from harnesslens.harnesses.opencode_execution import ENTRY_COMMAND, refresh_report
+            command = [str(executable()), "run", "--format", "json", "--model", model(), "--dir", str(workspace),
+                       "--command", ENTRY_COMMAND, prompt]
             stdout, stderr, code = run_process(sandbox_command(command, workspace, [port, pg_port]),
                                               cwd=workspace, env=env, timeout_s=limits.timeout_s)
             (trial_root / "stdout.jsonl").write_text(stdout)
@@ -339,10 +331,30 @@ def _trial(*, repo_root: Path, trial_root: Path, task_id: str, trial: int, pairi
             _stop_process(proxy)
             proxy = None
             trace = trial_root / "api_calls.jsonl"
+            component_errors = refresh_report(report, workspace, trace)
+            if version != "v0" and any(e.get("kind") in {"component_error", "policy_violation"}
+                                        for e in report.get("native_component_events", [])):
+                row["candidate_execution_failed"] = True
             events = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()] if trace.is_file() else []
-            row.update(api_calls_jsonl=str(trace), messages=_messages(events), runtime_load_report=report, model_context=report,
-                       n_messages=len(_messages(events)), n_tool_calls=sum(len(m.get("tool_calls", [])) for m in _messages(events)))
-            errors = [value for value in [validate_api_trace(trace), harness_execution_error(stdout, stderr),
+            primary_session = next((e.get("session_id") for e in report.get("native_component_events", []) if e.get("kind") == "command_invoked"), None)
+            messages = _messages(events, primary_session)
+            sessions = {}
+            for event in events:
+                if not event.get("session_id") or not isinstance(event.get("request"), dict): continue
+                session = sessions.setdefault(event["session_id"], {"agent_name": None, "agent_names": [], "request_indices": []})
+                name = event.get("agent_name")
+                if name and name not in session["agent_names"]: session["agent_names"].append(name)
+                if name not in {None, "title", "summary", "compaction"}: session["agent_name"] = name
+                session["request_indices"].append(event.get("call_index"))
+            for event in report.get("native_component_events", []):
+                info = (event.get("event", {}).get("properties") or {}).get("info", {})
+                if info.get("id") in sessions:
+                    sessions[info["id"]]["parent_session_id"] = info.get("parentID")
+            row.update(api_calls_jsonl=str(trace), primary_session_id=primary_session, model_sessions=sessions,
+                       messages=messages, runtime_load_report=report, model_context=report,
+                       n_messages=len(messages), n_tool_calls=sum(len(choice.get("message", {}).get("tool_calls", []))
+                           for event in events for choice in (event.get("response") or {}).get("choices", [])))
+            errors = [value for value in [*component_errors, validate_api_trace(trace), harness_execution_error(stdout, stderr),
                       "native OpenCode exited unsuccessfully" if code != 0 else ""] if value]
             if before != _inventory(workspace / "source") or any(not (workspace / p).is_file() or sha(workspace / p) != value for p, value in fixed.items()):
                 errors.append("fixed task/harness files changed")
@@ -401,6 +413,9 @@ def run_crm_batch(*, repo_root, run_root, scope, harness, harness_version, harne
                              manifest=harness_manifest, limits=limits, signature=signature, pg_port=proxy.port)
                 rows.append(row)
                 paths.append(str(directory / "trial.jsonl"))
+                if row.get("candidate_execution_failed"):
+                    from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
+                    raise CandidateRuntimeError(row.get("error", "Candidate component failed"), directory)
                 if row.get("infrastructure_error"):
                     raise RuntimeError(f"CRM execution paused: {row.get('error')}; retained at {directory}")
             return {"task_id": tid, "harness_version": harness_version, "rewards": [row["reward"] for row in rows],

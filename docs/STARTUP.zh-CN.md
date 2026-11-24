@@ -10,6 +10,7 @@
 | `env_file` | 私有模型地址、模型名、凭据、外部数据位置等 | 模板使用仓库 `.env` |
 | `mode` | train、test_baseline 或 test_candidate | train |
 | `[environment]` | 会话预算和并发等实验设置 | 模板预算200、并发1 |
+| `[components]` | 优化组件的实验边界；模型在范围内自行发现和选择 | 默认16类全允许，denied为空 |
 
 模型凭据只写私有 `.env`。远程业务 Agent 的固定运行时和模型由业务服务配置；平台模型用于分析、编辑和选优。
 
@@ -29,9 +30,16 @@ HAI_TOTAL_CREATION_BUDGET = 200
 HAI_MAX_ROLLOUT_CONCURRENCY = 1
 HAI_MAX_ANALYSIS_CONCURRENCY = 1
 HAI_PROVIDER_MAX_CONCURRENCY = 1
+
+[components]
+allowed = ["*"]
+denied = []
+# 如需固定权限/MCP：denied = ["permissions", "mcp_servers"]
 ```
 
 会话预算不是费用或 token 上限。一次 train 实验内部可能有多轮优化。CRM 的训练为 query1–10，query11–13 为最终独立评测用工程留出，不在训练中优化。
+
+`allowed` 是候选上限，不会强迫模型选择全部组件。先读取实际Agent能力和基线工具目录，再由模型发现可改项，候选通过真实生效检查后才进入评测。业务接入还受服务能力声明约束；详见 [16组件协议](OPENCODE-COMPONENTS.zh-CN.md)。
 
 ## 初版目录与空初版
 

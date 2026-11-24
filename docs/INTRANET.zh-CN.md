@@ -74,7 +74,7 @@ tar -xzf /path/to/crm-data.tar.gz -C third_party
 
 Python 适配是 Worker 本地 Python 函数调用；业务包和其依赖必须可访问，可在 `agent.python` 指定业务独立解释器。通用 JSONL benchmark 可使用 Linux Python 适配。**当前 CRM 的本机原生执行/SQL沙箱仍是 macOS Seatbelt；Linux Python CRM 路径会拒绝缺少端口隔离的执行。Linux 上本轮采用远程 HTTP 业务接入。** `scripts/run_crm.py` 的本机原生沙箱探针不可作为 Linux HTTP 冒烟命令。
 
-HTTP/trace字段及回执协议见 [BUSINESS-AGENTS.zh-CN.md](BUSINESS-AGENTS.zh-CN.md)。完整16组件是能力目录，不意味着全部已开放；模型根据运行时证据发现可编辑项，再做实际候选 preflight；原5项 proposal_only 仍保留。
+HTTP/trace字段、回执协议与通用接收端见 [BUSINESS-AGENTS.zh-CN.md](BUSINESS-AGENTS.zh-CN.md)。16组件的交付与本机执行机制已接通；profile默认全纳入探索，也可通过 `[components]` 缩小范围。实际业务接口能力声明与实验许可取交集，模型依运行时证据选择，再做候选preflight；原5项proposal_only继续保留。声明全部能力不能代替接入真实业务加载器。
 
 ## 启动平台
 

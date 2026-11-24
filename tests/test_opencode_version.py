@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import httpx
 import pytest
-from harnesslens.core.config import load_repo_env, resolve_opencode_binary, opencode_version
+from harnesslens.core.config import resolve_opencode_binary, opencode_version
 from harnesslens.core.budget import CreationBudget
 from harnesslens.harnesses.native_harness_driver import stop_process
 from harnesslens.harnesses.opencode_runtime import OpenCodeIntelligentAdapter, _start_proxy, _stop_process
@@ -80,7 +80,6 @@ class _Model(BaseHTTPRequestHandler):
 
 @pytest.mark.skipif(os.environ.get("HAI_RUN_OPENCODE_HTTP_PROBE") != "1", reason="opt in to local native editor runtime probe")
 def test_11832_sandboxed_editor_cli_and_usage(monkeypatch):
-    load_repo_env(ROOT)
     # Standalone CLI use must derive a bounded runtime root without relying
     # on the service wrapper's environment settings.
     monkeypatch.delenv("HAI_CRM_RUNTIME_ROOT", raising=False)
@@ -111,7 +110,6 @@ def test_11832_sandboxed_editor_cli_and_usage(monkeypatch):
 
 @pytest.mark.skipif(os.environ.get("HAI_RUN_OPENCODE_HTTP_PROBE") != "1", reason="opt in to local native HTTP runtime probe")
 def test_11832_serve_events_messages_and_model_trace(monkeypatch):
-    load_repo_env(ROOT)
     binary = resolve_opencode_binary()
     assert opencode_version(binary) == "1.18.32"
     root = ROOT / "runs/opencode-1.18.32-http"

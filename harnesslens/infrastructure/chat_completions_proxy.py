@@ -332,6 +332,13 @@ def _assemble_stream(buf_text):
 
 
 class H(http.server.BaseHTTPRequestHandler):
+    def _trace(self, entry):
+        for header, field in (("x-harnesslens-session-id", "session_id"), ("x-harnesslens-agent", "agent_name")):
+            value = self.headers.get(header)
+            if value:
+                entry[field] = value[:512]
+        _log(entry)
+
     def do_GET(self):
         # Non-LLM passthrough (e.g. /v1/models). Not logged.
         path = self._upstream_path()
@@ -379,7 +386,7 @@ class H(http.server.BaseHTTPRequestHandler):
             try:
                 provider_slot = _acquire_provider_slot()
             except TimeoutError as exc:
-                _log({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
+                self._trace({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
                       "upstream_status": 503, "error": "provider capacity wait timed out"})
                 self._error(exc)
                 return
@@ -388,7 +395,7 @@ class H(http.server.BaseHTTPRequestHandler):
             upstream_attempt = 0
             while True:
                 if time.monotonic() >= deadline:
-                    _log({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
+                    self._trace({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
                           "upstream_status": 504, "error": "provider request retry budget exhausted"})
                     self._error(TimeoutError("provider request retry budget exhausted"))
                     return
@@ -413,7 +420,7 @@ class H(http.server.BaseHTTPRequestHandler):
                     e.close()
                     delay = _jitter(delay) if delay is not None else None
                     if delay is not None and time.monotonic() + delay < deadline:
-                        _log(
+                        self._trace(
                             {
                                 "ts": time.time(),
                                 "event": "upstream_retry",
@@ -428,7 +435,7 @@ class H(http.server.BaseHTTPRequestHandler):
                         )
                         time.sleep(delay)
                         continue
-                    _log({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
+                    self._trace({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
                           "model": (req_json or {}).get("model") if isinstance(req_json, dict) else None,
                           "request": req_json, "response": None, "usage": None,
                           "stream": stream, "upstream_status": e.code,
@@ -447,7 +454,7 @@ class H(http.server.BaseHTTPRequestHandler):
                     delay = _upstream_exception_retry_delay(upstream_attempt)
                     delay = _jitter(delay) if delay is not None else None
                     if delay is not None and time.monotonic() + delay < deadline:
-                        _log(
+                        self._trace(
                             {
                                 "ts": time.time(),
                                 "event": "upstream_retry",
@@ -463,7 +470,7 @@ class H(http.server.BaseHTTPRequestHandler):
                         time.sleep(delay)
                         continue
                     self._error(e)
-                    _log({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
+                    self._trace({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
                           "request": req_json, "response": None, "usage": None,
                           "stream": stream, "upstream_status": 502, "error": str(e)})
                     return
@@ -531,7 +538,7 @@ class H(http.server.BaseHTTPRequestHandler):
                      "upstream_attempt_count": upstream_attempt}
             if read_error:
                 entry.update(error=read_error, partial_response=resp_json)
-            _log(entry)
+            self._trace(entry)
             if not is_stream:
                 if read_error:
                     self._error(RuntimeError(read_error))

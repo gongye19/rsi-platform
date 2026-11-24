@@ -92,10 +92,13 @@ def public_explorer_input(repo_root: str | Path, task_ids) -> dict:
     from harnesslens.harnesses.opencode_components import runtime_contract
     native_loader = {
         "config_loading": "Candidate JSON and captured workspace files are loaded before native OpenCode starts.",
-        "implemented_lane": "Instructions, native prompt, Skill, and prompt-only Subagent files.",
-        "fixed_config": ["model", "small_model", "provider", "mcp", "plugin", "tools", "permission", "agent.*.steps", "agent.*.tools", "agent.*.permission"],
-        "disabled_features": ["automatic compaction", "pruning", "executable plugins", "custom tools"],
-        "tool_transport": "Fixed read-only SQL CLI, without a schema-patch bridge.",
+        "implemented_lane": "All 16 component mechanisms: native config/files, observed plugin hooks and native tool-definition description/schema guidance bridge.",
+        "fixed_config": ["model", "small_model", "provider", "sampling", "host grading", "task data", "creation budget", "wall timeout", "agent steps ceiling"],
+        "disabled_features": [],
+        "tool_transport": "Read-only SQL CLI plus candidate custom tools/local MCP inside the same data/network sandbox. Descriptions/parameter descriptions patch native tool.definition without changing the validator.",
+        "command_entry": "harnesslens_run (default $ARGUMENTS); candidates can change its template/agent/subtask. Other commands need actual invocation evidence.",
+        "limits": {"agent_steps_ceiling": 40, "subagent_depth_ceiling": 8},
+        "dependencies": "Bundled official @opencode-ai/plugin 1.18.32 root/tool helper and Zod; additional dependencies and remote reference/Skill sources must be staged before the experiment.",
     }
     payload["environment"]["runtime_contract"] = runtime_contract(business=business, loader_facts=None if business else native_loader)
     if business:

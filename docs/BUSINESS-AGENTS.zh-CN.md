@@ -125,17 +125,49 @@ question = "{prompt}"
 这与适配器保存的 Python／HTTP 传输回执是两类记录：发送成功不等于系统提示词、skill 或工具配置已经加载。
 缺少模型请求证据时，可执行和评分，但候选预检不会据此通过，也不会被晋升。
 
-`[capabilities].channels` 只声明业务 agent 已有的能力。默认仅 `instructions_rules`；原服务若支持原生 skill/system prompt 等，可再声明
-`skills`、`system_prompt`、`agent_definitions`、`project_instructions`。声明不会给远端服务添加新功能，实际加载仍须用证据验证。
+`[capabilities].channels` 声明业务接口实际可交付的能力。默认仅 `instructions_rules`；支持共享接收端或等价加载器时可用 `channels = ["*"]` 声明16类，也可填任意子集。
+这与实验 profile 的 `[components]` 是两件事：服务声明能力上限，实验配置允许范围，两者取交集，模型再自主发现和选择；换 benchmark 名称不会改变这两个边界。
+原服务没有加载机制时，声明不会自动给它添加功能，不能仅凭一个答案证明全部支持。
 
-组件目录固定为 [16类编辑组件＋5类仅提案](OPENCODE-COMPONENTS.zh-CN.md)。当前业务交付适配实现了四类 prompt/skill/agent 加载机制；
-这是执行器当前的实现范围，不是由 benchmark 名称决定的搜索白名单。模型根据实际接口与运行证据判断哪些机制有效；
-`project_instructions` 作为旧别名规范化到 `instructions_rules`。
-声明原生 system prompt/Skill/Subagent 时，必须交付 `{harness_files}` 或 `{harness_dir}`，
-并启用 `require_harness_receipt=true`（响应中的 `harness_receipt`）或独立 `[trace]`。
-还需要业务端的真实 `runtime_report`，格式为 `harnesslens.channel-load-report.v1`；
-内联返回可设置 `runtime_report_path`，默认不把本机准备好的文件当作远端运行报告。
-系统提示词保存在 `opencode.json`，业务端需要原生加载，不能将其降级为普通用户指令。
+组件目录为 [16类编辑组件＋5类仅提案](OPENCODE-COMPONENTS.zh-CN.md)。Python/HTTP交付层现已接受全部16类，不再截断到四类。
+声明原生能力时，必须交付 `{harness_files}` 或 `{harness_dir}`，并启用 `require_harness_receipt=true` 或独立 `[trace]`。
+工具说明/参数指导还需将 `{tool_patches}` 映射到业务函数参数或HTTP body，不能只发送文件却丢掉工具patch。
+需要服务端真实 `runtime_report`（`harnesslens.channel-load-report.v1`）和实际模型请求；本机准备好的文件不充当远端运行报告。
+旧别名 `project_instructions` 规范化到 `instructions_rules`。
+
+### 共享接收端：两种调用方法共用
+
+平台提供 `harnesslens.harnesses.opencode_execution.prepare_received_harness` 和 `refresh_report`。
+将整个仓库放入内网Python路径后，可以在现有业务函数/HTTP处理函数中调用；不要求更换现有服务框架。
+以下为嵌入现有调用链的核心部分，不是把另一个Agent服务替换掉：
+
+```python
+from harnesslens.harnesses.opencode_execution import prepare_received_harness, refresh_report
+
+prepared = prepare_received_harness(
+    workspace=isolated_request_directory,
+    harness_files=request["harness_files"],
+    tool_patches=request.get("tool_patches", {}),
+    component_policy=request.get("component_policy"),
+    fixed_config=business_model_provider_config,
+    max_steps=40,
+)
+# 用 prepared["environment"] 覆盖本次子进程环境；不用 --pure。
+# 清除旧的 OPENCODE_DISABLE_AUTOCOMPACT / OPENCODE_DISABLE_PRUNE 等强制禁用项。
+# 原有业务调用启动同一个 OpenCode 1.18.32，使用：
+# [opencode_bin, *prepared["command_arguments"], question]
+# 数据/业务工具、进程隔离、模型请求代理/trace仍使用业务自己的设施。
+errors = refresh_report(prepared["report"], isolated_request_directory, actual_api_calls_jsonl)
+if errors:
+    raise RuntimeError("; ".join(errors))
+# 返回 prepared["report"] 为 runtime_report，并按下节协议返回真实会话回执。
+```
+
+每个请求使用独立目录和环境；不会写业务全局 AGENTS.md、Skills、配置目录或覆盖线上版本。
+`business_model_provider_config` 来自服务自己的固定设置；不要让优化器覆盖模型、Provider、采样或总预算。
+引用资料、额外运行依赖和远端MCP网络可达性由该隔离业务环境预先提供。
+接收端会加载本地插件/工具、Command、参考目录及原生配置；包内提供锁定的JS依赖，不在试验期间自动安装候选指定包。
+回执匹配 request_id、harness_digest、harness_version、OpenCode版本、组件协议和真实session_id；它仍不能代替运行时/请求生效检查。
 
 ## 业务接口只返回答案：独立 trace 接口
 
