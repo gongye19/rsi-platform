@@ -81,6 +81,9 @@ class _Model(BaseHTTPRequestHandler):
 @pytest.mark.skipif(os.environ.get("HAI_RUN_OPENCODE_HTTP_PROBE") != "1", reason="opt in to local native editor runtime probe")
 def test_11832_sandboxed_editor_cli_and_usage(monkeypatch):
     load_repo_env(ROOT)
+    # Standalone CLI use must derive a bounded runtime root without relying
+    # on the service wrapper's environment settings.
+    monkeypatch.delenv("HAI_CRM_RUNTIME_ROOT", raising=False)
     root = ROOT / "runs/opencode-1.18.32-editor"
     root.mkdir(parents=True, exist_ok=True)
     model = ThreadingHTTPServer(("127.0.0.1", 0), _Model)
