@@ -1,5 +1,16 @@
 # HarnessLens
 
+Internal Linux deployment without Docker: [Chinese deployment guide](docs/INTRANET.zh-CN.md).
+Includes uv lockfile, local API/worker queue, experiment UI and offline dependency preparation.
+Company HTTP/trace/test-data integration remains site-specific; the shipped profile is a non-runnable draft.
+
+Local extension: [CRMarenapro integration](docs/CRM.zh-CN.md), using the same
+13 DataAgentBench tasks as the local RRSI experiments (10 TRAIN / 3 TEST).
+
+Existing business agents can also be called through [Python functions or HTTP APIs](docs/BUSINESS-AGENTS.zh-CN.md).
+Configuration-driven JSONL benchmarks reuse the same execution and optimization
+flow; see the [benchmark adapter guide](docs/BENCHMARK-ADAPTERS.zh-CN.md).
+
 **Verify Smarter, Evolve Further: Efficient Harness Evolution through
 Behavior-Aware Verification**
 

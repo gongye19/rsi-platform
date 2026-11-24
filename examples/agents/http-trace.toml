@@ -1,0 +1,30 @@
+[agent]
+type = "http"
+name = "business-opencode"
+revision = "v1"
+url = "https://your-business-service.example/solve"
+token_env = "BUSINESS_AGENT_TOKEN"
+answer_path = "data.answer"
+timeout = 600
+
+[agent.body]
+question = "{prompt}"
+harness_files = "{harness_files}"
+harness_digest = "{harness_digest}"
+harness_version = "{harness_version}"
+component_protocol = "{component_protocol}"
+request_id = "{request_id}"
+
+[capabilities]
+channels = ["instructions_rules"]
+
+# This is your existing trace service, not a built-in OpenCode API endpoint.
+# It correlates business request_id -> OpenCode session -> provider trace.
+[trace]
+url = "https://your-business-service.example/traces/{request_id}"
+token_env = "BUSINESS_TRACE_TOKEN"
+trace_format = "opencode"
+messages_path = "messages"
+api_calls_path = "api_calls"
+usage_path = "usage.total_tokens"
+runtime_report_path = "runtime_report"

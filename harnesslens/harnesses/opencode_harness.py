@@ -10,6 +10,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping
+from harnesslens.harnesses.opencode_components import COMPONENTS, PROPOSAL_ONLY, config_component, config_leaves, protocol_manifest
 
 
 DEFAULT_OPENCODE_PREFIX = "~/.opencode"
@@ -34,7 +35,7 @@ def _channel(
     }
 
 
-OPENCODE_CHANNELS = (
+_LEGACY_OPENCODE_CHANNELS = (
     _channel(
         "instructions_rules",
         visibility="startup/always-visible",
@@ -85,8 +86,8 @@ OPENCODE_CHANNELS = (
         "system_prompt",
         visibility="highest-salience startup frame",
         use="Universal framing that cannot be safely additive.",
-        artifact_contract="config_patch agent.build.prompt as a complete replacement",
-        risks="Replacement can delete native behavior.",
+        artifact_contract="config_patch agent.<name>.prompt replaces its provider prompt segment; native environment and instruction context still compose with it",
+        risks="Changing the provider prompt segment can delete native framing.",
         materialization="isolated_candidate",
     ),
     _channel(
@@ -212,6 +213,24 @@ OPENCODE_CHANNELS = (
 )
 
 
+_legacy = {item["id"]: item for item in _LEGACY_OPENCODE_CHANNELS}
+_component_sources = {"tool_availability": "builtin_tools", "context_management": "compaction_config"}
+OPENCODE_CHANNELS = tuple(
+    {**(_legacy[_component_sources.get(key, key)] if key != "execution_policy" else _channel(
+        key, visibility="session execution and delegation", use="Agent scheduling within fixed experiment limits.",
+        artifact_contract="default_agent, agent.<name>.steps, subagent_depth", risks="Cannot raise the fixed experiment budget.",
+        materialization="isolated_candidate")), "id": key, "name": name, "number": n}
+    for n, (key, name) in enumerate(COMPONENTS, 1)
+) + tuple(_legacy[key] for key in sorted(PROPOSAL_ONLY))
+_COMPONENT_CONTRACTS = {
+    "tool_availability": "tools, agent.<name>.tools, normalized tool visibility; permission rules have their own owner",
+    "context_management": "compaction.*, tool_output.*, attachment processing fields; original inputs stay fixed",
+    "reference_sources": "references plus captured reference files and a verified loading path",
+}
+OPENCODE_CHANNELS = tuple({**item, "artifact_contract": _COMPONENT_CONTRACTS.get(item["id"], item["artifact_contract"])}
+                          for item in OPENCODE_CHANNELS)
+
+
 _OPENCODE_OPERATIONS: Mapping[str, Mapping[str, Any]] = {
     "instructions_rules": {
         "kind": "workspace_config",
@@ -290,6 +309,13 @@ _OPENCODE_OPERATIONS: Mapping[str, Mapping[str, Any]] = {
         "key_prefix": "experimental.",
     },
 }
+_OPENCODE_OPERATIONS = {key: value for key, value in _OPENCODE_OPERATIONS.items()
+                       if key not in {"agent_tool_config", "builtin_tools", "compaction_config"}}
+_OPENCODE_OPERATIONS.update({
+    "tool_availability": {"kind": "harness_config_patch", "manifest_field": "config_patch", "key_prefix": "tools."},
+    "context_management": {"kind": "harness_config_patch", "manifest_field": "config_patch", "key_prefix": "compaction."},
+    "execution_policy": {"kind": "harness_config_patch", "manifest_field": "config_patch", "key": "subagent_depth"},
+})
 
 
 _OPENCODE_REQUEST_OBSERVATIONS: Mapping[str, tuple[str, ...]] = {
@@ -326,12 +352,8 @@ class OpencodeHarnessAdapter:
         self.capabilities = HarnessCapabilities(OPENCODE_CHANNELS)
 
     def architecture_probe(self) -> dict[str, Any]:
-        prefix = Path(
-            os.environ.get("OPENCODE_PREFIX") or DEFAULT_OPENCODE_PREFIX
-        ).expanduser()
-        executable = shutil.which("opencode") or str(prefix / "bin" / "opencode")
-        if not Path(executable).is_file():
-            raise RuntimeError(f"opencode executable is unavailable: {executable}")
+        from harnesslens.core.config import resolve_opencode_binary
+        executable = str(resolve_opencode_binary())
         with tempfile.TemporaryDirectory(prefix="harnesslens-opencode-probe-") as raw_root:
             root = Path(raw_root)
             env = {
@@ -355,6 +377,7 @@ class OpencodeHarnessAdapter:
         facts = {
             "harness_id": "opencode",
             "harness_version": version,
+            "component_protocol": protocol_manifest(),
             "native_commands": _commands(help_text, r"^\s{2}opencode\s+([^\n]+?)\s{2,}"),
             "native_debug_commands": _commands(
                 debug_help, r"^\s{2}opencode\s+debug\s+([^\n]+?)\s{2,}"
@@ -444,6 +467,10 @@ class OpencodeHarnessAdapter:
             "mcp-servers.md",
             "permissions.md",
         ):
+            if name == "config.schema.json" and (docs_root / "SOURCE-1.18.32.json").is_file():
+                # The archived schema predates this pinned runtime. Its tagged
+                # config docs and real runtime probes are the current evidence.
+                continue
             catalog.append(
                 _doc_probe_evidence(
                     f"docs:opencode:{Path(name).stem}", docs_root / name
@@ -476,15 +503,14 @@ class OpencodeHarnessAdapter:
                     evidence_refs.append("runtime:probe:opencode-startup")
                 channel.update(
                     {
-                        "status": "verified",
+                        "status": "materializable",
                         "evidence_refs": evidence_refs,
                         "verification": {
                             "level": (
-                                "request_trace"
-                                if observations
-                                else "materializer_contract"
+                                "materializer_contract"
                             ),
-                            "runtime_observed": bool(observations),
+                            "runtime_observed": False,
+                            "admission": "requires_experiment_policy_and_live_preflight",
                             "observations": list(observations),
                         },
                         "operation": dict(operation),
@@ -539,24 +565,8 @@ class OpencodeHarnessAdapter:
             text = str(key)
             if text == "tools.skill" or text.startswith("permission.skill."):
                 continue
-            if text == "agent.build.prompt":
-                channels.add("system_prompt")
-            elif text.startswith("agent."):
-                channels.add("agent_tool_config")
-            elif text.startswith("tools."):
-                channels.add("builtin_tools")
-            elif text.startswith("permission."):
-                channels.add("permissions")
-            elif text.startswith("command."):
-                channels.add("commands")
-            elif text.startswith("compaction."):
-                channels.add("compaction_config")
-            elif text == "plugin" or text.startswith("plugin."):
-                channels.add("plugin_tool_system")
-            elif text == "mcp" or text.startswith("mcp."):
-                channels.add("mcp_servers")
-            elif text == "experimental" or text.startswith("experimental."):
-                channels.add("experimental_policies")
+            for leaf, _ in config_leaves({text: manifest["config_patch"][key]}):
+                channels.add(config_component(leaf))
         for patch in manifest["tool_desc_patches"].values():
             if isinstance(patch, Mapping) and str(patch.get("desc") or "").strip():
                 channels.add("tool_description")
@@ -669,11 +679,14 @@ def _validate_config_patch(config: Mapping[str, Any]) -> None:
         "plugin.",
         "mcp.",
         "experimental.",
+        "tool_output.",
+        "attachment.",
+        "references.",
     )
-    allowed_exact = {"plugin", "mcp", "experimental"}
+    allowed_exact = {"plugin", "mcp", "experimental", "default_agent", "subagent_depth", "references", "tool_output", "attachment"}
     for key in config:
         text = str(key)
-        if text in {"model", "provider"} or text.startswith("provider."):
+        if config_component(text) in PROPOSAL_ONLY:
             raise ValueError("model/provider changes are proposal-only in HarnessLens")
         if text not in allowed_exact and not text.startswith(allowed_prefixes):
             raise ValueError(f"unsupported OpenCode config patch key: {text}")

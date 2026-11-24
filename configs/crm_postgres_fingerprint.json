@@ -1,0 +1,209 @@
+{
+  "marker": "harness2-crm:5248cd64cddf4936027859c5d6f74b2d32fbeb4e1939d784b2ff26d45d83950c",
+  "tables": {
+    "Case": {
+      "rows": 153,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "priority",
+          "text"
+        ],
+        [
+          "subject",
+          "text"
+        ],
+        [
+          "description",
+          "text"
+        ],
+        [
+          "status",
+          "text"
+        ],
+        [
+          "contactid",
+          "text"
+        ],
+        [
+          "createddate",
+          "text"
+        ],
+        [
+          "closeddate",
+          "text"
+        ],
+        [
+          "orderitemid__c",
+          "text"
+        ],
+        [
+          "issueid__c",
+          "text"
+        ],
+        [
+          "accountid",
+          "text"
+        ],
+        [
+          "ownerid",
+          "text"
+        ]
+      ],
+      "sha256": "166641e3e25fc4f15608358de6a1933973439e657ae236f9c2f3bc944fe6a5f2"
+    },
+    "casehistory__c": {
+      "rows": 393,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "caseid__c",
+          "text"
+        ],
+        [
+          "oldvalue__c",
+          "text"
+        ],
+        [
+          "newvalue__c",
+          "text"
+        ],
+        [
+          "createddate",
+          "text"
+        ],
+        [
+          "field__c",
+          "text"
+        ]
+      ],
+      "sha256": "0138a77d8738b8948f3e73673042319523f55a8a3610eeea6dd144f92ecfd757"
+    },
+    "emailmessage": {
+      "rows": 5686,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "subject",
+          "text"
+        ],
+        [
+          "textbody",
+          "text"
+        ],
+        [
+          "parentid",
+          "text"
+        ],
+        [
+          "fromaddress",
+          "text"
+        ],
+        [
+          "toids",
+          "text"
+        ],
+        [
+          "messagedate",
+          "text"
+        ],
+        [
+          "relatedtoid",
+          "text"
+        ]
+      ],
+      "sha256": "fdec9726c43465601c25a970dd53828f27961e3847b9dfc650f4cb8c452a1aaa"
+    },
+    "issue__c": {
+      "rows": 15,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "name",
+          "text"
+        ],
+        [
+          "description__c",
+          "text"
+        ]
+      ],
+      "sha256": "2ac106e1ad2c80b960895e77efc643ab1f0dfa5e8621a9cc668ae3a39543e773"
+    },
+    "knowledge__kav": {
+      "rows": 194,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "title",
+          "text"
+        ],
+        [
+          "faq_answer__c",
+          "text"
+        ],
+        [
+          "summary",
+          "text"
+        ],
+        [
+          "urlname",
+          "text"
+        ]
+      ],
+      "sha256": "a404011c469cebb7c419a63e38b435bc413fbae6a3611014c8fa53196bc7e51b"
+    },
+    "livechattranscript": {
+      "rows": 58,
+      "columns": [
+        [
+          "id",
+          "text"
+        ],
+        [
+          "caseid",
+          "text"
+        ],
+        [
+          "accountid",
+          "text"
+        ],
+        [
+          "ownerid",
+          "text"
+        ],
+        [
+          "body",
+          "text"
+        ],
+        [
+          "endtime",
+          "text"
+        ],
+        [
+          "livechatvisitorid",
+          "text"
+        ],
+        [
+          "contactid",
+          "text"
+        ]
+      ],
+      "sha256": "ddcb722d39257d9ba7f8140dd884d6426042d8d6463bc0169205f05c23ffe1df"
+    }
+  }
+}

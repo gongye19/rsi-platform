@@ -25,10 +25,12 @@ for arg in "$@"; do
   case "$previous" in
     --cell) cell="$arg" ;;
     --harness) harness="$arg" ;;
+    --agent-config) export HAI_AGENT_CONFIG="$arg" ;;
   esac
   case "$arg" in
     --cell=*) cell="${arg#*=}" ;;
     --harness=*) harness="${arg#*=}" ;;
+    --agent-config=*) export HAI_AGENT_CONFIG="${arg#*=}" ;;
   esac
   previous="$arg"
 done

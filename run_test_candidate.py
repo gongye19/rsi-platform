@@ -24,9 +24,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run pass@k on a HarnessLens submitted candidate over a canonical TEST split."
     )
-    parser.add_argument("--benchmark", required=True, choices=supported_test_benchmarks())
+    from harnesslens.benchmarks.cell_config import benchmark_cell
+    parser.add_argument("--benchmark", required=True, type=benchmark_cell, help="Benchmark name or benchmark.toml path")
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")
     parser.add_argument("--patch-json", required=True, type=Path)
     parser.add_argument("--patch-descs-json", type=Path)
     parser.add_argument("--candidate-label", default="candidate")
@@ -49,6 +51,8 @@ def main() -> int:
     args = parser.parse_args()
     root = args.repo_root.resolve()
     load_repo_env(root)
+    from harnesslens.harnesses.business_agent import select_config
+    select_config(args.agent_config)
     split = load_benchmark_split(args.benchmark)
     if split.cell == "terminal_bench":
         os.environ["DOCKER_HOST"] = args.docker_host

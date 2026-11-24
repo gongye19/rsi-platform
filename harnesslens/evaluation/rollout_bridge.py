@@ -282,6 +282,7 @@ class CellHarnessRepository:
         )
 
     def _write_version_metadata(self, *, version: str, parent: str) -> None:
+        from harnesslens.harnesses.opencode_components import protocol_manifest
         version_root = _native_harness_root(
             self.evidence_root,
             self.run_id,
@@ -293,6 +294,8 @@ class CellHarnessRepository:
             version_root / "lineage.json",
             {"version": version, "parent": parent, "harness": self.harness},
         )
+        if self.harness == "opencode":
+            _write_json(version_root / "component_protocol.json", protocol_manifest())
         _write_json(
             version_root / "meta.json",
             {
@@ -331,6 +334,15 @@ class TrainRolloutService:
         self.harness = normalize_harness(harness)
         self.timeout_s = int(timeout_s)
         self.local_rootless_rollout = bool(local_rootless_rollout)
+        from harnesslens.harnesses.business_agent import load_config
+        from harnesslens.benchmarks.adapters import benchmark_adapter
+        self.adapter = benchmark_adapter(self.repo_root, self.cell)
+        if self.adapter:
+            self.cell = self.adapter.cell
+        if load_config() and self.adapter is None:
+            raise ValueError("This benchmark needs a business execution adapter; use a benchmark descriptor or its native runner")
+        if self.adapter and self.harness != "opencode":
+            raise ValueError("The configured benchmark runtime supports OpenCode only")
 
     def run(self, request: RolloutRequest) -> RolloutResponse:
         self._validate(request)
@@ -426,7 +438,7 @@ class TrainRolloutService:
         request_root = self.artifact_root / request.run_id / request.request_id
         expected_paths = {
             str(task_id): [
-                request_root / "trajectories" / str(task_id) / f"trial_{index + 1:04d}.jsonl"
+                request_root / "trajectories" / _safe(str(task_id)) / f"trial_{index + 1:04d}.jsonl"
                 for index in range(int(repeats))
             ]
             for task_id, repeats in request.task_repeats.items()
@@ -483,6 +495,8 @@ class TrainRolloutService:
                 "worker_errors": errors,
                 "trial_summaries": summaries,
             }
+        if self.adapter:
+            self.adapter.validate_retained(records)
         if self.cell == "terminal_bench":
             validate_terminal_rollout_trajectories(records)
         elif self.cell == BIRD_CELL:
@@ -547,7 +561,7 @@ class TrainRolloutService:
         repair_service: "TrainRolloutService",
     ) -> RolloutResponse:
         target = failure.trajectory_path
-        task_id = target.parent.name
+        task_id = str(json.loads(target.read_text()).get("task_id") or target.parent.name)
         trial_number = int(target.stem.rsplit("_", 1)[1])
         repair_request = RolloutRequest(
             request_id=f"{request.request_id}-repair-{task_id}-{trial_number:04d}",
@@ -575,6 +589,15 @@ class TrainRolloutService:
         self, request: RolloutRequest, task_ids: list[str], repeats: int
     ) -> dict[str, Any]:
         group_run_id = _safe(f"{request.run_id}_{request.request_id}_k{repeats}")
+        if self.adapter:
+            manifest = _rollout_candidate_manifest(CellHarnessRepository(
+                cell=self.cell, repo_root=self.repo_root, run_id=self.run_id,
+                evidence_root=self.evidence_root, harness=self.harness), request.harness_version)
+            return self.adapter.run_batch(run_root=self.artifact_root / "benchmark_groups" / group_run_id,
+                scope=request.scope, harness=self.harness, harness_version=request.harness_version,
+                harness_manifest=manifest, task_repeats={tid: repeats for tid in task_ids},
+                pairing_offsets={tid: int(request.pairing_offsets.get(tid, 0)) for tid in task_ids},
+                max_concurrency=request.max_concurrency)
         if self.cell == BIRD_CELL:
             if self.harness == "opencode":
                 _ensure_bird_v0(self.evidence_root, self.run_id)
@@ -734,6 +757,8 @@ class TrainRolloutService:
             for item in metadata.get("records") or []
             if isinstance(item, Mapping)
         )
+        if self.adapter:
+            self.adapter.validate_retained(records)
         return RolloutResponse(
             request_id=request.request_id,
             harness_version=request.harness_version,
@@ -841,6 +866,10 @@ def validate_rollout_interactions(records: list[TrainRolloutRecord]) -> None:
             ]
             if len(rows) != 1 or not isinstance(rows[0], Mapping):
                 raise RuntimeError(f"retained rollout trajectory is malformed: {path}")
+            if rows[0].get("agent_transport") in {"python", "http"}:
+                from harnesslens.evaluation.business_runtime import validate_record
+                validate_record(rows[0], path)
+                continue
             reference = rows[0].get("api_calls_jsonl")
             if not isinstance(reference, str) or not reference.strip():
                 raise RuntimeError(f"retained rollout has no complete OpenCode trace: {path}")
@@ -951,13 +980,14 @@ def _retain_api_sidecars(value: Any, *, source_dir: Path, destination: Path) -> 
         if isinstance(item, Mapping):
             result = {}
             for key, child in item.items():
-                if key == "api_calls_jsonl" and isinstance(child, str) and child.strip():
+                if key in {"api_calls_jsonl", "agent_transport_jsonl"} and isinstance(child, str) and child.strip():
                     source = Path(child)
                     if not source.is_absolute():
                         source = source_dir / source
                     if source.is_file():
                         if source not in copied:
-                            suffix = ".api_calls.jsonl" if not copied else f".api_calls.{len(copied):04d}.jsonl"
+                            kind = "api_calls" if key == "api_calls_jsonl" else "agent_transport"
+                            suffix = f".{kind}.jsonl" if not copied else f".{kind}.{len(copied):04d}.jsonl"
                             sidecar = destination.with_name(destination.stem + suffix)
                             shutil.copy2(source, sidecar)
                             copied[source] = sidecar.name
@@ -1149,6 +1179,10 @@ def _deep_merge_mapping(
 
 
 def _api_trace_required(cell: str, harness: str = "opencode") -> bool:
+    from harnesslens.harnesses.business_agent import load_config
+    business = load_config()
+    if business:
+        return bool(business["agent"]["api_calls_path"] or business.get("trace"))
     return normalize_harness(harness) in {"opencode", "codex"} and str(cell) not in {
         "terminal_bench",
         BIRD_CELL,
@@ -1156,6 +1190,9 @@ def _api_trace_required(cell: str, harness: str = "opencode") -> bool:
 
 
 def _trajectory_retention(cell: str, harness: str = "opencode") -> str:
+    from harnesslens.harnesses.business_agent import load_config
+    if load_config():
+        return "business_agent_messages_model_traces_and_transport_receipts"
     if normalize_harness(harness) == "pi":
         return "harnesslens_native_trial_jsonl_with_messages_and_tool_context"
     if _api_trace_required(cell, harness):

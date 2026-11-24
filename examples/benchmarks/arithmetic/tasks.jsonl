@@ -1,0 +1,3 @@
+{"id":"sum_a","question":"Compute 2 + 3.","answer":"5"}
+{"id":"sum_b","question":"Compute 4 + 7.","answer":"11"}
+{"id":"sum_holdout","question":"Compute 8 + 9.","answer":"17"}

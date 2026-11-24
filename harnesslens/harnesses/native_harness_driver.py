@@ -245,17 +245,8 @@ def safe(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value))
 
 def opencode_binary() -> Path:
-    candidates = [
-        Path(str(os.environ.get("HAI_OPENCODE_BIN") or "")),
-        default_opencode_prefix() / "bin" / "opencode",
-    ]
-    located = shutil.which("opencode")
-    if located:
-        candidates.insert(0, Path(located))
-    for candidate in candidates:
-        if str(candidate) and candidate.is_file():
-            return candidate.resolve()
-    raise RuntimeError("opencode executable is unavailable")
+    from harnesslens.core.config import resolve_opencode_binary
+    return resolve_opencode_binary()
 
 def stop_process(process: subprocess.Popen[str] | None) -> None:
     if process is None or process.poll() is not None:

@@ -6,6 +6,7 @@
 
 # Benchmark checkouts and agent runtimes are external; see docs/benchmarks.md
 /third_party
+/runtime
 .pi-agent/
 
 # Run artifacts: TRAIN controller runs, blind-TEST baselines and candidates
@@ -33,3 +34,15 @@ venv/
 .idea/
 .vscode/
 *.swp
+
+# Service state, frontend builds, offline delivery
+web/node_modules/
+web/.next/
+web/.env*
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+/offline/
+*.sqlite-wal
+*.sqlite-shm
+configs/experiments/*.local.toml
+examples/agents/*.local.toml

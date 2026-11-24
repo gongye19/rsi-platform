@@ -1,3 +1,8 @@
+---
+title: Agents
+description: Configure and use specialized agents.
+---
+
 Agents are specialized AI assistants that can be configured for specific tasks and workflows. They allow you to create focused tools with custom prompts, models, and tool access.
 
 :::tip

@@ -1,0 +1,592 @@
+{
+  "schema_version": "1.0",
+  "id": "component-history-example",
+  "title": "组件探索与回退 · 交互示例",
+  "algorithm": "通用组件优化器（示例）",
+  "source": "example",
+  "context": {},
+  "tasks": [],
+  "notice": "交互演示：以下改动、组件级对照结果和数值均为合成示例，不是实际实验。用于展示分叉、打叉、回退和从旧版本继续优化。",
+  "components": [
+    {
+      "id": "system_prompt",
+      "name": "System Prompt",
+      "description": "系统提示词",
+      "baseline_version_id": "system_prompt-v0"
+    },
+    {
+      "id": "guardrails",
+      "name": "Guardrails",
+      "description": "执行约束",
+      "baseline_version_id": "guardrails-v0"
+    },
+    {
+      "id": "memory",
+      "name": "Memory",
+      "description": "长期记忆",
+      "baseline_version_id": "memory-v0"
+    },
+    {
+      "id": "tool_guidance",
+      "name": "Tool Guidance",
+      "description": "工具指导",
+      "baseline_version_id": "tool_guidance-v0"
+    },
+    {
+      "id": "subagent",
+      "name": "Subagent",
+      "description": "子代理",
+      "baseline_version_id": "subagent-v0"
+    },
+    {
+      "id": "skill",
+      "name": "Skill",
+      "description": "技能",
+      "baseline_version_id": "skill-v0"
+    },
+    {
+      "id": "script",
+      "name": "Script",
+      "description": "脚本",
+      "baseline_version_id": "script-v0"
+    },
+    {
+      "id": "plugin",
+      "name": "Plugin",
+      "description": "插件",
+      "baseline_version_id": "plugin-v0"
+    }
+  ],
+  "versions": [
+    {
+      "id": "system_prompt-v0",
+      "component_id": "system_prompt",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "guardrails-v0",
+      "component_id": "guardrails",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "memory-v0",
+      "component_id": "memory",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "tool_guidance-v0",
+      "component_id": "tool_guidance",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "subagent-v0",
+      "component_id": "subagent",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "skill-v0",
+      "component_id": "skill",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "script-v0",
+      "component_id": "script",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "plugin-v0",
+      "component_id": "plugin",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "present": true,
+      "digest": "example-baseline",
+      "files": [],
+      "notes": "示例初始组件。"
+    },
+    {
+      "id": "system_prompt-v1",
+      "component_id": "system_prompt",
+      "label": "V1",
+      "parent_id": "system_prompt-v0",
+      "step": 1,
+      "round": 1,
+      "present": true,
+      "digest": "example-system_prompt-v1",
+      "files": [
+        {
+          "path": "system_prompt/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+增加冗长规划，示例对照无收益\n"
+        }
+      ],
+      "notes": "合成示例：增加冗长规划，示例对照无收益",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    },
+    {
+      "id": "subagent-v1",
+      "component_id": "subagent",
+      "label": "V1",
+      "parent_id": "subagent-v0",
+      "step": 1,
+      "round": 1,
+      "present": true,
+      "digest": "example-subagent-v1",
+      "files": [
+        {
+          "path": "subagent/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+拆分检索与交叉核验，示例对照改善\n"
+        }
+      ],
+      "notes": "合成示例：拆分检索与交叉核验，示例对照改善",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    },
+    {
+      "id": "subagent-v2",
+      "component_id": "subagent",
+      "label": "V2",
+      "parent_id": "subagent-v1",
+      "step": 4,
+      "round": 2,
+      "present": true,
+      "digest": "example-subagent-v2",
+      "files": [
+        {
+          "path": "subagent/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+扩大并发，示例中错误增加\n"
+        }
+      ],
+      "notes": "合成示例：扩大并发，示例中错误增加",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    },
+    {
+      "id": "plugin-v1",
+      "component_id": "plugin",
+      "label": "V1",
+      "parent_id": "plugin-v0",
+      "step": 4,
+      "round": 2,
+      "present": true,
+      "digest": "example-plugin-v1",
+      "files": [
+        {
+          "path": "plugin/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+增加查询结果校验插件\n"
+        }
+      ],
+      "notes": "合成示例：增加查询结果校验插件",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    },
+    {
+      "id": "subagent-v3",
+      "component_id": "subagent",
+      "label": "V3",
+      "parent_id": "subagent-v1",
+      "step": 7,
+      "round": 3,
+      "present": true,
+      "digest": "example-subagent-v3",
+      "files": [
+        {
+          "path": "subagent/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+从保留的 V1 重新改进，避免失败的 V2\n"
+        }
+      ],
+      "notes": "合成示例：从保留的 V1 重新改进，避免失败的 V2",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    },
+    {
+      "id": "skill-v1",
+      "component_id": "skill",
+      "label": "V1",
+      "parent_id": "skill-v0",
+      "step": 7,
+      "round": 3,
+      "present": true,
+      "digest": "example-skill-v1",
+      "files": [
+        {
+          "path": "skill/example.md",
+          "change": "modified",
+          "diff": "--- before\n+++ after\n@@ synthetic example @@\n+增加资料核验技能\n"
+        }
+      ],
+      "notes": "合成示例：增加资料核验技能",
+      "evidence": {
+        "trace": "[合成交互示例]\n提出修改 → 其余组件保持不变 → 组件对照评测 → 记录决策。",
+        "answer": "这是演示文本，不是业务Agent的真实回答。"
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "baseline",
+      "label": "baseline",
+      "step": 0,
+      "round": 0,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v0",
+        "skill": "skill-v0",
+        "script": "script-v0",
+        "plugin": "plugin-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 120,
+        "tokens": 25000
+      },
+      "metrics": {
+        "score": 62
+      }
+    },
+    {
+      "id": "trial-r1",
+      "label": "trial r1",
+      "step": 1,
+      "round": 1,
+      "components": {
+        "system_prompt": "system_prompt-v1",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v1",
+        "skill": "skill-v0",
+        "script": "script-v0",
+        "plugin": "plugin-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 130,
+        "tokens": 30000
+      },
+      "metrics": {
+        "score": 67
+      }
+    },
+    {
+      "id": "accepted-r1",
+      "label": "accepted r1",
+      "step": 3,
+      "round": 1,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v1",
+        "skill": "skill-v0",
+        "script": "script-v0",
+        "plugin": "plugin-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 110,
+        "tokens": 23000
+      },
+      "metrics": {
+        "score": 71
+      }
+    },
+    {
+      "id": "trial-r2",
+      "label": "trial r2",
+      "step": 4,
+      "round": 2,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v2",
+        "skill": "skill-v0",
+        "script": "script-v0",
+        "plugin": "plugin-v1"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 98,
+        "tokens": 26000
+      },
+      "metrics": {
+        "score": 69
+      }
+    },
+    {
+      "id": "accepted-r2",
+      "label": "accepted r2",
+      "step": 6,
+      "round": 2,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v1",
+        "skill": "skill-v0",
+        "script": "script-v0",
+        "plugin": "plugin-v1"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 100,
+        "tokens": 22000
+      },
+      "metrics": {
+        "score": 77
+      }
+    },
+    {
+      "id": "trial-r3",
+      "label": "trial r3",
+      "step": 7,
+      "round": 3,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v3",
+        "skill": "skill-v1",
+        "script": "script-v0",
+        "plugin": "plugin-v1"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 90,
+        "tokens": 21000
+      },
+      "metrics": {
+        "score": 82
+      }
+    },
+    {
+      "id": "accepted-r3",
+      "label": "accepted r3",
+      "step": 9,
+      "round": 3,
+      "components": {
+        "system_prompt": "system_prompt-v0",
+        "guardrails": "guardrails-v0",
+        "memory": "memory-v0",
+        "tool_guidance": "tool_guidance-v0",
+        "subagent": "subagent-v3",
+        "skill": "skill-v1",
+        "script": "script-v0",
+        "plugin": "plugin-v1"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 90,
+        "tokens": 21000
+      },
+      "metrics": {
+        "score": 82
+      }
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "label": "基础版本",
+      "round": 0,
+      "kind": "baseline",
+      "bundle_id": "baseline",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 1,
+      "label": "修改 Prompt 与 Subagent",
+      "round": 1,
+      "kind": "propose",
+      "bundle_id": "trial-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 2,
+      "label": "测试第一轮候选",
+      "round": 1,
+      "kind": "evaluate",
+      "bundle_id": "trial-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 3,
+      "label": "Prompt V1 无效；保留 Subagent V1",
+      "round": 1,
+      "kind": "select",
+      "bundle_id": "accepted-r1",
+      "active_bundle_id": "accepted-r1"
+    },
+    {
+      "index": 4,
+      "label": "从 Subagent V1 分叉出 V2；新增 Plugin V1",
+      "round": 2,
+      "kind": "propose",
+      "bundle_id": "trial-r2",
+      "active_bundle_id": "accepted-r1"
+    },
+    {
+      "index": 5,
+      "label": "测试第二轮候选",
+      "round": 2,
+      "kind": "evaluate",
+      "bundle_id": "trial-r2",
+      "active_bundle_id": "accepted-r1"
+    },
+    {
+      "index": 6,
+      "label": "放弃 Subagent V2，回退 V1；保留 Plugin V1",
+      "round": 2,
+      "kind": "select",
+      "bundle_id": "accepted-r2",
+      "active_bundle_id": "accepted-r2"
+    },
+    {
+      "index": 7,
+      "label": "从 Subagent V1 长出 V3；新增 Skill V1",
+      "round": 3,
+      "kind": "propose",
+      "bundle_id": "trial-r3",
+      "active_bundle_id": "accepted-r2"
+    },
+    {
+      "index": 8,
+      "label": "第三轮对照测试",
+      "round": 3,
+      "kind": "evaluate",
+      "bundle_id": "trial-r3",
+      "active_bundle_id": "accepted-r2"
+    },
+    {
+      "index": 9,
+      "label": "保留 Subagent V3 与 Skill V1",
+      "round": 3,
+      "kind": "select",
+      "bundle_id": "accepted-r3",
+      "active_bundle_id": "accepted-r3"
+    }
+  ],
+  "decisions": [
+    {
+      "version_id": "system_prompt-v1",
+      "step": 3,
+      "scope": "component",
+      "outcome": "failed",
+      "reason": "示例对照无收益，恢复 Prompt V0",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    },
+    {
+      "version_id": "subagent-v1",
+      "step": 3,
+      "scope": "component",
+      "outcome": "passed",
+      "reason": "示例对照有效，采用 Subagent V1",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    },
+    {
+      "version_id": "subagent-v2",
+      "step": 6,
+      "scope": "component",
+      "outcome": "failed",
+      "reason": "示例对照退化，回到 V1",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    },
+    {
+      "version_id": "plugin-v1",
+      "step": 6,
+      "scope": "component",
+      "outcome": "passed",
+      "reason": "示例对照有效，采用 Plugin V1",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    },
+    {
+      "version_id": "subagent-v3",
+      "step": 9,
+      "scope": "component",
+      "outcome": "passed",
+      "reason": "示例对照有效，采用 V3",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    },
+    {
+      "version_id": "skill-v1",
+      "step": 9,
+      "scope": "component",
+      "outcome": "passed",
+      "reason": "示例对照有效，采用 Skill V1",
+      "evidence": "合成组件级对照：固定其他组件，只替换当前组件；示例数据，不是实测。"
+    }
+  ]
+}

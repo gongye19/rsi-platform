@@ -87,7 +87,11 @@ def benchmark_task_explorer_input(
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve()
     config = benchmark_config(root, cell)
-    if config.kind == "tau2":
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    adapter = benchmark_adapter(root, config.cell)
+    if adapter:
+        payload = adapter.explorer_input(baseline.task_ids)
+    elif config.kind == "tau2":
         payload = _tau2_task_explorer_input(root, baseline, cell=config.cell)
     elif config.kind == "terminal_bench":
         payload = _terminal_task_explorer_input(root, baseline, cell=config.cell)

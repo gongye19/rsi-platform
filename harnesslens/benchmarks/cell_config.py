@@ -49,6 +49,15 @@ class BenchmarkConfig:
             "harnesslens/harnesses/native_candidate_runtime.py",
             "harnesslens/harnesses/harness_workspace.py",
         )
+        if self.kind == "business_extension":
+            from .adapters import runtime_sources
+            return (*common, *runtime_sources(), *self.domain_files)
+        if self.kind == "crm":
+            return (*common, "harnesslens/benchmarks/crm.py", "harnesslens/benchmarks/crm_eval.py",
+                    "harnesslens/benchmarks/crm_query.py", "harnesslens/benchmarks/crm_postgres.py",
+                    "harnesslens/harnesses/candidate_config_runtime.py",
+                    "harnesslens/infrastructure/chat_completions_proxy.py",
+                    "configs/crmarenapro_split.json", "configs/crm_postgres_fingerprint.json")
         if self.kind == "tau2":
             return (
                 *common,
@@ -88,6 +97,10 @@ class BenchmarkConfig:
         raise ValueError(f"unsupported benchmark kind: {self.kind}")
 
     def task_source_files(self) -> tuple[str, ...]:
+        if self.kind == "business_extension":
+            return self.domain_files
+        if self.kind == "crm":
+            return self.domain_files
         if self.kind == "tau2":
             return self.domain_files
         if self.kind == "terminal_bench":
@@ -100,6 +113,7 @@ class BenchmarkConfig:
 
 
 _ALIASES = {
+    "crm": "crmarenapro", "crmarenapro": "crmarenapro", "dab-crmarenapro": "crmarenapro",
     "retail": "retail",
     "tau2-retail": "retail",
     "banking": "banking_knowledge",
@@ -116,15 +130,19 @@ _ALIASES = {
 }
 
 
-SUPPORTED_CELLS = ("retail", "banking", "terminal-bench", "bird")
+SUPPORTED_CELLS = ("retail", "banking", "terminal-bench", "bird", "crm")
 
 
 def supported_cell_help() -> str:
     """One line naming the cells, for --cell help text and error messages."""
-    return " | ".join(SUPPORTED_CELLS)
+    return " | ".join(SUPPORTED_CELLS) + " | /path/to/benchmark.toml"
 
 
 def normalize_benchmark_cell(cell: str) -> str:
+    from .jsonl_adapter import resolve_external
+    external = resolve_external(Path(__file__).resolve().parents[2], cell)
+    if external:
+        return external.cell
     normalized = _ALIASES.get(str(cell).strip().lower())
     if normalized is None:
         raise ValueError(
@@ -143,15 +161,24 @@ def benchmark_cell(cell: str) -> str:
     import argparse
 
     try:
-        normalize_benchmark_cell(cell)
+        normalized = normalize_benchmark_cell(cell)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(str(exc)) from None
-    return cell
+    return normalized if Path(str(cell)).suffix == ".toml" else cell
 
 
 def benchmark_config(repo_root: str | Path, cell: str) -> BenchmarkConfig:
     root = Path(repo_root).resolve()
+    from .jsonl_adapter import resolve_external
+    external = resolve_external(root, cell)
+    if external:
+        return external.benchmark_config()
     normalized = normalize_benchmark_cell(cell)
+    if normalized == "crmarenapro":
+        split = _load_split(root, "crmarenapro_split.json")
+        return BenchmarkConfig(benchmark="dab-crmarenapro", cell="crmarenapro", kind="crm",
+                               train_task_ids=tuple(split["train"]), local_rootless_rollout=False,
+                               outcome_authority="authoritative")
     if normalized == "retail":
         return BenchmarkConfig(
             benchmark="tau2-retail",

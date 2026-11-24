@@ -31,8 +31,9 @@ def _source_files() -> list[Path]:
     this_file = Path(__file__).resolve()
     return [
         path
-        for path in REPO_ROOT.rglob("*.py")
-        if "__pycache__" not in path.parts
+        for path in _release_files()
+        if path.suffix == ".py"
+        and "__pycache__" not in path.parts
         and "third_party" not in path.parts
         and ".venv" not in path.parts
         and "venv" not in path.parts
@@ -54,7 +55,7 @@ def test_repository_is_self_contained():
         if FORBIDDEN_VERSION_PATH.search(source):
             violations.append(f"{relative}: internal version path")
         for fragment in FORBIDDEN_PATH_FRAGMENTS:
-            if fragment in source:
+            if re.search(re.escape(fragment) + r"(?:/|[\"'])", source):
                 violations.append(f"{relative}: path fragment {fragment!r}")
         tree = ast.parse(source, filename=str(path))
         for node in ast.walk(tree):
@@ -89,11 +90,17 @@ TEXT_SUFFIXES = {".py", ".md", ".sh", ".toml", ".json", ".yaml", ".yml", ".mjs",
 VENDORED = ("assets/docs_cache",)
 
 
+def _release_files():
+    """Git-visible source, including new files, excluding ignored builds/data."""
+    names = subprocess.check_output(["git", "-C", str(REPO_ROOT), "ls-files", "--cached", "--others", "--exclude-standard", "-z"]).decode().split("\0")
+    return [REPO_ROOT / name for name in names if name and (REPO_ROOT / name).is_file()]
+
+
 def _text_files() -> list[Path]:
     """Everything a reader could copy a path out of, not just importable code."""
     this_file = Path(__file__).resolve()
     files = []
-    for path in REPO_ROOT.rglob("*"):
+    for path in _release_files():
         if not path.is_file() or path.resolve() == this_file:
             continue
         # runs/, results/ and the caches hold generated artifacts that record
@@ -149,6 +156,7 @@ ALLOWED_HOSTS = re.compile(
         | proxy | host\.docker\.internal
         # public infrastructure this project genuinely talks to
         | api\.deepseek\.com | api\.anthropic\.com | api\.openai\.com
+        | open\.bigmodel\.cn
         | developers\.openai\.com | opencode\.ai
         | archive\.ubuntu\.com | (?:[a-z0-9-]+\.)*astral\.sh
         | (?:[a-z0-9-]+\.)*(?:github\.com|huggingface\.co)

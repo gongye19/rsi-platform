@@ -34,6 +34,8 @@ class HarnessProfile:
 
     @property
     def provider_options(self) -> Mapping[str, Any]:
+        if "/glm-" in self.model:
+            return {"thinking": {"type": "disabled"}}
         if self.harness == "opencode":
             return {"reasoningEffort": "high"}
         if self.harness == "codex":
@@ -61,7 +63,7 @@ def power_profile(harness: str, *, max_steps: int) -> HarnessProfile:
     )
     return HarnessProfile(
         harness=normalized,
-        model=models[normalized],
+        model=os.environ.get("HAI_MODEL") or models[normalized],
         reasoning_effort="high",
         max_steps=int(max_steps),
         context_limit=_positive_env_int(

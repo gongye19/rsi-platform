@@ -1,0 +1,24 @@
+[agent]
+type = "python"
+name = "my-business-agent"
+revision = "v1"
+function = "business_agent.api:solve"
+python = "/path/to/business-project/.venv/bin/python"
+python_paths = ["/path/to/business-project"]
+timeout = 600
+sandbox = "auto"
+answer_path = "result.text"
+usage_path = "metrics.total_tokens"
+trace_path = "messages"
+# Optional: map the agent's existing complete model request/response records.
+# api_calls_path = "api_calls"
+# pass_env = ["BUSINESS_MODEL_KEY"]
+
+[agent.arguments]
+question = "{prompt}"
+config_dir = "{harness_dir}"
+# Add only keyword arguments the existing function already accepts.
+# seed = "{seed}"
+
+[capabilities]
+channels = ["instructions_rules"]

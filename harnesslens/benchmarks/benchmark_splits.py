@@ -23,6 +23,7 @@ class BenchmarkSplit:
 
 
 _SPECS: Mapping[str, Mapping[str, Any]] = {
+    "dab-crmarenapro": {"cell": "crmarenapro", "config": "crmarenapro_split.json", "local_rootless_rollout": False},
     "retail": {
         "cell": "retail",
         "config": "retail_split.json",
@@ -46,6 +47,7 @@ _SPECS: Mapping[str, Mapping[str, Any]] = {
 }
 
 _ALIASES = {
+    "crm": "dab-crmarenapro", "crmarenapro": "dab-crmarenapro", "dab-crmarenapro": "dab-crmarenapro",
     "retail": "retail",
     "tau2-retail": "retail",
     "banking": "banking",
@@ -66,6 +68,10 @@ def supported_test_benchmarks() -> tuple[str, ...]:
 
 
 def load_benchmark_split(benchmark: str) -> BenchmarkSplit:
+    from .jsonl_adapter import resolve_external
+    external = resolve_external(Path(__file__).resolve().parents[2], benchmark)
+    if external:
+        return external.split()
     normalized = _ALIASES.get(str(benchmark).strip().lower())
     if normalized is None:
         raise ValueError(f"unsupported HarnessLens test benchmark: {benchmark}")

@@ -13,6 +13,7 @@ from harnesslens.core.artifacts import write_json
 from harnesslens.core.budget import CreationBudget
 from harnesslens.harnesses.harness_query_adapters import harness_query_adapter
 from harnesslens.harnesses.harness_workspace import MCP_PATCH_WORKSPACE_PATH
+from harnesslens.harnesses.opencode_components import PROPOSAL_ONLY, component_id
 from harnesslens.core.profiles import power_profile
 from harnesslens.harnesses.runner import (
     IntelligentHarnessRunner,
@@ -102,8 +103,8 @@ _CANDIDATE_RUNTIME_LOADING = {
             "task tools and permissions",
             "the task MCP server binding",
         ],
-        "fixed_surface_ids": ["builtin_tools", "permissions", "mcp_servers"],
-        "conditional_surface_ids": ["compaction_config"],
+        "fixed_surface_ids": ["tool_availability", "permissions", "mcp_servers", "execution_policy"],
+        "conditional_surface_ids": ["context_management"],
         "disabled_behavior": [
             (
                 "automatic native project-config discovery beyond the captured "
@@ -375,7 +376,21 @@ class DiscoveryModule:
         adapter = harness_query_adapter(self.harness, repo_root=self.repo_root)
         probe = adapter.architecture_probe()
         evidence_catalog = adapter.query_evidence_catalog(probe)
-        runtime_loading = _CANDIDATE_RUNTIME_LOADING[str(probe["harness_id"])]
+        runtime_loading = deepcopy(_CANDIDATE_RUNTIME_LOADING[str(probe["harness_id"])])
+        contract = task_input.get("environment", {}).get("runtime_contract")
+        if isinstance(contract, Mapping):
+            # Backend facts are evidence for the explorer, not a benchmark whitelist.
+            runtime_loading["fixed_surface_ids"] = sorted(PROPOSAL_ONLY)
+            runtime_loading["execution_contract"] = contract
+            runtime_loading["preserved_behavior"] = [
+                "candidate native agent prompt stays in agent.<name>.prompt; it is not flattened into AGENTS.md",
+                "candidate instructions and skills load from the delivered versioned workspace",
+            ]
+            if contract.get("business_agent"):
+                runtime_loading["preserved_behavior"] = [
+                    "HarnessLens prepares versioned files and sends only mapped business arguments/body fields.",
+                    "Prepared files do not prove remote loading; native channels need the service's runtime report and actual model-request evidence.",
+                ]
         evidence_catalog.append(
             {
                 "id": "runtime:candidate-workspace-loader",
@@ -385,6 +400,12 @@ class DiscoveryModule:
             }
         )
         inventory = adapter.query_channel_inventory(probe)
+        if (task_input.get("environment", {}).get("runtime_contract", {})).get("business_agent"):
+            # This limit comes from the configured service's declared interface.
+            # It is not inferred from the benchmark name.
+            allowed = set(task_input["environment"]["runtime_contract"]["declared_channels"])
+            runtime_loading["fixed_surface_ids"] = list(set(runtime_loading.get("fixed_surface_ids", [])) | {
+                str(item["id"]) for item in inventory if item["id"] not in allowed})
         inventory_ids = {str(item.get("id") or "") for item in inventory}
         mcp_points = (
             _mcp_editable_points(task_input, harness_id=str(probe["harness_id"]))
@@ -1119,30 +1140,6 @@ def canonicalize_harness_query_output(
 
 
 _ADMITTED_NATIVE_CHANNELS = {
-    "opencode": {
-        "instructions_rules": {
-            "scope": "project",
-            "path": "opencode.json",
-            "mechanism": "config",
-            "key": "instructions",
-        },
-        "skills": {
-            "scope": "project",
-            "path": ".opencode/skills/<slug>/SKILL.md",
-            "mechanism": "file",
-        },
-        "system_prompt": {
-            "scope": "project",
-            "path": "opencode.json",
-            "mechanism": "config",
-            "key": "agent.build.prompt",
-        },
-        "agent_definitions": {
-            "scope": "project",
-            "path": ".opencode/agents/<name>.md",
-            "mechanism": "file",
-        },
-    },
     "pi": {
         "project_instructions": {
             "scope": "project",
@@ -1214,7 +1211,10 @@ _SANDBOX_PENDING_CHANNELS = frozenset(
 _NATIVE_CHANNEL_POLICY = {
     "opencode": {
         "agent_tool_config": "forbidden",
-        "commands": "unsupported",
+        "tool_availability": "forbidden",
+        "commands": "conditional",
+        "execution_policy": "conditional",
+        "context_management": "conditional",
         "reference_sources": "conditional",
         "plugin_tool_system": "conditional",
         "custom_tools": "conditional",
@@ -1236,7 +1236,7 @@ def _enforce_native_channel_admission(
     harness: str,
     controller_mcp_ids: set[str],
 ) -> None:
-    """Make channel admission controller-owned instead of model-selected."""
+    """Enforce execution constraints without replacing OpenCode model discovery."""
 
     admitted = _ADMITTED_NATIVE_CHANNELS.get(str(harness), {})
     lanes = _NATIVE_CHANNEL_LANES.get(str(harness), {})
@@ -1259,7 +1259,33 @@ def _enforce_native_channel_admission(
                 hypothesis.get("evidence_refs") or source.get("evidence_refs") or []
             )
         ]
-        if channel_id in admitted:
+        # Experiment/transport restrictions override the generic built-in allowlist.
+        # A supported channel is not automatically enabled for every business API.
+        experiment_status = str(hypothesis.get("policy_status") or "")
+        proposal_only = str(harness) == "opencode" and component_id(channel_id) in PROPOSAL_ONLY
+        if str(harness) == "opencode":
+            # Preserve the model's evidence-backed discovery. Never promote the
+            # four historical prompt channels merely because they are in a table,
+            # or discard a newly discovered surface because it is not in it.
+            blocked = proposal_only or experiment_status in {"forbidden", "unsupported", "conditional"}
+            if not blocked and source.get("status") == "modifiable":
+                item = dict(source)
+                item.update(id=channel_id, verification_required="runtime_load_and_channel_preflight")
+                item.setdefault("execution_lane", _NATIVE_CHANNEL_LANES.get("opencode", {}).get(channel_id, "direct"))
+                modifiable.append(item)
+            else:
+                status = "forbidden" if proposal_only else (experiment_status or source.get("status") or "conditional")
+                if status not in {"conditional", "unsupported", "forbidden"}:
+                    status = "conditional"
+                reason = ("Proposal-only component; automatic editing is disabled." if proposal_only else
+                          "This execution configuration explicitly restricts the surface." if blocked else
+                          str(source.get("reason") or "The explorer has not established an effective edit mechanism."))
+                item = {**source, "id": channel_id, "status": status, "reason": reason,
+                        "evidence_refs": list(source.get("evidence_refs") or refs)}
+                item.pop("evidence_level", None)
+                unavailable.append(item)
+            continue
+        if channel_id in admitted and experiment_status not in {"forbidden", "unsupported", "conditional"} and not proposal_only:
             edit_contract = dict(admitted[channel_id])
             verification = hypothesis.get("verification") or {}
             evidence_level = (
@@ -1297,17 +1323,17 @@ def _enforce_native_channel_admission(
                 }
             )
             continue
-        status = str(
-            policy.get(channel_id) or hypothesis.get("policy_status") or "conditional"
-        )
+        status = "forbidden" if proposal_only else str(
+            experiment_status or policy.get(channel_id) or "conditional")
         if status not in {"conditional", "unsupported", "forbidden"}:
             status = "conditional"
         unavailable_item = {
             "id": channel_id,
             "status": status,
             "reason": (
-                "The controller does not admit this channel without a dedicated "
-                "runtime verifier and preflight checker."
+                "Proposal-only component; automatic editing is disabled." if proposal_only else
+                ("This experiment or business adapter does not permit this channel." if experiment_status == "forbidden" else
+                "The controller does not admit this channel without a dedicated runtime verifier and preflight checker.")
             ),
             "runtime_constraints": [
                 "Documented or materialized presence alone is insufficient for admission."

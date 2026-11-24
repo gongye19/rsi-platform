@@ -1,0 +1,88 @@
+{
+  "id": "opencode-1.18.32-16",
+  "runtime": "OpenCode",
+  "version": "1.18.32",
+  "classification": "business-v1",
+  "components": [
+    {
+      "id": "instructions_rules",
+      "name": "Instructions",
+      "description": "常驻规则"
+    },
+    {
+      "id": "system_prompt",
+      "name": "System Prompt",
+      "description": "系统提示词"
+    },
+    {
+      "id": "skills",
+      "name": "Skill",
+      "description": "技能与附属资源"
+    },
+    {
+      "id": "agent_definitions",
+      "name": "Agent",
+      "description": "主代理与子代理定义"
+    },
+    {
+      "id": "execution_policy",
+      "name": "Execution Policy",
+      "description": "执行与调度"
+    },
+    {
+      "id": "tool_description",
+      "name": "Tool Description",
+      "description": "工具描述"
+    },
+    {
+      "id": "tool_parameter_description",
+      "name": "Tool Parameters",
+      "description": "工具参数指导"
+    },
+    {
+      "id": "tool_availability",
+      "name": "Tool Access",
+      "description": "工具可用性"
+    },
+    {
+      "id": "permissions",
+      "name": "Permissions",
+      "description": "权限规则"
+    },
+    {
+      "id": "commands",
+      "name": "Command",
+      "description": "命令"
+    },
+    {
+      "id": "reference_sources",
+      "name": "References",
+      "description": "参考资料接入"
+    },
+    {
+      "id": "context_management",
+      "name": "Context",
+      "description": "上下文管理"
+    },
+    {
+      "id": "custom_tools",
+      "name": "Custom Tool",
+      "description": "自定义工具"
+    },
+    {
+      "id": "plugin_tool_system",
+      "name": "Plugin",
+      "description": "插件执行逻辑"
+    },
+    {
+      "id": "mcp_servers",
+      "name": "MCP",
+      "description": "MCP接入"
+    },
+    {
+      "id": "experimental_policies",
+      "name": "Experimental",
+      "description": "实验性策略"
+    }
+  ]
+}

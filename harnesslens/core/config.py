@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -25,6 +27,45 @@ def repo_root(override: str | Path | None = None) -> Path:
 
 
 DEFAULT_PROVIDER_BASE_URL = "https://api.deepseek.com/v1"
+
+
+@lru_cache(maxsize=32)
+def _opencode_version(path: str, size: int, modified_ns: int) -> str:
+    try:
+        result = subprocess.run([path, "--version"], text=True, capture_output=True, timeout=30, check=True)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise RuntimeError(f"Cannot read OpenCode version at {path}") from exc
+    lines = result.stdout.strip().splitlines()
+    if not lines:
+        raise RuntimeError(f"OpenCode returned no version at {path}")
+    return lines[-1].removeprefix("v")
+
+
+def opencode_version(binary: str | Path) -> str:
+    path = Path(binary).resolve()
+    stat = path.stat()
+    return _opencode_version(str(path), stat.st_size, stat.st_mtime_ns)
+
+
+def resolve_opencode_binary() -> Path:
+    """An explicit pinned runtime takes precedence over PATH everywhere."""
+    configured = os.environ.get("HAI_OPENCODE_BIN")
+    pinned = repo_root() / "runtime/opencode-1.18.32/bin/opencode"
+    using_pin = not configured and pinned.is_file()
+    if configured:
+        path = Path(configured).expanduser().resolve()
+    elif using_pin:
+        path = pinned.resolve()
+    else:
+        located = shutil.which("opencode")
+        path = Path(located) if located else Path(os.environ.get("OPENCODE_PREFIX") or "~/.opencode").expanduser() / "bin/opencode"
+        path = path.resolve()
+    if not path.is_file():
+        raise RuntimeError(f"OpenCode executable is unavailable: {path}")
+    expected = os.environ.get("HAI_OPENCODE_VERSION", "1.18.32" if using_pin else "").strip()
+    if expected and opencode_version(path) != expected:
+        raise RuntimeError(f"OpenCode version mismatch: expected {expected}, found {opencode_version(path)} at {path}")
+    return path
 
 
 def provider_base_url() -> str:

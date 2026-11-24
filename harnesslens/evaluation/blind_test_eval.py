@@ -107,6 +107,8 @@ class BlindTestRolloutService(TrainRolloutService):
         for item in retained.get("records") or []:
             records.append(_record_from_mapping(item, request.harness_version))
         requested = sum(int(value) for value in request.task_repeats.values())
+        if self.adapter:
+            self.adapter.validate_retained(records)
         if self.cell == "terminal_bench":
             _validate_terminal_trajectories(records)
         elif self.cell == BIRD_CELL:
@@ -209,7 +211,8 @@ def run_test_baseline(
     unknown = set(selected_test) - set(split.test)
     if unknown:
         raise ValueError("selected task is outside the canonical TEST split")
-    if not os.environ.get("DEEPSEEK_API_KEY"):
+    from harnesslens.harnesses.business_agent import load_config
+    if not os.environ.get("DEEPSEEK_API_KEY") and not load_config():
         raise RuntimeError("DEEPSEEK_API_KEY is required for a HarnessLens test baseline")
     normalized_retrieval = str(retrieval_config).strip()
     if split.cell == "banking_knowledge":
@@ -328,7 +331,8 @@ def run_test_candidate(
     unknown = set(selected_test) - set(split.test)
     if unknown:
         raise ValueError("selected task is outside the canonical TEST split")
-    if not os.environ.get("DEEPSEEK_API_KEY"):
+    from harnesslens.harnesses.business_agent import load_config
+    if not os.environ.get("DEEPSEEK_API_KEY") and not load_config():
         raise RuntimeError("DEEPSEEK_API_KEY is required for a HarnessLens test candidate")
     normalized_retrieval = str(retrieval_config).strip()
     if split.cell == "banking_knowledge":
@@ -548,6 +552,10 @@ def runtime_limits(
     repeats: int = BASELINE_REPEATS,
 ) -> Mapping[str, Any]:
     effective_repeats = _validated_test_repeats(repeats)
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    adapter = benchmark_adapter(Path(__file__).resolve().parents[2], split.cell)
+    if adapter:
+        return {"repeats": effective_repeats, "max_concurrency": adapter.max_concurrency, **adapter.limits().to_dict()}
     if split.cell == BIRD_CELL:
         limits = BirdLimits()
         return {
@@ -576,6 +584,10 @@ def runtime_limits(
 
 
 def baseline_max_concurrency(split: BenchmarkSplit) -> int:
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    adapter = benchmark_adapter(Path(__file__).resolve().parents[2], split.cell)
+    if adapter:
+        return adapter.max_concurrency
     return (
         TERMINAL_BASELINE_MAX_CONCURRENCY
         if split.cell == "terminal_bench"

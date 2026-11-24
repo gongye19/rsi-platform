@@ -1,0 +1,12 @@
+{
+  "version": "1.18.32",
+  "release_url": "https://github.com/anomalyco/opencode/releases/tag/v1.18.32",
+  "asset_url": "https://github.com/anomalyco/opencode/releases/download/v1.18.32/opencode-darwin-arm64.zip",
+  "archive_sha256": "fa643f93401c13508d8d513780e54ce9cc01203d501114be9b88d62408b8101f",
+  "binary_sha256": "a3c45d4e1d6620b436851f1ef6b25c71befcf06a382e279a1eb1c2196424395e",
+  "platform": "darwin-arm64",
+  "local_binary": "runtime/opencode-1.18.32/bin/opencode",
+  "previous_runtime": "RRSI 1.14.18 (external, not a dependency)",
+  "scope": "HarnessLens new runs; existing RRSI/Harness2 runtime and frozen experiments unchanged",
+  "purpose": "macOS validation provenance; cross-platform installer uses configs/opencode-assets.json"
+}

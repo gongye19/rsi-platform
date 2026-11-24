@@ -19,6 +19,7 @@ def configure_cell_runtime(repo_root: Path, cell: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--agent-config", type=Path, help="Existing Python/HTTP business-agent adapter TOML")
     parser.add_argument("--baseline-event", type=Path)
     parser.add_argument(
         "--analysis-source-run",
@@ -51,6 +52,8 @@ def main() -> int:
     args = parser.parse_args()
     root = args.repo_root.resolve()
     load_repo_env(root)
+    from harnesslens.harnesses.business_agent import select_config
+    select_config(args.agent_config)
     configure_cell_runtime(root, args.cell)
     result = IterationController(
         repo_root=root,

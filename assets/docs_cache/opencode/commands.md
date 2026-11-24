@@ -1,3 +1,8 @@
+---
+title: Commands
+description: Create custom commands for repetitive tasks.
+---
+
 Custom commands let you specify a prompt you want to run when that command is executed in the TUI.
 
 ```bash frame="none"

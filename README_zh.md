@@ -7,6 +7,16 @@
 
 [English](README.md)
 
+**内网 Linux（无 Docker）部署**：从 [内网使用指南](docs/INTRANET.zh-CN.md) 开始。
+Python 依赖由 uv/uv.lock 管理；API、独立 Worker、实验管理界面与离线依赖准备脚本已提供。
+业务接口、trace 和隔离测试数据需在公司环境完成联调；默认草稿配置不会发起真实实验。
+
+本地扩展：已接入 DAB／CRMarenapro 的同一套 13 题，默认 10 训练／3 测试；
+配置、检查和运行命令见 [CRM 接入说明](docs/CRM.zh-CN.md)。
+新增题库可使用 [通用 benchmark 适配](docs/BENCHMARK-ADAPTERS.zh-CN.md)，复用 Python／HTTP 调用、trace 和原有选优流程。
+
+已有业务 agent 也可通过 [Python 函数或 HTTP API 接入](docs/BUSINESS-AGENTS.zh-CN.md)，用配置映射其现有参数和返回字段。
+
 ## 目录结构
 
 ```text

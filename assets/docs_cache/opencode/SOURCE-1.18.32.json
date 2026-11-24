@@ -1,0 +1,51 @@
+{
+  "version": "1.18.32",
+  "source": "https://github.com/anomalyco/opencode/tree/v1.18.32/packages/web/src/content/docs",
+  "files": {
+    "permissions.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/permissions.mdx",
+      "sha256": "e929098f6f772186eeb4f0eb55e332c477d88e30cb1efc45d0839dfa333b5163"
+    },
+    "commands.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/commands.mdx",
+      "sha256": "33ae3aa2df77e8206b27114d05825a419f9188766be07a90f1e09bab7a81bb78"
+    },
+    "config.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/config.mdx",
+      "sha256": "8002123cfd54b17aa10b51c94ce76af8f50eba2d445ebfa62b813d3e93fa92be"
+    },
+    "skills.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/skills.mdx",
+      "sha256": "7ff4df3a1a4909fa0e0025a6f086c3dbc63d09fdd578bc13f3f4ae30fcfe4627"
+    },
+    "models.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/models.mdx",
+      "sha256": "2c8f7c813c7e80e55d71801d8f0b3ce23884f2c279dc4a1bac122e79198f2482"
+    },
+    "custom-tools.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/custom-tools.mdx",
+      "sha256": "0a5df35e96df711324244d91fc3d16001bca81cea5b91f86207a8fc55f1209fc"
+    },
+    "plugins.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/plugins.mdx",
+      "sha256": "4cc0d8db8645a036d1398a9e3be65c386ab75d003a2699c14bc06c267ea1354f"
+    },
+    "rules.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/rules.mdx",
+      "sha256": "2d789f8467c7018a07b2307d44beb37ef13b10038aed1124aa20098cb4296fd9"
+    },
+    "agents.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/agents.mdx",
+      "sha256": "0941601a02a57c97aa2072bd8accb15900dc6c78e78d99de44435c17e62e6b32"
+    },
+    "mcp-servers.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/mcp-servers.mdx",
+      "sha256": "3e99f66ed4a4a40d238b539497bb8739a140e94aa7ab27fd08e4ee0c3a0c6102"
+    },
+    "tools.md": {
+      "url": "https://raw.githubusercontent.com/anomalyco/opencode/v1.18.32/packages/web/src/content/docs/tools.mdx",
+      "sha256": "eb6f30fc30cd4b9932252eb07fdb08771a38f209694e4b9b4a23dd5e1a0d9a9a"
+    }
+  },
+  "legacy_schema_note": "config.schema.json remains the original archived schema snapshot; version-specific runtime behavior is verified by 1.18.32 probes."
+}

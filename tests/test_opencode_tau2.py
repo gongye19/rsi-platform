@@ -115,9 +115,7 @@ def test_opencode_tau2_merges_candidate_config_then_restores_fixed_invariants(tm
                     "content": (
                         "---\n"
                         "description: Reviews evidence before the parent answers.\n"
-                        "mode: primary\n"
-                        "model: candidate/forbidden\n"
-                        "permission: allow\n"
+                        "mode: subagent\n"
                         "---\n\n"
                         "Check the task evidence and report contradictions.\n"
                     ),

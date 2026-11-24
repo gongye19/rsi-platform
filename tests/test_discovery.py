@@ -67,6 +67,12 @@ def test_controller_admits_verified_harness_optimization_lanes(
     )
 
     modules = {item["id"]: item for item in output["modifiable_modules"]}
+    if harness == "opencode":
+        # A historical controller allowlist is not evidence of what the model
+        # discovered for this run. Empty discovery must stay empty.
+        assert not modules
+        assert {item["id"] for item in output["unavailable_modules"]} == expected
+        return
     assert set(modules) == expected
     assert {
         channel_id
@@ -846,7 +852,7 @@ def test_project_file_materializer_requires_file_mechanism():
         )
 
 
-def test_harness_query_controller_owns_admitted_channel_assessment():
+def test_harness_query_preserves_model_evidence_level_without_fabricating_runtime_proof():
     output = _grounded_query_output()
     module = output["modifiable_modules"][0]
     module["evidence_level"] = "documented"
@@ -862,7 +868,7 @@ def test_harness_query_controller_owns_admitted_channel_assessment():
 
     normalized = canonicalize_harness_query_output(output, payload)
 
-    assert normalized["modifiable_modules"][0]["evidence_level"] == "materialized"
+    assert normalized["modifiable_modules"][0]["evidence_level"] == "documented"
     assert normalized["modifiable_modules"][0]["evidence_refs"] == ["docs:instructions"]
     assert "operation" not in normalized["modifiable_modules"][0]
 
@@ -987,7 +993,8 @@ def test_harness_query_fallback_only_demotes_unproven_surfaces():
             {
                 "id": "runtime:channel:instructions_rules",
                 "kind": "materializer_contract",
-                "value": {"kind": "prompt_content"},
+                "value": {"kind": "workspace_config", "scope": "project", "path": "opencode.json",
+                          "mechanism": "config", "key": "instructions"},
             },
             {
                 "id": "runtime:channel:permissions",
@@ -1018,6 +1025,7 @@ def test_harness_query_fallback_only_demotes_unproven_surfaces():
                     "scope": "project",
                     "path": "opencode.json",
                     "mechanism": "config",
+                    "key": "instructions",
                 },
                 "runtime_constraints": ["claim"],
                 "risks": "claim",

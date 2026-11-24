@@ -32,6 +32,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 KEY = ""
 LOG_FILE = None
@@ -158,7 +159,7 @@ def _upstream_base_url() -> str:
 def _upstream_url(path):
     base = _upstream_base_url()
     normalized_path = path if path.startswith("/") else f"/{path}"
-    if base.endswith("/v1") and normalized_path.startswith("/v1/"):
+    if urlsplit(base).path.rstrip("/") and normalized_path.startswith("/v1/"):
         normalized_path = normalized_path[len("/v1"):]
     return f"{base}{normalized_path}"
 

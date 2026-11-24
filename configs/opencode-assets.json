@@ -1,0 +1,8 @@
+{
+  "version": "1.18.32",
+  "assets": {
+    "linux-x64": {"name": "opencode-linux-x64.tar.gz", "sha256": "3046e0404fdc60fb80307e7a47824ba07477364178a4d09baa8548496dd6d43b"},
+    "linux-arm64": {"name": "opencode-linux-arm64.tar.gz", "sha256": "568461b7d4d8c19865c97e9a1102e613049c6039d01fe772154de873c1865840"},
+    "darwin-arm64": {"name": "opencode-darwin-arm64.zip", "sha256": "fa643f93401c13508d8d513780e54ce9cc01203d501114be9b88d62408b8101f"}
+  }
+}

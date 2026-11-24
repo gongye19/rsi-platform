@@ -149,7 +149,8 @@ def test_pi_candidate_materializes_prompt_files_config_and_tool_schema(tmp_path)
     )
 
 
-def test_pi_rollout_keeps_query_discovered_context_and_skill_channels(tmp_path):
+def test_pi_rollout_keeps_query_discovered_context_and_skill_channels(tmp_path, monkeypatch):
+    monkeypatch.setattr("harnesslens.benchmarks.pi_tau2._pi_binary", lambda root: tmp_path / "pi")
     command = _pi_rpc_command(
         REPO_ROOT,
         tmp_path,

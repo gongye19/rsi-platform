@@ -1773,6 +1773,8 @@ class MainAgentModule:
         decision["snapshot_path"] = str(snapshot.resolve())
         decision["patch_digest"] = content_digest(patch)
         decision["workspace_digest"] = workspace_digest(workspace)
+        if publish and self.harness == "opencode":
+            decision["harness_package"] = _export_opencode_package(self.run_root, selected, workspace, patch)
         write_json(output_path, decision)
         if publish:
             write_json(submission_root / "final.json", decision)
@@ -1848,6 +1850,8 @@ class MainAgentModule:
             "experience_dispositions": str(Path(dispositions_path).resolve()),
             "budget": self.budget.status(),
         }
+        if self.harness == "opencode":
+            payload["harness_package"] = _export_opencode_package(self.run_root, selected_version, workspace, patch)
         write_json(output_path, payload)
         write_json(self.run_root / "submission" / "final.json", payload)
         write_text(track_root / "CURRENT_HEAD.txt", str(selected_version) + "\n")
@@ -1869,6 +1873,14 @@ def _snapshot_manifest_path(snapshot: Path, harness: str) -> Path:
     if normalized == "pi_agent":
         normalized = "pi"
     return snapshot / "harness" / normalized / "manifest.json"
+
+
+def _export_opencode_package(run_root, version, workspace, manifest):
+    from harnesslens.harnesses.opencode_package import export_package
+    query = Path(run_root) / "discovery/harness_query_input.json"
+    experiment = json.loads(query.read_text()).get("candidate_workspace_contract", {}) if query.is_file() else {}
+    return export_package(directory=Path(run_root) / "submission", version=version,
+                          workspace=workspace, manifest=manifest, experiment=experiment)
 
 
 def _snapshot_workspace_path(snapshot: Path, harness: str) -> Path:

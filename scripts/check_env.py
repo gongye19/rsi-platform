@@ -92,10 +92,15 @@ def check_runtime(report: Report, harness: str) -> None:
     report.section(f"Agent runtime ({harness})")
     binary, hint = RUNTIME_BINARIES[harness]
     located = shutil.which(binary)
-    if binary == "opencode" and not located:
-        prefix = Path(os.environ.get("OPENCODE_PREFIX") or "~/.opencode").expanduser()
-        candidate = prefix / "bin" / binary
-        located = str(candidate) if candidate.is_file() else None
+    if binary == "opencode":
+        from harnesslens.core.config import resolve_opencode_binary, opencode_version
+        try:
+            path = resolve_opencode_binary()
+            located = str(path)
+            report.line(OK, "OpenCode version", opencode_version(path))
+        except RuntimeError as exc:
+            located = None
+            report.line(MISSING, "OpenCode version", str(exc))
     if binary == "pi":
         # the same resolver the run uses, so preflight cannot disagree with it
         from harnesslens.core.config import pi_binary
@@ -118,6 +123,17 @@ def check_benchmark(report: Report, root: Path, cell: str) -> None:
         report.line(MISSING, f"cell {cell}", str(exc))
         return
     report.line(OK, f"cell {cell}", f"kind={config.kind}, {len(config.train_task_ids)} TRAIN tasks")
+
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    adapter = benchmark_adapter(root, config.cell)
+    if adapter:
+        try:
+            signature = adapter.fingerprint()
+            report.line(OK, "Benchmark adapter", adapter.cell)
+            report.line(OK, "Task scope", f"{len(adapter.split().train)} TRAIN / {len(adapter.split().test)} TEST")
+        except Exception as exc:
+            report.line(MISSING, "Benchmark prerequisites", str(exc))
+        return
 
     checkout, url = BENCHMARK_CHECKOUTS[config.kind]
     path = root / checkout
@@ -189,10 +205,17 @@ def main() -> int:
                         help="retail, banking, terminal-bench, bird")
     parser.add_argument("--harness", choices=tuple(RUNTIME_BINARIES), default="opencode")
     parser.add_argument("--repo-root", type=Path, default=None)
+    parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")
     args = parser.parse_args()
 
     root = repo_root(args.repo_root)
     load_repo_env(root)
+    from harnesslens.harnesses.business_agent import select_config, load_config
+    select_config(args.agent_config)
+    business = load_config()
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    if business and benchmark_adapter(root, args.cell) is None:
+        parser.error("This benchmark needs a business execution adapter or a benchmark TOML descriptor")
 
     print(f"HarnessLens preflight — {root}")
     report = Report()

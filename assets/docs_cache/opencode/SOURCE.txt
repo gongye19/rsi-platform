@@ -1,2 +1,5 @@
-Official opencode docs fetched from https://opencode.ai/docs/<page>.md on 2026-06-06T15:35:50Z
-opencode CLI version: 1.14.27
+OpenCode runtime: 1.18.32
+Official tagged source: https://github.com/anomalyco/opencode/tree/v1.18.32/packages/web/src/content/docs
+Fetched: 2026-11-24
+11 Markdown pages: exact URLs and SHA-256 hashes in SOURCE-1.18.32.json.
+config.schema.json: archived 1.14.27 snapshot fetched 2026-06-06; excluded from current query evidence.

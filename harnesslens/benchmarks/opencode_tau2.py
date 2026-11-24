@@ -625,18 +625,8 @@ def _opencode_env(*, runtime_home: Path, config_path: Path) -> dict[str, str]:
 
 
 def _opencode_binary() -> Path:
-    configured = str(os.environ.get("HAI_OPENCODE_BIN") or "").strip()
-    candidates = [
-        Path(configured).expanduser() if configured else None,
-        _default_opencode_prefix() / "bin" / "opencode",
-    ]
-    located = shutil.which("opencode")
-    if located:
-        candidates.insert(0, Path(located))
-    for candidate in candidates:
-        if candidate is not None and candidate.is_file():
-            return candidate.resolve()
-    raise RuntimeError("opencode executable is unavailable")
+    from harnesslens.core.config import resolve_opencode_binary
+    return resolve_opencode_binary()
 
 
 def _opencode_runtime_root(

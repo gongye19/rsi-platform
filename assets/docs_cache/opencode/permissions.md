@@ -1,3 +1,8 @@
+---
+title: Permissions
+description: Control which actions require approval to run.
+---
+
 OpenCode uses the `permission` config to decide whether a given action should run automatically, prompt you, or be blocked.
 
 As of `v1.1.1`, the legacy `tools` boolean config is deprecated and has been merged into `permission`. The old `tools` config is still supported for backwards compatibility.
@@ -11,6 +16,26 @@ Each permission rule resolves to one of:
 - `"allow"` — run without approval
 - `"ask"` — prompt for approval
 - `"deny"` — block the action
+
+---
+
+## Auto mode
+
+Start OpenCode with `--auto` to automatically approve permission requests that are not explicitly denied.
+
+```bash
+opencode --auto
+```
+
+You can also use auto mode with [`opencode run`](/docs/cli#run).
+
+```bash
+opencode run --auto "Refactor this module"
+```
+
+Explicit `"deny"` rules are still enforced. Auto mode only changes requests that would otherwise ask for approval.
+
+In the TUI, open the command palette and select **Enable auto-approve permissions** or **Disable auto-approve permissions** to change modes. When auto mode is active, the prompt displays a muted `auto` indicator next to the current agent.
 
 ---
 

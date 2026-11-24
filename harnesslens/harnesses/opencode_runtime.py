@@ -141,11 +141,11 @@ class OpenCodeIntelligentAdapter:
                 "OPENCODE_DISABLE_PROJECT_CONFIG": "1",
                 "OPENCODE_DISABLE_AUTOCOMPACT": "1",
                 "OPENCODE_DISABLE_PRUNE": "1",
+                "OPENCODE_DISABLE_MODELS_FETCH": "1",
             }
             _prepend_opencode_path(env)
-            executable = shutil.which("opencode", path=env.get("PATH"))
-            if not executable:
-                raise RuntimeError("OpenCode executable is unavailable")
+            from harnesslens.core.config import resolve_opencode_binary
+            executable = str(resolve_opencode_binary())
             command = [
                 executable,
                 "run",
@@ -160,12 +160,16 @@ class OpenCodeIntelligentAdapter:
                 "--format",
                 "json",
             ]
+            if os.environ.get("HAI_OPENCODE_LEGACY_CLI") == "1":
+                command = [arg for arg in command if arg != "--auto"]
             if working_directory is not None:
+                (run_root / ".tmp").mkdir(exist_ok=True)
                 env = isolated_child_env(
                     env,
                     overrides={
                         "DEEPSEEK_API_KEY": "editor-local-proxy",
                         "HOME": str(run_root / ".home"),
+                        "TMPDIR": str(run_root / ".tmp"),
                         "XDG_DATA_HOME": str(run_root / ".oc_data"),
                         "XDG_CONFIG_HOME": str(run_root / ".oc_config"),
                         "XDG_STATE_HOME": str(run_root / ".oc_state"),
@@ -173,13 +177,14 @@ class OpenCodeIntelligentAdapter:
                         "OPENCODE_DISABLE_PROJECT_CONFIG": "1",
                         "OPENCODE_DISABLE_AUTOCOMPACT": "1",
                         "OPENCODE_DISABLE_PRUNE": "1",
+                        "OPENCODE_DISABLE_MODELS_FETCH": "1",
                     },
                 )
                 command = bubblewrap_command(
                     command,
                     writable_root=run_root,
                     working_directory=run_cwd,
-                    read_only_roots=(Path(executable).resolve().parents[4],),
+                    read_only_roots=(Path(os.environ.get("HAI_CRM_RUNTIME_ROOT") or Path(executable).resolve().parents[4]),),
                 )
             (run_root / "invocation.json").write_text(
                 json.dumps(

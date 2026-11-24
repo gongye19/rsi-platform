@@ -1,4 +1,6 @@
 from pathlib import Path
+import sys
+import subprocess
 
 import pytest
 
@@ -55,3 +57,19 @@ def test_bubblewrap_exposes_only_declared_runtime_and_job_root(
     assert f"--bind {job} {job}" in joined
     assert str(tmp_path / "private") not in joined
     assert command[-2:] == [str(runtime / "agent"), "run"]
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS Seatbelt boundary")
+def test_macos_editor_boundary_allows_job_but_denies_private_siblings(tmp_path):
+    from harnesslens.infrastructure.process_isolation import seatbelt_command
+    job = tmp_path / "job"
+    job.mkdir()
+    secret = tmp_path / "private.txt"
+    secret.write_text("private")
+    script = "from pathlib import Path; Path('allowed').write_text('ok'); " + f"Path({str(secret)!r}).read_text()"
+    command = seatbelt_command([sys.executable, "-c", script], writable_root=job,
+        working_directory=job, read_only_roots=(sys.base_prefix, sys.prefix))
+    result = subprocess.run(command, cwd=job, capture_output=True)
+    assert (job / "allowed").read_text() == "ok"
+    assert result.returncode != 0
+    assert b"Operation not permitted" in result.stderr

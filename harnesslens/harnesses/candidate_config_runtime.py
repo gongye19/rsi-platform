@@ -102,29 +102,26 @@ def compile_opencode_agent_definitions(project_root: str | Path) -> dict[str, An
     root = Path(project_root) / ".opencode" / "agents"
     result: dict[str, Any] = {}
     for path in sorted(root.glob("*.md")) if root.is_dir() else []:
-        if path.stem in _OPENCODE_RESERVED_AGENTS:
-            continue
         content = path.read_text(encoding="utf-8", errors="replace")
-        match = re.match(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", content, re.S)
-        if not match:
-            continue
-        frontmatter: dict[str, str] = {}
-        for line in match.group(1).splitlines():
-            key, separator, value = line.partition(":")
-            if separator and key.strip():
-                frontmatter[key.strip()] = value.strip().strip("'\"")
-        description = frontmatter.get("description", "").strip()
-        if not description:
-            continue
-        definition: dict[str, Any] = {
-            "description": description,
-            "mode": "subagent",
-        }
-        body = match.group(2).strip()
-        if body:
-            definition["prompt"] = body
-        result[path.stem] = definition
+        result[path.stem] = parse_opencode_agent_definition(str(path), content)
     return result
+
+
+def parse_opencode_agent_definition(path: str, content: str) -> dict[str, Any]:
+    """The current prompt-only worker lane does not admit hidden capability edits."""
+    import yaml
+    if Path(path).stem in _OPENCODE_RESERVED_AGENTS:
+        raise ValueError("Reserved OpenCode agents must be changed through explicit config contracts")
+    match = re.match(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", content, re.S)
+    if not match:
+        raise ValueError("OpenCode agent requires YAML frontmatter")
+    metadata = yaml.safe_load(match[1])
+    if not isinstance(metadata, Mapping) or set(metadata) - {"description", "mode"}:
+        raise ValueError("Prompt-only Agent definition cannot edit model, permissions, tools, budget or unsupported fields")
+    description = metadata.get("description")
+    if not isinstance(description, str) or not description.strip() or metadata.get("mode", "subagent") != "subagent":
+        raise ValueError("Prompt-only Agent requires a description and subagent mode")
+    return {"description": description.strip(), "mode": "subagent", **({"prompt": match[2].strip()} if match[2].strip() else {})}
 
 
 def deep_merge(left: Mapping[str, Any], right: Mapping[str, Any]) -> dict[str, Any]:

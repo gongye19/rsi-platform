@@ -39,15 +39,30 @@ cp .env.example .env
 | --- | --- | --- |
 | `HARNESSLENS_ROOT` | 包所在目录的上一级 | 仓库根。只有把包装到仓库外时才需要设置。 |
 | `HAI_REPO_ROOT` | 同上 | MCP server 子进程用的仓库根，由父进程自动注入。 |
+| `HAI_BENCHMARK_CONFIG` | — | 外部 benchmark TOML 的绝对路径。传入 `--cell /path/benchmark.toml` 时自动设置，供子进程和恢复解析相同 benchmark ID。 |
+| `HAI_SERVICE_TOKEN` | — | 内网平台 API 的随机 Bearer token，至少24字符；只放私有环境文件，由 API 与 Next.js 服务端使用，禁止 NEXT_PUBLIC 前缀。服务部署见 INTRANET.zh-CN.md。 |
 | `OPENCODE_PREFIX` | `~/.opencode` | opencode 安装前缀；实际用的是 `<prefix>/bin/opencode`。 |
-| `HAI_OPENCODE_BIN` | — | 直接指定 opencode 可执行文件，优先级高于 `OPENCODE_PREFIX`。 |
+| `HAI_OPENCODE_BIN` | — | 直接指定 opencode 可执行文件，优先级高于 PATH 和 `OPENCODE_PREFIX`。 |
+| `HAI_OPENCODE_VERSION` | — | 指定时启动前严格校验版本；本机固定 `1.18.32`。 |
+| `HAI_OPENCODE_LEGACY_CLI` | `0` | 设为 `1` 时不传 `--auto`，仅兼容旧版 CLI。1.18.32 使用 `0`。 |
 | `PI_AGENT_BIN` / `PI_BIN` | `<repo>/.pi-agent/node_modules/.bin/pi` | pi 可执行文件。 |
 | `HAI_CODEX_MODELS_CACHE` | `~/.codex/models_cache.json` | codex 模型目录缓存，会被复制进每个隔离的 `CODEX_HOME`。 |
 | `HAI_TERMINAL_BENCH_CACHE` | 工作区内 `.cache/terminal_bench/shared_trials` | terminal-bench 共享 trial 缓存。 |
 | `TAU2_DATA_DIR` | `third_party/tau3-bench/data` | tau2 数据目录。checkout 不在约定位置时用它指过去。 |
 | `TB_DOCKER` | `PATH` 上的 `docker` | docker 可执行文件路径。 |
 
-查找可执行文件时，**`PATH` 上已有的永远优先**于上面这些变量。
+OpenCode 的查找顺序为显式 `HAI_OPENCODE_BIN` → 仓库内固定的 `runtime/opencode-1.18.32/bin/opencode` → PATH → `OPENCODE_PREFIX`；
+显式路径不存在或版本不匹配会直接报错，不回退到另一版本。
+
+CRM 扩展配置见 [CRM 接入](CRM.zh-CN.md)，主要变量如下：
+
+| 变量 | 默认 | 说明 |
+| --- | --- | --- |
+| `HAI_DAB_ROOT` | `third_party/dataagentbench` | CRMarenapro 原始任务、数据与官方 grader 所在 checkout。 |
+| `HAI_CRM_RUNTIME_ROOT` | 根据二进制推断 | 原生求解/编辑器沙箱可只读访问的 OpenCode 运行时目录。 |
+| `HAI_CRM_POSTGRES_PORT` | `55432` | 宿主 PostgreSQL 端口；原生 agent 经临时受限代理访问。 |
+| `HAI_CRM_MODEL` | `crm/glm-5.2` | CRM 原生求解模型。 |
+| `HAI_MODEL` | 角色默认配置 | 覆盖分析、编辑等智能角色的模型；本机与求解模型保持一致。 |
 
 ---
 

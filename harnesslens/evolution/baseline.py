@@ -116,6 +116,11 @@ def build_baseline_fingerprint(
             "max_concurrency": MAX_ROLLOUT_CONCURRENCY,
             **BirdLimits().to_dict(),
         }
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    adapter = benchmark_adapter(root, config.cell)
+    extension_fields = adapter.baseline_fields(target_harness) if adapter else {}
+    if extension_fields:
+        rollout = {"repeats": TRAIN_ROLLOUT_REPEATS, **extension_fields["rollout"]}
     payload = {
         "schema": f"harnesslens.{config.cell}-baseline.v1",
         "benchmark": config.benchmark,
@@ -137,6 +142,9 @@ def build_baseline_fingerprint(
         },
         "runtime_file_sha256": files,
     }
+    if extension_fields:
+        payload.update(extension_fields)
+        payload["rollout"] = rollout
     payload["fingerprint_sha256"] = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()

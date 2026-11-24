@@ -1,0 +1,11 @@
+schema = "harnesslens.business-benchmark.v1"
+id = "example_arithmetic"
+tasks = "tasks.jsonl"
+train = ["sum_a", "sum_b"]
+test = ["sum_holdout"]
+id_field = "id"
+prompt_field = "question"
+public_fields = ["question"]
+reference_field = "answer"
+grader = "exact"
+max_concurrency = 2

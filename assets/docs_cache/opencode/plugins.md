@@ -1,3 +1,8 @@
+---
+title: Plugins
+description: Write your own plugins to extend OpenCode.
+---
+
 Plugins allow you to extend OpenCode by hooking into various events and customizing behavior. You can create plugins to add new features, integrate with external services, or modify OpenCode's default behavior.
 
 For examples, check out the [plugins](/docs/ecosystem#plugins) created by the community.
@@ -193,6 +198,7 @@ Plugins can subscribe to events as seen below in the Examples section. Here is a
 
 #### Tool Events
 
+- `tool.execute.after`
 - `tool.execute.before`
 
 #### TUI Events

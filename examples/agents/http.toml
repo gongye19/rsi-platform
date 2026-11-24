@@ -1,0 +1,24 @@
+[agent]
+type = "http"
+name = "my-business-service"
+revision = "v1"
+url = "https://your-business-service.example/solve"
+token_env = "BUSINESS_AGENT_TOKEN"
+timeout = 600
+answer_path = "data.answer"
+usage_path = "data.usage.total_tokens"
+trace_path = "data.messages"
+# api_calls_path = "data.api_calls"
+# [agent.headers_env]
+# X-API-Key = "BUSINESS_AGENT_API_KEY"
+
+[agent.body]
+question = "{prompt}"
+# Map to the service's EXISTING idempotency field, if it has one.
+# request_id = "{request_id}"
+
+[agent.body.options]
+instructions = "{harness_files}"
+
+[capabilities]
+channels = ["instructions_rules"]

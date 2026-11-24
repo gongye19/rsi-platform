@@ -1,0 +1,175 @@
+{
+  "schema": "harnesslens.opencode-components.v1",
+  "opencode_version": "1.18.32",
+  "components": [
+    {
+      "number": 1,
+      "id": "instructions_rules",
+      "name": "常驻规则",
+      "edit_surfaces": [
+        "AGENTS.md",
+        "instructions"
+      ]
+    },
+    {
+      "number": 2,
+      "id": "system_prompt",
+      "name": "系统提示词",
+      "edit_surfaces": [
+        "agent.<name>.prompt",
+        "experimental.chat.system.transform"
+      ]
+    },
+    {
+      "number": 3,
+      "id": "skills",
+      "name": "Skill",
+      "edit_surfaces": [
+        ".opencode/skills/*/SKILL.md",
+        "skills.paths",
+        "skills.urls",
+        "skill companion files"
+      ]
+    },
+    {
+      "number": 4,
+      "id": "agent_definitions",
+      "name": "Agent 定义",
+      "edit_surfaces": [
+        "agent role",
+        "agent description",
+        "agent mode"
+      ]
+    },
+    {
+      "number": 5,
+      "id": "execution_policy",
+      "name": "执行与调度",
+      "edit_surfaces": [
+        "default_agent",
+        "agent.<name>.steps",
+        "subagent_depth"
+      ]
+    },
+    {
+      "number": 6,
+      "id": "tool_description",
+      "name": "工具描述",
+      "edit_surfaces": [
+        "tool definition description"
+      ]
+    },
+    {
+      "number": 7,
+      "id": "tool_parameter_description",
+      "name": "工具参数指导",
+      "edit_surfaces": [
+        "parameter descriptions",
+        "compatible parameter schema"
+      ]
+    },
+    {
+      "number": 8,
+      "id": "tool_availability",
+      "name": "工具可用性",
+      "edit_surfaces": [
+        "tools",
+        "agent.<name>.tools",
+        "normalized tool visibility"
+      ]
+    },
+    {
+      "number": 9,
+      "id": "permissions",
+      "name": "权限规则",
+      "edit_surfaces": [
+        "permission",
+        "agent.<name>.permission"
+      ]
+    },
+    {
+      "number": 10,
+      "id": "commands",
+      "name": "Command",
+      "edit_surfaces": [
+        "command",
+        ".opencode/commands/*.md"
+      ]
+    },
+    {
+      "number": 11,
+      "id": "reference_sources",
+      "name": "参考资料接入",
+      "edit_surfaces": [
+        "references",
+        "reference documentation and loading paths"
+      ]
+    },
+    {
+      "number": 12,
+      "id": "context_management",
+      "name": "上下文管理",
+      "edit_surfaces": [
+        "compaction",
+        "tool_output",
+        "attachment processing"
+      ]
+    },
+    {
+      "number": 13,
+      "id": "custom_tools",
+      "name": "自定义工具",
+      "edit_surfaces": [
+        ".opencode/tools",
+        "tool implementations and helper scripts"
+      ]
+    },
+    {
+      "number": 14,
+      "id": "plugin_tool_system",
+      "name": "插件执行逻辑",
+      "edit_surfaces": [
+        "plugin",
+        ".opencode/plugins",
+        "hooks without another semantic owner"
+      ]
+    },
+    {
+      "number": 15,
+      "id": "mcp_servers",
+      "name": "MCP 接入",
+      "edit_surfaces": [
+        "mcp"
+      ]
+    },
+    {
+      "number": 16,
+      "id": "experimental_policies",
+      "name": "实验性策略",
+      "edit_surfaces": [
+        "explicitly admitted experimental behavior fields"
+      ]
+    }
+  ],
+  "proposal_only": [
+    "diagnostic",
+    "file_attachments",
+    "model_provider",
+    "runtime_env",
+    "tool_return"
+  ],
+  "legacy_aliases": {
+    "agent_tool_config": "tool_availability",
+    "builtin_tools": "tool_availability",
+    "compaction_config": "context_management",
+    "project_instructions": "instructions_rules",
+    "instructions": "instructions_rules",
+    "agents": "agent_definitions",
+    "tool_parameters": "tool_parameter_description",
+    "references": "reference_sources",
+    "context": "context_management",
+    "plugins": "plugin_tool_system",
+    "mcp": "mcp_servers",
+    "experimental": "experimental_policies"
+  }
+}

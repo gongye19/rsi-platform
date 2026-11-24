@@ -33,6 +33,24 @@ PAIRED_RETRY_REVIEW_RESERVE = 7
 MAX_TARGETED_RETRY_ROUNDS = 3
 
 
+def _target_model(cell):
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    from harnesslens.core.config import repo_root
+    adapter = benchmark_adapter(repo_root(), cell)
+    if adapter:
+        return adapter.target_model()
+    return "deepseek/deepseek-v4-flash"
+
+
+def _runtime_limits(cell):
+    from harnesslens.benchmarks.adapters import benchmark_adapter
+    from harnesslens.core.config import repo_root
+    adapter = benchmark_adapter(repo_root(), cell)
+    if adapter:
+        return adapter.limits().to_dict()
+    return ROLLOUT_RUNTIME_LIMITS
+
+
 @dataclass(frozen=True)
 class RolloutResult:
     output: Mapping[str, Any]
@@ -361,10 +379,10 @@ class RolloutModule:
                 creation_count=trial_count,
                 metadata={
                     "harness": self.harness,
-                    "model": "deepseek/deepseek-v4-flash",
+                    "model": _target_model(self.config.cell),
                     "task_ids": list(task_ids),
                     "repeats": repeats,
-                    **ROLLOUT_RUNTIME_LIMITS,
+                    **_runtime_limits(self.config.cell),
                 },
             )
             self.budget.claim_launch(job_id)
@@ -429,10 +447,10 @@ class RolloutModule:
                 creation_count=1,
                 metadata={
                     "harness": self.harness,
-                    "model": "deepseek/deepseek-v4-flash",
+                    "model": _target_model(self.config.cell),
                     "trajectory_path": str(current.trajectory_path),
                     "purpose": "repair incomplete retained rollout trace",
-                    **ROLLOUT_RUNTIME_LIMITS,
+                    **_runtime_limits(self.config.cell),
                 },
             )
             self.budget.claim_launch(repair_job)

@@ -1,0 +1,841 @@
+{
+  "schema_version": "1.0",
+  "id": "harnesslens-opencode-1-18-32-example",
+  "title": "HarnessLens · OpenCode 1.18.32",
+  "algorithm": "HarnessLens",
+  "source": "example",
+  "profile": {
+    "id": "opencode-1.18.32-16",
+    "runtime": "OpenCode",
+    "version": "1.18.32"
+  },
+  "context": {},
+  "tasks": [],
+  "notice": "HarnessLens交互演示：组件修改、screen/confirm评测、晋升判定和分数/耗时/Token均为合成数据，未运行真实训练。16类为固定业务分类；未配置的类别保持空版本。判定以完整配置为单位，不代表单组件贡献。",
+  "components": [
+    {
+      "id": "instructions_rules",
+      "name": "Instructions",
+      "description": "常驻规则",
+      "baseline_version_id": "instructions_rules-v0"
+    },
+    {
+      "id": "system_prompt",
+      "name": "System Prompt",
+      "description": "系统提示词",
+      "baseline_version_id": "system_prompt-v0"
+    },
+    {
+      "id": "skills",
+      "name": "Skill",
+      "description": "技能与附属资源",
+      "baseline_version_id": "skills-v0"
+    },
+    {
+      "id": "agent_definitions",
+      "name": "Agent",
+      "description": "主代理与子代理定义",
+      "baseline_version_id": "agent_definitions-v0"
+    },
+    {
+      "id": "execution_policy",
+      "name": "Execution Policy",
+      "description": "执行与调度",
+      "baseline_version_id": "execution_policy-v0"
+    },
+    {
+      "id": "tool_description",
+      "name": "Tool Description",
+      "description": "工具描述",
+      "baseline_version_id": "tool_description-v0"
+    },
+    {
+      "id": "tool_parameter_description",
+      "name": "Tool Parameters",
+      "description": "工具参数指导",
+      "baseline_version_id": "tool_parameter_description-v0"
+    },
+    {
+      "id": "tool_availability",
+      "name": "Tool Access",
+      "description": "工具可用性",
+      "baseline_version_id": "tool_availability-v0"
+    },
+    {
+      "id": "permissions",
+      "name": "Permissions",
+      "description": "权限规则",
+      "baseline_version_id": "permissions-v0"
+    },
+    {
+      "id": "commands",
+      "name": "Command",
+      "description": "命令",
+      "baseline_version_id": "commands-v0"
+    },
+    {
+      "id": "reference_sources",
+      "name": "References",
+      "description": "参考资料接入",
+      "baseline_version_id": "reference_sources-v0"
+    },
+    {
+      "id": "context_management",
+      "name": "Context",
+      "description": "上下文管理",
+      "baseline_version_id": "context_management-v0"
+    },
+    {
+      "id": "custom_tools",
+      "name": "Custom Tool",
+      "description": "自定义工具",
+      "baseline_version_id": "custom_tools-v0"
+    },
+    {
+      "id": "plugin_tool_system",
+      "name": "Plugin",
+      "description": "插件执行逻辑",
+      "baseline_version_id": "plugin_tool_system-v0"
+    },
+    {
+      "id": "mcp_servers",
+      "name": "MCP",
+      "description": "MCP接入",
+      "baseline_version_id": "mcp_servers-v0"
+    },
+    {
+      "id": "experimental_policies",
+      "name": "Experimental",
+      "description": "实验性策略",
+      "baseline_version_id": "experimental_policies-v0"
+    }
+  ],
+  "versions": [
+    {
+      "id": "instructions_rules-v0",
+      "component_id": "instructions_rules",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "ada64a3ad1cd8539a1819053a2aa65b2a3e1cbd08c3bf7828156377f2745c2be",
+      "present": true,
+      "files": [
+        {
+          "path": "AGENTS.md",
+          "change": "added",
+          "diff": "--- before/AGENTS.md\n+++ after/AGENTS.md\n@@ -0,0 +1 @@\n+Use the available retrieval and database tools to answer with cited evidence.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "system_prompt-v0",
+      "component_id": "system_prompt",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "88dcc502a45006dc5dfbd9b2405b00185a5d342fa985e55b09c5a6602eeba4ca",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/agent/build/prompt",
+          "change": "added",
+          "diff": "--- before/opencode.json#/agent/build/prompt\n+++ after/opencode.json#/agent/build/prompt\n@@ -0,0 +1 @@\n+You are a research question-answering assistant.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "skills-v0",
+      "component_id": "skills",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "f28ff48536bb3e6954e7146d5d9f6b005743b40915df962f23f6a43c92b0895d",
+      "present": true,
+      "files": [
+        {
+          "path": ".opencode/skills/research-qa/SKILL.md",
+          "change": "added",
+          "diff": "--- before/.opencode/skills/research-qa/SKILL.md\n+++ after/.opencode/skills/research-qa/SKILL.md\n@@ -0,0 +1,5 @@\n+---\n+name: research-qa\n+description: Answer research questions from tools.\n+---\n+Retrieve supporting evidence before answering.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "agent_definitions-v0",
+      "component_id": "agent_definitions",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "93dd6f2233b6f447e28713d5a9a5246da6c7a3a5fe1ba2b0b2bdb6c30fa73706",
+      "present": true,
+      "files": [
+        {
+          "path": ".opencode/agents/research.md",
+          "change": "added",
+          "diff": "--- before/.opencode/agents/research.md\n+++ after/.opencode/agents/research.md\n@@ -0,0 +1,5 @@\n+---\n+description: Inspect research evidence\n+mode: subagent\n+---\n+Return cited findings.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "execution_policy-v0",
+      "component_id": "execution_policy",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "b6fb09ad560da9c2c40e4b3b5406b6738c44dad6984471074b1dd8ae26ee5440",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/subagent_depth",
+          "change": "added",
+          "diff": "--- before/opencode.json#/subagent_depth\n+++ after/opencode.json#/subagent_depth\n@@ -0,0 +1 @@\n+1\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "tool_description-v0",
+      "component_id": "tool_description",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "tool_parameter_description-v0",
+      "component_id": "tool_parameter_description",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "tool_availability-v0",
+      "component_id": "tool_availability",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "permissions-v0",
+      "component_id": "permissions",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "52c5857d6c6c7cc9670560d0e4b0b4b64bdd92cdf67f92a066168d6cabf49487",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/permission",
+          "change": "added",
+          "diff": "--- before/opencode.json#/permission\n+++ after/opencode.json#/permission\n@@ -0,0 +1 @@\n+{\"bash\": \"deny\", \"read\": \"allow\"}\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "commands-v0",
+      "component_id": "commands",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "reference_sources-v0",
+      "component_id": "reference_sources",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "context_management-v0",
+      "component_id": "context_management",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "a441bbdaf3756d905ed436c5e7f1d03716f8bd4f0b63d173c7dfdf4482c27c06",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/compaction",
+          "change": "added",
+          "diff": "--- before/opencode.json#/compaction\n+++ after/opencode.json#/compaction\n@@ -0,0 +1 @@\n+{\"auto\": true, \"prune\": false}\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "custom_tools-v0",
+      "component_id": "custom_tools",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "plugin_tool_system-v0",
+      "component_id": "plugin_tool_system",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "mcp_servers-v0",
+      "component_id": "mcp_servers",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "experimental_policies-v0",
+      "component_id": "experimental_policies",
+      "label": "V0",
+      "parent_id": null,
+      "step": 0,
+      "round": 0,
+      "digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "present": false,
+      "files": [],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "system_prompt-v1",
+      "component_id": "system_prompt",
+      "label": "V1",
+      "parent_id": "system_prompt-v0",
+      "step": 3,
+      "round": 1,
+      "digest": "f7d172791ac562a72af1b58b3dd13975bce5c2b94df884cbadf2bac481a20385",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/agent/build/prompt",
+          "change": "modified",
+          "diff": "--- before/opencode.json#/agent/build/prompt\n+++ after/opencode.json#/agent/build/prompt\n@@ -1 +1 @@\n-You are a research question-answering assistant.\n+You are a research assistant. Separate retrieval evidence from conclusions and cite the sources.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "skills-v1",
+      "component_id": "skills",
+      "label": "V1",
+      "parent_id": "skills-v0",
+      "step": 3,
+      "round": 1,
+      "digest": "4352d0b8ca2312935c9846b58f979300b294c3ad4f998e7a68b2716174d6ab86",
+      "present": true,
+      "files": [
+        {
+          "path": ".opencode/skills/research-qa/SKILL.md",
+          "change": "modified",
+          "diff": "--- before/.opencode/skills/research-qa/SKILL.md\n+++ after/.opencode/skills/research-qa/SKILL.md\n@@ -1,5 +1,5 @@\n ---\n name: research-qa\n-description: Answer research questions from tools.\n+description: Multi-source research question answering\n ---\n-Retrieve supporting evidence before answering.\n+Inspect schemas, retrieve evidence, reconcile entities, and cite sources.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "system_prompt-v2",
+      "component_id": "system_prompt",
+      "label": "V2",
+      "parent_id": "system_prompt-v1",
+      "step": 8,
+      "round": 2,
+      "digest": "ae8cfb3bc9d9976cb98bc6fa685f400514ef1f7b97b425d4efda319455af975d",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/agent/build/prompt",
+          "change": "modified",
+          "diff": "--- before/opencode.json#/agent/build/prompt\n+++ after/opencode.json#/agent/build/prompt\n@@ -1 +1 @@\n-You are a research assistant. Separate retrieval evidence from conclusions and cite the sources.\n+Verify every finding with two independent tool calls.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "tool_description-v1",
+      "component_id": "tool_description",
+      "label": "V1",
+      "parent_id": "tool_description-v0",
+      "step": 8,
+      "round": 2,
+      "digest": "28af60543cac96d1aaac4d87ad5e390c7ada22a7ea1ed278908eaf71b31b4781",
+      "present": true,
+      "files": [
+        {
+          "path": "manifest.json#/tool_desc_patches/search/desc",
+          "change": "added",
+          "diff": "--- before/manifest.json#/tool_desc_patches/search/desc\n+++ after/manifest.json#/tool_desc_patches/search/desc\n@@ -0,0 +1 @@\n+Search indexed research documents; verify the page citation.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "tool_description-v2",
+      "component_id": "tool_description",
+      "label": "V2",
+      "parent_id": "tool_description-v0",
+      "step": 12,
+      "round": 3,
+      "digest": "0d8ad584ab29d321c3cc62e140bf5288eac28c5393b394fb86295cf9ff75ba77",
+      "present": true,
+      "files": [
+        {
+          "path": "manifest.json#/tool_desc_patches/search/desc",
+          "change": "added",
+          "diff": "--- before/manifest.json#/tool_desc_patches/search/desc\n+++ after/manifest.json#/tool_desc_patches/search/desc\n@@ -0,0 +1 @@\n+Retrieve relevant document pages with source and page identifiers.\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    },
+    {
+      "id": "context_management-v1",
+      "component_id": "context_management",
+      "label": "V1",
+      "parent_id": "context_management-v0",
+      "step": 12,
+      "round": 3,
+      "digest": "9662d67321e124cea597c0b35f9a289ec0d667f1717924f64d823d8d0e9df95a",
+      "present": true,
+      "files": [
+        {
+          "path": "opencode.json#/compaction",
+          "change": "modified",
+          "diff": "--- before/opencode.json#/compaction\n+++ after/opencode.json#/compaction\n@@ -1 +1 @@\n-{\"auto\": true, \"prune\": false}\n+{\"auto\":true,\"prune\":true,\"preserve_recent_tokens\":4096}\n"
+        }
+      ],
+      "notes": "合成交互演示配置。",
+      "evidence": {
+        "trace": "[合成示例] 候选已通过通道加载检查；screen和confirm在各自任务上比较候选与现任。此文本不是实际执行轨迹。"
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "baseline",
+      "label": "baseline",
+      "step": 0,
+      "round": 0,
+      "components": {
+        "instructions_rules": "instructions_rules-v0",
+        "system_prompt": "system_prompt-v0",
+        "skills": "skills-v0",
+        "agent_definitions": "agent_definitions-v0",
+        "execution_policy": "execution_policy-v0",
+        "tool_description": "tool_description-v0",
+        "tool_parameter_description": "tool_parameter_description-v0",
+        "tool_availability": "tool_availability-v0",
+        "permissions": "permissions-v0",
+        "commands": "commands-v0",
+        "reference_sources": "reference_sources-v0",
+        "custom_tools": "custom_tools-v0",
+        "plugin_tool_system": "plugin_tool_system-v0",
+        "mcp_servers": "mcp_servers-v0",
+        "experimental_policies": "experimental_policies-v0",
+        "context_management": "context_management-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 120,
+        "tokens": 25000
+      },
+      "metrics": {
+        "score": 62
+      }
+    },
+    {
+      "id": "candidate-r1",
+      "label": "candidate-r1",
+      "step": 3,
+      "round": 1,
+      "components": {
+        "instructions_rules": "instructions_rules-v0",
+        "system_prompt": "system_prompt-v1",
+        "skills": "skills-v1",
+        "agent_definitions": "agent_definitions-v0",
+        "execution_policy": "execution_policy-v0",
+        "tool_description": "tool_description-v0",
+        "tool_parameter_description": "tool_parameter_description-v0",
+        "tool_availability": "tool_availability-v0",
+        "permissions": "permissions-v0",
+        "commands": "commands-v0",
+        "reference_sources": "reference_sources-v0",
+        "custom_tools": "custom_tools-v0",
+        "plugin_tool_system": "plugin_tool_system-v0",
+        "mcp_servers": "mcp_servers-v0",
+        "experimental_policies": "experimental_policies-v0",
+        "context_management": "context_management-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 110,
+        "tokens": 23000
+      },
+      "metrics": {
+        "score": 71
+      }
+    },
+    {
+      "id": "candidate-r2",
+      "label": "candidate-r2",
+      "step": 8,
+      "round": 2,
+      "components": {
+        "instructions_rules": "instructions_rules-v0",
+        "system_prompt": "system_prompt-v2",
+        "skills": "skills-v1",
+        "agent_definitions": "agent_definitions-v0",
+        "execution_policy": "execution_policy-v0",
+        "tool_description": "tool_description-v1",
+        "tool_parameter_description": "tool_parameter_description-v0",
+        "tool_availability": "tool_availability-v0",
+        "permissions": "permissions-v0",
+        "commands": "commands-v0",
+        "reference_sources": "reference_sources-v0",
+        "custom_tools": "custom_tools-v0",
+        "plugin_tool_system": "plugin_tool_system-v0",
+        "mcp_servers": "mcp_servers-v0",
+        "experimental_policies": "experimental_policies-v0",
+        "context_management": "context_management-v0"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 145,
+        "tokens": 32000
+      },
+      "metrics": {
+        "score": 68
+      }
+    },
+    {
+      "id": "candidate-r3",
+      "label": "candidate-r3",
+      "step": 12,
+      "round": 3,
+      "components": {
+        "instructions_rules": "instructions_rules-v0",
+        "system_prompt": "system_prompt-v1",
+        "skills": "skills-v1",
+        "agent_definitions": "agent_definitions-v0",
+        "execution_policy": "execution_policy-v0",
+        "tool_description": "tool_description-v2",
+        "tool_parameter_description": "tool_parameter_description-v0",
+        "tool_availability": "tool_availability-v0",
+        "permissions": "permissions-v0",
+        "commands": "commands-v0",
+        "reference_sources": "reference_sources-v0",
+        "custom_tools": "custom_tools-v0",
+        "plugin_tool_system": "plugin_tool_system-v0",
+        "mcp_servers": "mcp_servers-v0",
+        "experimental_policies": "experimental_policies-v0",
+        "context_management": "context_management-v1"
+      },
+      "execution": {
+        "status": "completed",
+        "seconds": 100,
+        "tokens": 22000
+      },
+      "metrics": {
+        "score": 77
+      }
+    }
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "round": 0,
+      "kind": "baseline",
+      "label": "基础配置",
+      "bundle_id": "baseline",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 1,
+      "round": 0,
+      "kind": "discover",
+      "label": "检查编辑通道",
+      "bundle_id": "baseline",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 2,
+      "round": 0,
+      "kind": "analyze",
+      "label": "分析检索与查询轨迹",
+      "bundle_id": "baseline",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 3,
+      "round": 1,
+      "kind": "propose",
+      "label": "生成候选：Prompt / Skill",
+      "bundle_id": "candidate-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 4,
+      "round": 1,
+      "kind": "preflight",
+      "label": "检查候选组件加载",
+      "bundle_id": "candidate-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 5,
+      "round": 1,
+      "kind": "evaluate",
+      "label": "Screen 配对评测",
+      "bundle_id": "candidate-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 6,
+      "round": 1,
+      "kind": "confirm",
+      "label": "Confirm 独立复验",
+      "bundle_id": "candidate-r1",
+      "active_bundle_id": "baseline"
+    },
+    {
+      "index": 7,
+      "round": 1,
+      "kind": "select",
+      "label": "晋升候选",
+      "bundle_id": "candidate-r1",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 8,
+      "round": 2,
+      "kind": "propose",
+      "label": "生成候选：Prompt / Tool Description",
+      "bundle_id": "candidate-r2",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 9,
+      "round": 2,
+      "kind": "preflight",
+      "label": "检查候选组件加载",
+      "bundle_id": "candidate-r2",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 10,
+      "round": 2,
+      "kind": "evaluate",
+      "label": "Screen 配对评测",
+      "bundle_id": "candidate-r2",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 11,
+      "round": 2,
+      "kind": "select",
+      "label": "未晋升，沿用上一版",
+      "bundle_id": "candidate-r2",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 12,
+      "round": 3,
+      "kind": "propose",
+      "label": "生成候选：Tool Description / Context",
+      "bundle_id": "candidate-r3",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 13,
+      "round": 3,
+      "kind": "preflight",
+      "label": "检查候选组件加载",
+      "bundle_id": "candidate-r3",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 14,
+      "round": 3,
+      "kind": "evaluate",
+      "label": "Screen 配对评测",
+      "bundle_id": "candidate-r3",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 15,
+      "round": 3,
+      "kind": "confirm",
+      "label": "Confirm 独立复验",
+      "bundle_id": "candidate-r3",
+      "active_bundle_id": "candidate-r1"
+    },
+    {
+      "index": 16,
+      "round": 3,
+      "kind": "select",
+      "label": "晋升候选",
+      "bundle_id": "candidate-r3",
+      "active_bundle_id": "candidate-r3"
+    }
+  ],
+  "decisions": [
+    {
+      "version_id": "system_prompt-v1",
+      "step": 7,
+      "scope": "bundle",
+      "outcome": "retained",
+      "reason": "完整候选经screen与confirm后晋升（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    },
+    {
+      "version_id": "skills-v1",
+      "step": 7,
+      "scope": "bundle",
+      "outcome": "retained",
+      "reason": "完整候选经screen与confirm后晋升（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    },
+    {
+      "version_id": "system_prompt-v2",
+      "step": 11,
+      "scope": "bundle",
+      "outcome": "not_retained",
+      "reason": "完整候选未晋升，沿用现任配置（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    },
+    {
+      "version_id": "tool_description-v1",
+      "step": 11,
+      "scope": "bundle",
+      "outcome": "not_retained",
+      "reason": "完整候选未晋升，沿用现任配置（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    },
+    {
+      "version_id": "tool_description-v2",
+      "step": 16,
+      "scope": "bundle",
+      "outcome": "retained",
+      "reason": "完整候选经screen与confirm后晋升（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    },
+    {
+      "version_id": "context_management-v1",
+      "step": 16,
+      "scope": "bundle",
+      "outcome": "retained",
+      "reason": "完整候选经screen与confirm后晋升（合成示例）。",
+      "evidence": "合成配置级比较，不声称单组件因果贡献。"
+    }
+  ]
+}

@@ -10,6 +10,7 @@ from typing import Any, Mapping, Sequence
 
 from harnesslens.core.artifacts import write_json
 from harnesslens.harnesses.tool_schema import patch_mcp_tool_schemas
+from harnesslens.harnesses.opencode_components import protocol_manifest
 
 
 PREFLIGHT_REPEAT_COUNT = 1
@@ -84,6 +85,7 @@ def build_runtime_load_report(
     return {
         "schema": "harnesslens.channel-load-report.v1",
         "harness": str(harness),
+        "component_protocol": protocol_manifest() if harness == "opencode" else None,
         "project_root": str(project),
         "project_instruction_files": instruction_files,
         "candidate_project_files": _candidate_project_files(manifest, project),
@@ -140,6 +142,9 @@ def validate_channel_preflight(
         )
     else:
         context = rows[0].get("model_context")
+        if rows[0].get("agent_transport") in {"python", "http"} and not rows[0].get("model_request_evidence"):
+            checks.append({"channel_id": "business_agent_evidence", "passed": False,
+                           "detail": "Business agent returned no actual model-request evidence; delivery alone does not verify harness loading. Configure api_calls_path from its existing traces."})
         if (
             not isinstance(context, Mapping)
             or context.get("schema") != "harnesslens.channel-load-report.v1"
@@ -197,12 +202,17 @@ def validate_channel_preflight(
                 )
                 checked_channels.update(channels & _MCP_CHANNELS)
             for channel_id in sorted(channels & _INSTRUCTION_CHANNELS):
+                channel_request = request_text
+                if channel_id == "system_prompt" and runtime_harness == "opencode":
+                    channel_request = _model_request_text(rows[0], system_only=True)
+                    checks.append({"channel_id": "system_message_evidence", "passed": bool(channel_request.strip()),
+                                   "detail": "Native system prompt requires actual system/developer request context."})
                 checks.append(
                     _check_instruction_channel(
                         channel_id,
                         candidate,
                         context,
-                        request_text=request_text,
+                        request_text=channel_request,
                     )
                 )
                 checked_channels.add(channel_id)
@@ -436,6 +446,7 @@ def _check_instruction_channel(
         and str(item.get("scope") or "") == "project"
         and str(item.get("change") or "") != "deleted"
         and _instruction_file_matches(channel_id, str(item.get("path") or ""))
+        and _instruction_config_matches(channel_id, item)
     ]
     loaded_files = {
         str(item.get("path") or ""): str(item.get("content") or "")
@@ -443,7 +454,7 @@ def _check_instruction_channel(
         if isinstance(item, Mapping)
     }
     file_checks = [
-        _instruction_file_materialized(item, loaded_files, context)
+        _instruction_file_materialized(item, loaded_files, context, channel_id=channel_id)
         for item in expected_files
     ]
     manifest = candidate.get("manifest_delta") or {}
@@ -487,6 +498,22 @@ def _check_instruction_channel(
     }
 
 
+def _instruction_config_matches(channel_id: str, item: Mapping[str, Any]) -> bool:
+    if item.get("path") != "opencode.json":
+        return True
+    try:
+        config = json.loads(str(item.get("content") or ""))
+    except json.JSONDecodeError:
+        return True  # The materialization check reports malformed config.
+    if not isinstance(config, Mapping):
+        return True
+    if channel_id == "instructions_rules":
+        return "instructions" in config
+    if channel_id == "system_prompt":
+        return any(isinstance(value, Mapping) and "prompt" in value for value in (config.get("agent") or {}).values())
+    return True
+
+
 def _instruction_file_matches(channel_id: str, path: str) -> bool:
     if channel_id == "developer_instructions":
         return path == ".codex/config.toml"
@@ -504,6 +531,7 @@ def _instruction_file_materialized(
     item: Mapping[str, Any],
     loaded_files: Mapping[str, str],
     context: Mapping[str, Any],
+    *, channel_id: str = "instructions_rules",
 ) -> bool:
     path = str(item.get("path") or "")
     content = str(item.get("content") or "").strip()
@@ -512,9 +540,15 @@ def _instruction_file_materialized(
     if path == "opencode.json":
         try:
             expected = json.loads(content)
-            loaded = json.loads(loaded_files.get(path, ""))
+            loaded = json.loads(loaded_files.get(path, "{}"))
         except (json.JSONDecodeError, TypeError):
             return False
+        if channel_id == "system_prompt":
+            prompts = {name: value["prompt"] for name, value in (expected.get("agent") or {}).items()
+                       if isinstance(value, Mapping) and isinstance(value.get("prompt"), str) and value["prompt"].strip()}
+            effective = (context.get("effective_config") or {}).get("agent", {})
+            return bool(prompts) and all(isinstance(effective.get(name), Mapping)
+                                        and effective[name].get("prompt") == text for name, text in prompts.items())
         expected_entries = expected.get("instructions") or []
         effective_entries = (context.get("effective_config") or {}).get(
             "instructions"
@@ -690,7 +724,7 @@ def _retained_rows(rollout: Mapping[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _model_request_text(row: Mapping[str, Any]) -> str:
+def _model_request_text(row: Mapping[str, Any], *, system_only: bool = False) -> str:
     reference = str(row.get("api_calls_jsonl") or "").strip()
     if not reference:
         return ""
@@ -714,6 +748,11 @@ def _model_request_text(row: Mapping[str, Any]) -> str:
             continue
         request = entry.get("request")
         if isinstance(request, Mapping):
+            if system_only:
+                messages = request.get("messages", request.get("input", []))
+                request = {"system": request.get("system", ""), "instructions": request.get("instructions", ""),
+                           "messages": [m for m in messages if isinstance(m, Mapping) and m.get("role") in {"system", "developer"}]
+                           if isinstance(messages, list) else []}
             request_strings.extend(_nested_request_strings(request))
     return "\n".join(request_strings)
 
@@ -762,6 +801,10 @@ def _instruction_request_values(
             except json.JSONDecodeError:
                 values.append(content)
             else:
+                if channel_id == "system_prompt":
+                    values.extend(agent["prompt"] for agent in (parsed.get("agent") or {}).values()
+                                  if isinstance(agent, Mapping) and isinstance(agent.get("prompt"), str))
+                    continue
                 values.extend(
                     value
                     for value in _json_instruction_strings(parsed)
