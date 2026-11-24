@@ -76,7 +76,13 @@ CRM 扩展配置见 [CRM 接入](CRM.zh-CN.md)，主要变量如下：
 | `HAI_MAX_ANALYSIS_CONCURRENCY` | `20` | 分析类角色的并发。 |
 | `HAI_PROVIDER_MAX_CONCURRENCY` | `20` | provider 代理层的全局并发闸。 |
 | `HAI_PROVIDER_TRIAL_MAX_CONCURRENCY` | `20` | 单个 trial 维度的 provider 并发闸。 |
-| `HAI_PROVIDER_RETRY_ATTEMPTS` | `4` | provider 失败重试次数。 |
+| `HAI_PROVIDER_RETRY_ATTEMPTS` | `4` | provider 单请求总尝试次数（含首次，最多6次）；仅重试临时限流、5xx及连接异常，明确额度不足/鉴权错误立即停止。 |
+| `HAI_PROVIDER_HTTP_TIMEOUT_S` | `300` | 单次上游 HTTP/socket 超时秒数；本机 CRM 配置180。 |
+| `HAI_PROVIDER_REQUEST_BUDGET_S` | `600` | 单请求重试预算秒数；本机配置420。流式读取也检查预算，整个 Agent 另有总超时。 |
+| `HAI_PROVIDER_SLOT_TIMEOUT_S` | `120` | 等待全局模型请求并发槽的超时秒数。 |
+| `HAI_CRM_MAX_CONCURRENCY` | `2` | CRM 任务并发上限，本机配置4；仍受 rollout/global provider 上限约束。 |
+| `HAI_CRM_TIMEOUT_S` | `600` | 原生 CRM 单 trial 总超时，本机配置900；业务 HTTP/Python 使用其接入配置的 timeout。 |
+| `HAI_INTELLIGENT_TIMEOUT_S` | 未额外限制 | OpenCode 分析/编辑等智能会话的额外总超时上限，本机配置1200。 |
 | `HAI_PROVIDER_SLOT_DIR` | `/tmp/harnesslens-provider-slots` | 跨进程并发槽的锁目录。 |
 | `HAI_PROVIDER_TRIAL_SLOT_DIR` | `/tmp/harnesslens-provider-trial-slots` | 同上，trial 维度。 |
 | `HAI_OPENCODE_TURN_RETRY_ATTEMPTS` | `0` | opencode 单轮重试次数。 |

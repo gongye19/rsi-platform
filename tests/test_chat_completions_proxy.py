@@ -25,18 +25,23 @@ def test_burst_rate_uses_short_exponential_backoff(monkeypatch):
     ]
 
 
-def test_quota_uses_bounded_long_backoff_and_retry_after(monkeypatch):
+def test_permanent_quota_stops_without_retry_even_with_retry_after(monkeypatch):
     monkeypatch.setenv("HAI_PROVIDER_RETRY_ATTEMPTS", "5")
     body = _error_body("insufficient_quota")
 
-    assert [_upstream_retry_policy(429, body, attempt) for attempt in range(1, 6)] == [
-        30.0,
-        60.0,
-        120.0,
-        120.0,
-        None,
-    ]
-    assert _upstream_retry_policy(429, body, 1, retry_after="45") == 45.0
+    assert all(_upstream_retry_policy(429, body, attempt) is None for attempt in range(1, 6))
+    assert _upstream_retry_policy(429, body, 1, retry_after="45") is None
+
+
+def test_rate_limit_honors_retry_after_and_refuses_excessive_wait(monkeypatch):
+    monkeypatch.setenv("HAI_PROVIDER_RETRY_ATTEMPTS", "3")
+    body = _error_body("rate_limit_exceeded")
+    assert _upstream_retry_policy(429, body, 1, retry_after="45") == 45
+    assert _upstream_retry_policy(429, body, 1, retry_after="3600") is None
+    assert _upstream_retry_policy(503, body, 1, retry_after="10") == 10
+    assert _upstream_retry_policy(429, _error_body("1302"), 1) == 5
+    assert _upstream_retry_policy(429, _error_body("1305"), 2) == 10
+    assert _upstream_retry_policy(429, _error_body("1310"), 1, retry_after="10") is None
 
 
 def test_transient_server_errors_use_bounded_backoff(monkeypatch):

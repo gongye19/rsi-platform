@@ -156,7 +156,7 @@ ALLOWED_HOSTS = re.compile(
         | proxy | host\.docker\.internal
         # public infrastructure this project genuinely talks to
         | api\.deepseek\.com | api\.anthropic\.com | api\.openai\.com
-        | open\.bigmodel\.cn
+        | open\.bigmodel\.cn | docs\.bigmodel\.cn
         | developers\.openai\.com | opencode\.ai
         | archive\.ubuntu\.com | (?:[a-z0-9-]+\.)*astral\.sh
         | (?:[a-z0-9-]+\.)*(?:github\.com|huggingface\.co)

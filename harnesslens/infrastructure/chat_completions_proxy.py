@@ -24,6 +24,7 @@ import http.server
 import fcntl
 import json
 import os
+import random
 import signal
 import socketserver
 import ssl
@@ -32,6 +33,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
 KEY = ""
@@ -44,7 +46,10 @@ _counter_lock = threading.Lock()
 _log_lock = threading.Lock()
 _active_requests = 0
 _active_cond = threading.Condition()
-_RETRYABLE_429_CODES = {"insufficient_quota", "limit_burst_rate"}
+# Provider-specific meanings verified against https://docs.bigmodel.cn/cn/faq/api-code.
+_RETRYABLE_429_CODES = {"limit_burst_rate", "rate_limit_exceeded", "rate_limit_error", "too_many_requests", "1302", "1305"}
+_PERMANENT_QUOTA_CODES = {"insufficient_quota", "billing_disabled", "quota_exhausted", "insufficient_balance",
+                          "1113", "1308", "1309", "1310", "1311", *map(str, range(1313, 1322))}
 _TRANSIENT_UPSTREAM_STATUSES = {500, 502, 503, 504}
 
 
@@ -64,6 +69,9 @@ def _provider_error_code(body):
 def _upstream_retry_policy(status, body, attempt, retry_after=""):
     """Return a bounded retry delay, or None when the error must be relayed."""
     status = int(status)
+    code = _provider_error_code(body).strip().lower()
+    if status == 429 and code in _PERMANENT_QUOTA_CODES:
+        return None
     if status in _TRANSIENT_UPSTREAM_STATUSES:
         try:
             maximum_attempts = int(os.environ.get("HAI_PROVIDER_RETRY_ATTEMPTS", "4"))
@@ -72,11 +80,13 @@ def _upstream_retry_policy(status, body, attempt, retry_after=""):
         maximum_attempts = max(1, min(maximum_attempts, 6))
         if int(attempt) >= maximum_attempts:
             return None
-        return min(5.0 * (2 ** (int(attempt) - 1)), 60.0)
+        delay = min(5.0 * (2 ** (int(attempt) - 1)), 60.0)
+        advised = _retry_after_seconds(retry_after)
+        return max(delay, advised or 0) if (advised or 0) <= 120 else None
     if status != 429:
         return None
-    code = _provider_error_code(body)
-    if code not in _RETRYABLE_429_CODES:
+    advised = _retry_after_seconds(retry_after)
+    if code not in _RETRYABLE_429_CODES and advised is None:
         return None
     try:
         maximum_attempts = int(os.environ.get("HAI_PROVIDER_RETRY_ATTEMPTS", "4"))
@@ -85,13 +95,31 @@ def _upstream_retry_policy(status, body, attempt, retry_after=""):
     maximum_attempts = max(1, min(maximum_attempts, 6))
     if int(attempt) >= maximum_attempts:
         return None
-    base = 5.0 if code == "limit_burst_rate" else 30.0
-    delay = min(base * (2 ** (int(attempt) - 1)), 120.0)
+    delay = min(5.0 * (2 ** (int(attempt) - 1)), 60.0)
+    return max(delay, advised or 0) if (advised or 0) <= 120 else None
+
+
+def _retry_after_seconds(value):
+    if not value:
+        return None
     try:
-        delay = max(delay, float(retry_after or 0))
-    except ValueError:
-        pass
-    return delay
+        return max(0.0, float(value))
+    except (ValueError, TypeError):
+        try:
+            return max(0.0, parsedate_to_datetime(value).timestamp() - time.time())
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+
+def _jitter(delay):
+    return delay + random.uniform(0, min(1.0, delay * .1))
+
+
+def _seconds(name, default):
+    value = float(os.environ.get(name, default))
+    if not 0 < value <= 7200:
+        raise ValueError(f"{name} must be between 0 and 7200 seconds")
+    return value
 
 
 def _upstream_exception_retry_delay(attempt):
@@ -117,7 +145,7 @@ def _provider_slot_count():
 def _acquire_provider_slot():
     root = os.environ.get("HAI_PROVIDER_SLOT_DIR", "/tmp/harnesslens-provider-slots")
     os.makedirs(root, exist_ok=True)
-    deadline = time.monotonic() + 900.0
+    deadline = time.monotonic() + _seconds("HAI_PROVIDER_SLOT_TIMEOUT_S", 120)
     while time.monotonic() < deadline:
         for index in range(_provider_slot_count()):
             fd = os.open(os.path.join(root, f"slot-{index:02d}.lock"), os.O_RDWR | os.O_CREAT, 0o600)
@@ -247,6 +275,7 @@ def _assemble_stream(buf_text):
     finish_reason = None
     usage = None
     role = "assistant"
+    stream_error = None
     for line in buf_text.splitlines():
         line = line.strip()
         if not line.startswith("data:"):
@@ -260,6 +289,8 @@ def _assemble_stream(buf_text):
             continue
         if chunk.get("model"):
             model = chunk["model"]
+        if chunk.get("error"):
+            stream_error = chunk["error"]
         if chunk.get("usage"):
             usage = chunk["usage"]
         for choice in chunk.get("choices", []) or []:
@@ -295,6 +326,8 @@ def _assemble_stream(buf_text):
                 "choices": [{"index": 0, "message": message, "finish_reason": finish_reason}]}
     if usage is not None:
         resp_obj["usage"] = usage
+    if stream_error:
+        resp_obj["error"] = stream_error
     return resp_obj, usage
 
 
@@ -329,7 +362,6 @@ class H(http.server.BaseHTTPRequestHandler):
         _begin_request()
         provider_slot = None
         try:
-            provider_slot = _acquire_provider_slot()
             role = self._role()
             path = self._upstream_path()
             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
@@ -344,16 +376,29 @@ class H(http.server.BaseHTTPRequestHandler):
             call_index = _next_call_index()
             ts = time.time()
 
+            try:
+                provider_slot = _acquire_provider_slot()
+            except TimeoutError as exc:
+                _log({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
+                      "upstream_status": 503, "error": "provider capacity wait timed out"})
+                self._error(exc)
+                return
+            deadline = time.monotonic() + _seconds("HAI_PROVIDER_REQUEST_BUDGET_S", 600)
             hdrs = {"Content-Type": "application/json", "Authorization": f"Bearer {KEY}"}
             upstream_attempt = 0
             while True:
+                if time.monotonic() >= deadline:
+                    _log({"ts": ts, "call_index": call_index, "request": req_json, "response": None,
+                          "upstream_status": 504, "error": "provider request retry budget exhausted"})
+                    self._error(TimeoutError("provider request retry budget exhausted"))
+                    return
                 upstream_attempt += 1
                 try:
                     r = urllib.request.Request(
                         _upstream_url(path), data=body, headers=hdrs, method="POST"
                     )
                     resp = urllib.request.urlopen(
-                        r, context=ssl.create_default_context(), timeout=300
+                        r, context=ssl.create_default_context(), timeout=min(_seconds("HAI_PROVIDER_HTTP_TIMEOUT_S", 300), max(.01, deadline - time.monotonic()))
                     )
                     break
                 except urllib.error.HTTPError as e:
@@ -365,7 +410,9 @@ class H(http.server.BaseHTTPRequestHandler):
                         upstream_attempt,
                         e.headers.get("Retry-After", ""),
                     )
-                    if delay is not None:
+                    e.close()
+                    delay = _jitter(delay) if delay is not None else None
+                    if delay is not None and time.monotonic() + delay < deadline:
                         _log(
                             {
                                 "ts": time.time(),
@@ -381,23 +428,25 @@ class H(http.server.BaseHTTPRequestHandler):
                         )
                         time.sleep(delay)
                         continue
-                    self.send_response(e.code)
-                    self.send_header(
-                        "Content-Type", e.headers.get("Content-Type", "application/json")
-                    )
-                    self.send_header("Content-Length", str(len(err_body)))
-                    self.end_headers()
-                    self.wfile.write(err_body)
                     _log({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
                           "model": (req_json or {}).get("model") if isinstance(req_json, dict) else None,
                           "request": req_json, "response": None, "usage": None,
                           "stream": stream, "upstream_status": e.code,
                           "upstream_attempt_count": upstream_attempt,
                           "error": err_body.decode("utf-8", "replace")[:2000]})
+                    try:
+                        self.send_response(e.code)
+                        self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
+                        self.send_header("Content-Length", str(len(err_body)))
+                        self.end_headers()
+                        self.wfile.write(err_body)
+                    except (OSError, ValueError):
+                        pass
                     return
                 except Exception as e:  # noqa: BLE001
                     delay = _upstream_exception_retry_delay(upstream_attempt)
-                    if delay is not None:
+                    delay = _jitter(delay) if delay is not None else None
+                    if delay is not None and time.monotonic() + delay < deadline:
                         _log(
                             {
                                 "ts": time.time(),
@@ -423,52 +472,78 @@ class H(http.server.BaseHTTPRequestHandler):
             ctype = resp.headers.get("Content-Type", "")
             is_stream = stream or "text/event-stream" in ctype
 
+            chunks = []
+            read_error = ""
+            stream_tail = b""
             if is_stream:
-                # Relay SSE chunks to the client AS THEY ARRIVE while buffering for assembly.
-                self.send_response(status)
-                self.send_header("Content-Type", ctype or "text/event-stream")
-                self.send_header("Cache-Control", "no-cache")
-                self.end_headers()
-                chunks = []
                 try:
-                    while True:
-                        chunk = resp.read(8192)
-                        if not chunk:
-                            break
-                        chunks.append(chunk)
+                    self.send_response(status)
+                    self.send_header("Content-Type", ctype or "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                except (OSError, ValueError):
+                    pass
+            try:
+                read = getattr(resp, "read1", resp.read)
+                while True:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("provider response exceeded request budget")
+                    chunk = read(8192)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    if is_stream:
                         try:
                             self.wfile.write(chunk)
                             self.wfile.flush()
-                        except Exception:  # noqa: BLE001 — client closed; keep buffering for the log
-                            pass
-                finally:
-                    resp.close()
-                buf_text = b"".join(chunks).decode("utf-8", "replace")
-                resp_obj, usage = _assemble_stream(buf_text)
-                _log({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
-                      "model": resp_obj.get("model") or ((req_json or {}).get("model") if isinstance(req_json, dict) else None),
-                      "request": req_json, "response": resp_obj, "usage": usage,
-                      "stream": True, "upstream_status": status,
-                      "upstream_attempt_count": upstream_attempt})
-            else:
-                resp_body = resp.read()
+                        except (OSError, ValueError):
+                            pass  # Retain upstream response even after client cancellation.
+                        tail = stream_tail + chunk
+                        done = any(line.strip() == b"data: [DONE]" for line in tail.split(b"\n")[:-1])
+                        stream_tail = tail[-128:]
+                        if done:
+                            break  # DONE ends SSE; do not wait for a delayed TCP EOF.
+            except Exception as exc:
+                read_error = type(exc).__name__ + ": " + str(exc)
+            finally:
                 resp.close()
-                self.send_response(status)
-                self.send_header("Content-Type", ctype or "application/json")
-                self.send_header("Content-Length", str(len(resp_body)))
-                self.end_headers()
-                self.wfile.write(resp_body)
+            raw = b"".join(chunks)
+            if is_stream:
+                resp_json, usage = _assemble_stream(raw.decode("utf-8", "replace"))
+                finished = any(item.get("finish_reason") for item in resp_json.get("choices", []))
+                if resp_json.get("error") or any(item.get("finish_reason") in {"error", "network_error", "server_error"} for item in resp_json.get("choices", [])):
+                    read_error = read_error or "upstream SSE reported a generation error"
+                if not read_error and b"[DONE]" not in raw and not finished:
+                    read_error = "upstream SSE ended without a completion marker"
+            else:
                 try:
-                    resp_json = json.loads(resp_body)
-                except (json.JSONDecodeError, ValueError):
+                    resp_json = json.loads(raw)
+                except (ValueError, UnicodeDecodeError):
                     resp_json = None
+                    read_error = read_error or "upstream returned invalid JSON"
                 usage = resp_json.get("usage") if isinstance(resp_json, dict) else None
-                _log({"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
-                      "model": (resp_json or {}).get("model") if isinstance(resp_json, dict)
-                               else ((req_json or {}).get("model") if isinstance(req_json, dict) else None),
-                      "request": req_json, "response": resp_json, "usage": usage,
-                      "stream": False, "upstream_status": status,
-                      "upstream_attempt_count": upstream_attempt})
+                if isinstance(resp_json, dict) and resp_json.get("error"):
+                    read_error = read_error or "upstream returned an error payload"
+            entry = {"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
+                     "model": req_json.get("model") if isinstance(req_json, dict) else None, "request": req_json,
+                     "response": None if read_error else resp_json, "usage": usage,
+                     "stream": is_stream, "upstream_status": status,
+                     "upstream_attempt_count": upstream_attempt}
+            if read_error:
+                entry.update(error=read_error, partial_response=resp_json)
+            _log(entry)
+            if not is_stream:
+                if read_error:
+                    self._error(RuntimeError(read_error))
+                else:
+                    self.send_response(status)
+                    self.send_header("Content-Type", ctype or "application/json")
+                    self.send_header("Content-Length", str(len(raw)))
+                    self.end_headers()
+                    try:
+                        self.wfile.write(raw)
+                    except (OSError, ValueError):
+                        pass
         finally:
             _release_provider_slot(provider_slot)
             _end_request()

@@ -23,7 +23,7 @@ def runtime_sources():
         "harnesses/business_agent.py", "harnesses/business_worker.py", "harnesses/opencode_components.py",
         "harnesses/candidate_config_runtime.py", "harnesses/native_candidate_runtime.py",
         "harnesses/harness_workspace.py", "harnesses/initial_harness.py", "harnesses/harness_manifest.py", "harnesses/channel_preflight.py",
-        "infrastructure/process_isolation.py", "evaluation/rollout_outcome.py"))
+        "infrastructure/process_isolation.py", "infrastructure/trace_watch.py", "evaluation/rollout_outcome.py"))
 
 
 @dataclass(frozen=True)
@@ -110,6 +110,11 @@ class BusinessBenchmark:
 
 class CrmAdapter(BusinessBenchmark):
     cell = "crmarenapro"
+
+    @property
+    def max_concurrency(self):
+        from .crm_eval import crm_workers
+        return crm_workers(30, 30)
 
     def __init__(self, repo_root):
         self.repo_root = Path(repo_root).resolve()

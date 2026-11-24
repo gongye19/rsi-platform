@@ -4,7 +4,9 @@
 
 | 范围 | 结果 |
 | --- | --- |
-| 核心回归：控制器、预算、发现、分析、候选、trace、通用 benchmark、业务适配、CRM、平台服务、可选初版 Harness | 506 passed，4 skipped |
+| 核心回归：控制器、预算、发现、分析、候选、trace、通用 benchmark、业务适配、CRM、平台服务、可选初版 Harness、并发恢复及启动器 | 521 passed，4 skipped |
+| 实际 OpenCode 1.18.32 + 本地模拟 HTTP、原生 CRM 和业务 HTTP/Python 集成 | 10 passed |
+| 13题最终免费预检：六数据源可读、官方校验器/源数据/管理端口/数据库写入隔离 | 通过 |
 | Linux ARM64 完全断网：Python 锁定依赖、OpenCode 1.18.32 安装 | 通过 |
 | Linux ARM64：服务队列/停止恢复、HTTP/Python 适配、通用 benchmark、组件协议 | 78 passed，2 skipped |
 | Linux ARM64 断网：新增可选初版、冻结、继承、HTTP 基线/留出及包回载 | 13 passed，2 Python cases deselected |
@@ -20,6 +22,8 @@
 Linux 验证使用本机临时验证环境；交付和部署流程无需 Docker。验证环境开启了 bubblewrap 所需能力；普通受限环境的 namespace 检查会正确失败。公司 Linux 主机是否允许这些能力仍需运行预检确认。Linux x64 已准备校验固定的运行时归档和锁定依赖 wheels，本机未实测 x64 执行。
 
 未调用真实付费模型，未连接公司业务服务，未运行13题真实优化性能实验。模型响应均为本地模拟；上述通过不构成进化效果或业务准确率证明。
+
+本轮故障注入覆盖临时限流恢复、额度错误立即失败、重试次数、Retry-After、流中断、结束标记后延迟断开、输入管道阻塞超时及启动阶段失败即停止。当前本机13题的最终配置和一条命令入口见 [CRM-LOCAL-RUN.zh-CN.md](CRM-LOCAL-RUN.zh-CN.md)。
 
 全量上游测试还包含 BIRD、tau2、Terminal-Bench、Pi 等外部安装集成测试；这批依赖没有随本次13题交付安装，未计入上表，不能宣称整个上游套件已通过。原始本机日志在未提交的 `runs/` 中。
 

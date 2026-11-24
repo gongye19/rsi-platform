@@ -8,6 +8,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
@@ -75,6 +76,11 @@ class OpenCodeIntelligentAdapter:
         self.output_limit = int(output_limit)
         self.max_steps = int(max_steps)
         self.timeout_s = int(timeout_s)
+        if os.environ.get("HAI_INTELLIGENT_TIMEOUT_S"):
+            cap = int(os.environ["HAI_INTELLIGENT_TIMEOUT_S"])
+            if not 30 <= cap <= 7200:
+                raise ValueError("HAI_INTELLIGENT_TIMEOUT_S must be between 30 and 7200")
+            self.timeout_s = min(self.timeout_s, cap)
         self.workspace_root = Path(workspace_root).resolve()
         self.model_options = dict(model_options or {})
         self.allowed_builtin_tools = tuple(str(item) for item in allowed_builtin_tools)
@@ -223,6 +229,7 @@ class OpenCodeIntelligentAdapter:
                 process,
                 prompt=str(prompt),
                 timeout_s=self.timeout_s,
+                api_trace_path=api_trace,
             )
         finally:
             _stop_process(proxy)
@@ -382,7 +389,7 @@ def _start_proxy(*, run_root: Path, call_id: str) -> tuple[subprocess.Popen[str]
 
 
 def _stream_process(
-    process: subprocess.Popen[str], *, prompt: str, timeout_s: int
+    process: subprocess.Popen[str], *, prompt: str, timeout_s: int, api_trace_path=None
 ) -> tuple[str, str, str]:
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
@@ -392,21 +399,39 @@ def _stream_process(
     ]
     for reader in readers:
         reader.start()
-    if process.stdin:
-        process.stdin.write(prompt)
-        process.stdin.close()
+    def feed():
+        if process.stdin:
+            try:
+                process.stdin.write(prompt)
+            except (BrokenPipeError, OSError, ValueError):
+                pass
+            finally:
+                try:
+                    process.stdin.close()
+                except (BrokenPipeError, OSError, ValueError):
+                    pass
+    writer = threading.Thread(target=feed, daemon=True)
+    writer.start()
     outcome = "completed"
+    from harnesslens.infrastructure.trace_watch import ProviderTraceWatch
+    watch = ProviderTraceWatch(api_trace_path) if api_trace_path else None
     try:
-        process.wait(timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        outcome = "timeout"
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        process.wait(timeout=10)
-    for reader in readers:
-        reader.join(timeout=10)
+        deadline = time.monotonic() + timeout_s
+        while process.poll() is None:
+            if watch and watch.error():
+                outcome = "provider_error"
+                break
+            if time.monotonic() >= deadline:
+                outcome = "timeout"
+                break
+            time.sleep(0.1)
+    finally:
+        if process.poll() is None:
+            from harnesslens.harnesses.native_harness_driver import stop_process
+            stop_process(process)
+        writer.join(timeout=2)
+        for reader in readers:
+            reader.join(timeout=10)
     return "".join(stdout_parts), "".join(stderr_parts), outcome
 
 

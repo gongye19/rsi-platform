@@ -1,0 +1,22 @@
+schema = "harnesslens.experiment.v1"
+benchmark = "crm"
+mode = "train"
+env_file = "../../.env"
+readiness = "ready"
+# Native local experiment: no company HTTP endpoint is required.
+# Optional initial_harness = "../../harnesses/business-agent"
+
+[environment]
+HAI_TOTAL_CREATION_BUDGET = 200
+HAI_TRAIN_ROLLOUT_REPEATS = 2
+HAI_MAX_ROLLOUT_CONCURRENCY = 4
+HAI_CRM_MAX_CONCURRENCY = 4
+HAI_MAX_ANALYSIS_CONCURRENCY = 2
+HAI_PROVIDER_MAX_CONCURRENCY = 4
+HAI_CRM_TIMEOUT_S = 900
+HAI_INTELLIGENT_TIMEOUT_S = 1200
+HAI_PROVIDER_HTTP_TIMEOUT_S = 180
+HAI_PROVIDER_REQUEST_BUDGET_S = 420
+HAI_PROVIDER_SLOT_TIMEOUT_S = 120
+HAI_PROVIDER_RETRY_ATTEMPTS = 4
+HAI_INTELLIGENT_CONTEXT_LIMIT = 200000

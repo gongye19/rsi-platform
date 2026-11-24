@@ -14,6 +14,7 @@ DEFAULT_RETAIL_TRAIN_TASK_IDS = (
 )
 
 BASELINE_RUNTIME_FILES = (
+    "harnesslens/infrastructure/trace_watch.py",
     "harnesslens/harnesses/initial_harness.py",
     "harnesslens/evaluation/rollout_bridge.py",
     "harnesslens/benchmarks/native_tau2_worker.py",
@@ -46,6 +47,7 @@ class BenchmarkConfig:
 
     def runtime_files(self) -> tuple[str, ...]:
         common = (
+            "harnesslens/infrastructure/trace_watch.py",
             "harnesslens/harnesses/initial_harness.py",
             "harnesslens/evaluation/rollout_bridge.py",
             "harnesslens/harnesses/native_candidate_runtime.py",

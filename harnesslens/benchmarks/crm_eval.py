@@ -52,7 +52,19 @@ def model() -> str:
 def effective_limits():
     from harnesslens.harnesses.business_agent import load_config
     business = load_config()
-    return CrmLimits(timeout_s=business["agent"]["timeout"]) if business else CrmLimits()
+    if business:
+        return CrmLimits(timeout_s=business["agent"]["timeout"])
+    timeout = int(os.environ.get("HAI_CRM_TIMEOUT_S", "600"))
+    if not 30 <= timeout <= 7200:
+        raise ValueError("HAI_CRM_TIMEOUT_S must be between 30 and 7200")
+    return CrmLimits(timeout_s=timeout)
+
+
+def crm_workers(requested, task_count):
+    cap = int(os.environ.get("HAI_CRM_MAX_CONCURRENCY", "2"))
+    if not 1 <= cap <= 30:
+        raise ValueError("HAI_CRM_MAX_CONCURRENCY must be between 1 and 30")
+    return max(1, min(int(requested), int(task_count), cap))
 
 
 def executable() -> Path:
@@ -249,25 +261,18 @@ def _messages(events: list[dict]) -> list[dict]:
 
 
 def run_process(command, *, cwd, env, timeout_s):
-    """Stop on the first authentication/quota error, retaining failed evidence."""
+    """Stop on terminal provider failure; allow bounded upstream retries to finish."""
     root = cwd.parent
     process = None
     error = ""
+    from harnesslens.infrastructure.trace_watch import ProviderTraceWatch
+    watch = ProviderTraceWatch(root / "api_calls.jsonl")
     try:
         with (root / "stdout.jsonl").open("w") as out, (root / "stderr.log").open("w") as err:
             process = subprocess.Popen(command, cwd=cwd, env=env, stdout=out, stderr=err, start_new_session=True)
             deadline = time.monotonic() + timeout_s
             while process.poll() is None:
-                trace = root / "api_calls.jsonl"
-                if trace.is_file():
-                    for line in trace.read_text(errors="replace").splitlines():
-                        try:
-                            status = json.loads(line).get("upstream_status")
-                        except ValueError:
-                            continue
-                        if status in (401, 402, 403, 429):
-                            error = f"provider unavailable: HTTP {status}; execution paused"
-                            break
+                error = watch.error()
                 if error or time.monotonic() >= deadline:
                     error = error or "native OpenCode timeout"
                     stop_process(process)
@@ -401,8 +406,7 @@ def run_crm_batch(*, repo_root, run_root, scope, harness, harness_version, harne
             return {"task_id": tid, "harness_version": harness_version, "rewards": [row["reward"] for row in rows],
                     "trajectory_paths": paths, "worker_errors": [],
                     "trial_summaries": [{k: row.get(k) for k in ("trial", "pairing_slot", "reward", "n_messages", "n_tool_calls", "termination", "usage")} for row in rows]}
-        # Small default width keeps the same provider within its local quota.
-        with ThreadPoolExecutor(max_workers=max(1, min(int(max_concurrency), len(task_repeats), 2))) as pool:
+        with ThreadPoolExecutor(max_workers=crm_workers(max_concurrency, len(task_repeats))) as pool:
             records = list(pool.map(run_task, task_repeats))
     if signature != runtime_fingerprint(root):
         raise RuntimeError("CRM environment changed during execution")
