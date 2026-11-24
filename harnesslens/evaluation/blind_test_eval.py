@@ -200,6 +200,7 @@ def run_test_baseline(
     task_ids: Sequence[str] | None = None,
     repeats: int = BASELINE_REPEATS,
     harness: str = "opencode",
+    initial_harness: str | Path | None = None,
 ) -> BlindTestBaselineResult:
     root = Path(repo_root).resolve()
     split = load_benchmark_split(benchmark)
@@ -236,6 +237,9 @@ def run_test_baseline(
         / target_harness
     )
     output_path = run_root / "baseline_result.json"
+    from harnesslens.harnesses.initial_harness import freeze_initial_harness
+    freeze_initial_harness(run_root=run_root, run_id=str(run_id), cell=split.cell,
+                          harness=target_harness, source=initial_harness)
     if output_path.exists():
         cached = json.loads(output_path.read_text(encoding="utf-8"))
         if cached.get("benchmark") != split.benchmark:
@@ -509,7 +513,7 @@ def _load_workspace_submission(
         snapshot.relative_to(allowed_root)
     except ValueError as exc:
         raise ValueError("submission snapshot must stay under runs/") from exc
-    if str(payload.get("selected_version") or "") == "v0":
+    if str(payload.get("selected_version") or "") == "v0" and not (snapshot / "harness" / str(harness) / "workspace.json").exists():
         query_path = patch_path.parent.parent / "discovery" / "harness_query.json"
         if query_path.is_symlink() or not query_path.is_file():
             raise ValueError("v0 submission is missing its Harness Query result")
@@ -533,6 +537,12 @@ def _load_workspace_submission(
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(workspace, Mapping) or not isinstance(manifest, Mapping):
         raise ValueError("submission workspace and manifest must be JSON objects")
+    from harnesslens.core.artifacts import content_digest
+    from harnesslens.harnesses.harness_workspace import workspace_digest
+    if payload.get("workspace_digest") and payload["workspace_digest"] != workspace_digest(workspace):
+        raise ValueError("Submission workspace digest mismatch")
+    if payload.get("patch_digest") and payload["patch_digest"] != content_digest(manifest):
+        raise ValueError("Submission manifest digest mismatch")
     return {"workspace": dict(workspace), "manifest": dict(manifest)}
 
 

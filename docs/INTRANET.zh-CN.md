@@ -1,5 +1,7 @@
 # Linux 内网交付与使用
 
+每次实验的最终配置清单见 [STARTUP.zh-CN.md](STARTUP.zh-CN.md)。`initial_harness` 可选，不指定就是空 v0；指定后冻结为该实验的初版快照。
+
 部署方式为普通 Linux 用户下的 **uv + systemd API + 单 Worker + Next.js 界面**，不需要 Docker。CLI 仍然可独立使用。API 只调度任务，Worker 以子进程执行原来的训练/评测入口；没有重写优化算法。
 
 ## 交付内容和依赖

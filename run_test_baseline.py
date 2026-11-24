@@ -30,6 +30,7 @@ def main() -> int:
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")
+    parser.add_argument("--initial-harness", type=Path, help="Optional initial OpenCode directory/package; omitted means empty v0")
     parser.add_argument("--retrieval-config", default="bm25")
     parser.add_argument("--repeats", type=int, choices=(1, 2), default=BASELINE_REPEATS)
     parser.add_argument(
@@ -86,6 +87,7 @@ def main() -> int:
         task_ids=args.task_id,
         repeats=args.repeats,
         harness=args.harness,
+        **({"initial_harness": args.initial_harness} if args.initial_harness is not None else {}),
     )
     print(
         json.dumps(

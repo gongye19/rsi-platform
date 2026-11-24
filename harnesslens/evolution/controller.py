@@ -83,11 +83,15 @@ class IterationController:
         incumbent_submissions: tuple[str | Path, ...] = (),
         promotion_metric: str = "pass_at_1",
         analysis_source_run: str | Path | None = None,
+        initial_harness: str | Path | None = None,
     ):
         self.repo_root = Path(repo_root).resolve()
         self.run_root = self.repo_root / "runs" / "train" / str(run_id)
         self.run_root.mkdir(parents=True, exist_ok=True)
         self.harness = str(harness)
+        self.initial_harness = initial_harness
+        if initial_harness is not None and incumbent_submissions:
+            raise ValueError("Choose either initial Harness or incumbent submission")
         self.promotion_metric = normalize_promotion_metric(promotion_metric)
         self.config = benchmark_config(self.repo_root, cell)
         self.analysis_source_run = (
@@ -131,6 +135,7 @@ class IterationController:
                 baseline_event=baseline_event,
                 cell=self.config.cell,
                 harness=self.harness,
+                **({"initial_harness": self.initial_harness} if self.initial_harness is not None else {}),
             )
         except ValueError as exc:
             if (

@@ -88,6 +88,7 @@ def build_baseline_fingerprint(
     cell: str = "retail",
     harness: str = "opencode",
     task_ids: Sequence[str] | None = None,
+    initial_harness_digest: str | None = None,
 ) -> dict[str, Any]:
     root = Path(repo_root).resolve()
     config = benchmark_config(root, cell)
@@ -145,6 +146,8 @@ def build_baseline_fingerprint(
     if extension_fields:
         payload.update(extension_fields)
         payload["rollout"] = rollout
+    if initial_harness_digest:
+        payload["initial_harness_sha256"] = initial_harness_digest
     payload["fingerprint_sha256"] = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
@@ -167,6 +170,8 @@ def _validate_harness_only_reuse(
     actual = payload.get("baseline_fingerprint")
     if not isinstance(actual, Mapping):
         raise ValueError("baseline event is missing the frozen runtime fingerprint")
+    if actual.get("initial_harness_sha256") != expected.get("initial_harness_sha256"):
+        raise ValueError("Baseline reuse requires the same initial Harness")
     for field in ("harness", "benchmark", "cell", "target_model", "user_model"):
         if actual.get(field) != expected.get(field):
             raise ValueError(
@@ -276,16 +281,20 @@ def ensure_baseline_event(
     cell: str = "retail",
     harness: str = "opencode",
     task_ids: Sequence[str] | None = None,
+    initial_harness: str | Path | None = None,
 ) -> Path:
     root = Path(repo_root).resolve()
     run = Path(run_root).resolve()
     config = benchmark_config(repo_root, cell)
+    from harnesslens.harnesses.initial_harness import freeze_initial_harness
+    initial = freeze_initial_harness(run_root=run, cell=config.cell, harness=harness, source=initial_harness)
     normalized = tuple(str(item) for item in (task_ids or config.train_task_ids))
     expected_fingerprint = build_baseline_fingerprint(
         repo_root,
         cell=config.cell,
         harness=harness,
         task_ids=normalized,
+        **({"initial_harness_digest": initial["sha256"]} if initial and not initial["empty"] else {}),
     )
     expected_trial_count = len(normalized) * TRAIN_ROLLOUT_REPEATS
     if baseline_event is not None:

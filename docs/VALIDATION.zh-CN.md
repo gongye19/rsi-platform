@@ -4,13 +4,14 @@
 
 | 范围 | 结果 |
 | --- | --- |
-| 核心回归：控制器、预算、发现、分析、候选、trace、通用 benchmark、业务适配、CRM、平台服务 | 495 passed，4 skipped |
+| 核心回归：控制器、预算、发现、分析、候选、trace、通用 benchmark、业务适配、CRM、平台服务、可选初版 Harness | 506 passed，4 skipped |
 | Linux ARM64 完全断网：Python 锁定依赖、OpenCode 1.18.32 安装 | 通过 |
 | Linux ARM64：服务队列/停止恢复、HTTP/Python 适配、通用 benchmark、组件协议 | 78 passed，2 skipped |
+| Linux ARM64 断网：新增可选初版、冻结、继承、HTTP 基线/留出及包回载 | 13 passed，2 Python cases deselected |
 | 前端静态检查、TypeScript/生产构建 | 通过 |
 | 前端谱系/指标/布局与只读分享测试 | 38 passed |
 | 实际 Next.js→平台 API：创建草稿、状态、真实记录入口、拒绝启动 draft | 通过 |
-| 真实 OpenCode 1.18.32 + 本机 CRM 数据库 + 本地模拟模型 | 1 passed |
+| 真实 OpenCode 1.18.32 + 本机 CRM 数据库 + 本地模拟模型（空初版/非空初版） | 2 passed |
 | Python/HTTP CRM 接入 + 本地模拟模型 | 2 passed |
 | 新建隔离 PostgreSQL 17.7：导入数据、六表规范指纹 | 通过 |
 | systemd API/Worker 生成文件的 Linux 语法验证 | 通过 |

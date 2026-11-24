@@ -18,7 +18,7 @@ def run_id(value):
 def load_profile(path):
     path = Path(path).resolve()
     raw = tomllib.loads(path.read_text())
-    if set(raw) - {"schema", "benchmark", "agent_config", "env_file", "mode", "submission", "environment", "readiness"} or raw.get("schema") != "harnesslens.experiment.v1":
+    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness"} or raw.get("schema") != "harnesslens.experiment.v1":
         raise ValueError("Unsupported experiment profile")
     mode = raw.get("mode", "train")
     if mode not in {"train", "test_baseline", "test_candidate"}:
@@ -30,6 +30,15 @@ def load_profile(path):
         benchmark = str((path.parent / benchmark).resolve())
     files = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()}
     result = {**raw, "mode": mode, "benchmark": benchmark, "profile_path": str(path)}
+    initial = raw.get("initial_harness", "")
+    if not isinstance(initial, str):
+        raise ValueError("initial_harness must be a directory/package path")
+    result["initial_harness"] = str((path.parent / initial).resolve()) if initial else ""
+    if initial:
+        if mode == "test_candidate":
+            raise ValueError("test_candidate loads its full Harness from submission, not initial_harness")
+        from harnesslens.harnesses.initial_harness import load_initial_harness
+        files["initial_harness"] = load_initial_harness(result["initial_harness"])["sha256"]
     for key in ("agent_config", "env_file", "submission"):
         value = raw.get(key, "")
         if not isinstance(value, str):
@@ -87,6 +96,8 @@ def invocation(profile, identity):
             "--run-id", identity, flag, profile["benchmark"], "--harness", "opencode"]
     if profile["agent_config"]:
         argv += ["--agent-config", profile["agent_config"]]
+    if profile.get("initial_harness"):
+        argv += ["--initial-harness", profile["initial_harness"]]
     if profile["mode"] == "test_candidate":
         if not profile["submission"]:
             raise ValueError("test_candidate needs submission")

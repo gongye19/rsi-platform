@@ -55,7 +55,8 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
-def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch):
+@pytest.mark.parametrize("with_initial", [False, True])
+def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch, with_initial):
     load_repo_env(ROOT)
     Handler.requests = []
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -63,9 +64,16 @@ def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch):
     thread.start()
     monkeypatch.setenv("DEEPSEEK_API_KEY", "local-probe-only")
     monkeypatch.setenv("DEEPSEEK_BASE_URL", f"http://127.0.0.1:{server.server_address[1]}/v4")
-    run_id = os.environ.get("HAI_CRM_PROBE_RUN_ID") or "crm-local-runtime-" + uuid.uuid4().hex[:12]
+    run_id = (os.environ.get("HAI_CRM_PROBE_RUN_ID") or "crm-local-runtime-" + uuid.uuid4().hex[:12]) + ("-initial" if with_initial else "-empty")
     root = ROOT / "runs/crm_checks" / run_id
-    repository = CellHarnessRepository(cell="crmarenapro", repo_root=ROOT, run_id=run_id, evidence_root=root / "evidence")
+    source = root / "initial-input"
+    if with_initial:
+        source.mkdir(parents=True)
+        (source / "AGENTS.md").write_text("CRM_INITIAL_BASE_RULE")
+    from harnesslens.harnesses.initial_harness import freeze_initial_harness
+    frozen = freeze_initial_harness(run_root=root, cell="crmarenapro", source=source if with_initial else None)
+    evidence = root / "rollout_evidence"
+    repository = CellHarnessRepository(cell="crmarenapro", repo_root=ROOT, run_id=run_id, evidence_root=evidence)
     version = repository.materialize_workspace_candidate(base_version="v0", candidate_label="candidate", workspace={"files": [
         {"scope": "project", "path": "AGENTS.md", "content": "CRM_INSTRUCTION_SENTINEL"},
         {"scope": "project", "path": "opencode.json", "content": json.dumps({"agent": {"build": {"prompt": "CRM_SYSTEM_SENTINEL"}}})},
@@ -76,10 +84,14 @@ def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch):
         for ver in ("v0", version):
             service = TrainRolloutService(cell="crmarenapro", repo_root=ROOT, run_id=run_id,
                 artifact_root=root / "artifacts", train_task_ids=["crmarenapro/query1"], initial_budget=1,
-                evidence_root=root / "evidence", workspace_root=root / "workspaces", local_rootless_rollout=False)
+                evidence_root=evidence, workspace_root=root / "workspaces", local_rootless_rollout=False)
             results[ver] = service.run(RolloutRequest("probe-" + ver, run_id, "TRAIN", ver,
                 {"crmarenapro/query1": 1}, 1, "local synthetic-response integration probe", {"crmarenapro/query1": 4})).to_dict()
         text = json.dumps(Handler.requests)
+        if with_initial:
+            assert "CRM_INITIAL_BASE_RULE" in text
+            assert (source / "AGENTS.md").read_text() == "CRM_INITIAL_BASE_RULE"
+        assert frozen["empty"] == (not with_initial)
         assert "CRM_INSTRUCTION_SENTINEL" in text
         assert "CRM_SYSTEM_SENTINEL" in text
         assert "CRM_SKILL_DESCRIPTION_SENTINEL" in text

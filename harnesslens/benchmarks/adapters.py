@@ -22,7 +22,7 @@ def runtime_sources():
         "benchmarks/cell_config.py", "benchmarks/benchmark_splits.py", "evaluation/rollout_bridge.py",
         "harnesses/business_agent.py", "harnesses/business_worker.py", "harnesses/opencode_components.py",
         "harnesses/candidate_config_runtime.py", "harnesses/native_candidate_runtime.py",
-        "harnesses/harness_workspace.py", "harnesses/harness_manifest.py", "harnesses/channel_preflight.py",
+        "harnesses/harness_workspace.py", "harnesses/initial_harness.py", "harnesses/harness_manifest.py", "harnesses/channel_preflight.py",
         "infrastructure/process_isolation.py", "evaluation/rollout_outcome.py"))
 
 

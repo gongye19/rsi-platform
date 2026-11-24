@@ -20,6 +20,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--agent-config", type=Path, help="Existing Python/HTTP business-agent adapter TOML")
+    parser.add_argument("--initial-harness", type=Path, help="Optional initial OpenCode directory/package; omitted means an empty v0")
     parser.add_argument("--baseline-event", type=Path)
     parser.add_argument(
         "--analysis-source-run",
@@ -63,6 +64,7 @@ def main() -> int:
         incumbent_submissions=tuple(args.incumbent_submission),
         promotion_metric=args.promotion_metric,
         analysis_source_run=args.analysis_source_run,
+        initial_harness=args.initial_harness,
     ).run(baseline_event=args.baseline_event)
     print(json.dumps({
         "selected_version": result.selected_version,

@@ -7,6 +7,8 @@
 
 [English](README.md)
 
+实验参数统一见 [启动配置](docs/STARTUP.zh-CN.md)：初始 Harness 可选，不指定即为空 v0。
+
 **内网 Linux（无 Docker）部署**：从 [内网使用指南](docs/INTRANET.zh-CN.md) 开始。
 Python 依赖由 uv/uv.lock 管理；API、独立 Worker、实验管理界面与离线依赖准备脚本已提供。
 业务接口、trace 和隔离测试数据需在公司环境完成联调；默认草稿配置不会发起真实实验。

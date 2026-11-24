@@ -376,6 +376,13 @@ class DiscoveryModule:
         adapter = harness_query_adapter(self.harness, repo_root=self.repo_root)
         probe = adapter.architecture_probe()
         evidence_catalog = adapter.query_evidence_catalog(probe)
+        if self.harness == "opencode" and (self.run_root / "initial_harness.json").is_file():
+            from harnesslens.harnesses.initial_harness import freeze_initial_harness
+            initial = freeze_initial_harness(run_root=self.run_root, cell=self.cell)
+            if not initial["empty"]:
+                evidence_catalog.append({"id": "runtime:initial-harness", "kind": "frozen_initial_workspace",
+                    "source": "Platform-local immutable v0; starting files, not independently verified edits",
+                    "value": {"workspace": initial["workspace"], "manifest": initial["manifest"], "sha256": initial["sha256"]}})
         runtime_loading = deepcopy(_CANDIDATE_RUNTIME_LOADING[str(probe["harness_id"])])
         contract = task_input.get("environment", {}).get("runtime_contract")
         if isinstance(contract, Mapping):

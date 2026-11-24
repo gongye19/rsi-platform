@@ -1,5 +1,7 @@
 schema = "harnesslens.experiment.v1"
 benchmark = "crm"
+# Optional, relative to this profile. Omit or leave empty for empty v0.
+# initial_harness = "../../harnesses/business-agent"
 mode = "train"
 agent_config = "../../examples/agents/company-http.toml"
 env_file = "../../.env"

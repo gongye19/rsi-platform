@@ -184,3 +184,56 @@ def test_host_grader_timeout_is_an_error_not_a_zero_reward(dataset, tmp_path):
     adapter = benchmark_adapter(ROOT, str(dataset))
     with pytest.raises(RuntimeError, match="timed out"):
         adapter.grade("train-a", "answer")
+
+
+@pytest.mark.parametrize("business", ["python", "http"], indirect=True)
+def test_initial_harness_baseline_candidate_reuse_and_retained_v0(dataset, business, tmp_path, monkeypatch):
+    from harnesslens.evolution.baseline import ensure_baseline_event
+    from harnesslens.harnesses.initial_harness import freeze_initial_harness
+    from harnesslens.evolution.main_agent import MainAgentModule
+    from harnesslens.core.budget import CreationBudget
+    from harnesslens.evaluation.blind_test_eval import _load_workspace_submission, run_test_baseline
+    model, agent_config = business
+    cell = benchmark_cell(str(dataset))
+    source = tmp_path / "initial"; source.mkdir()
+    original = "INITIAL_RULE_FROM_BUSINESS"
+    (source / "AGENTS.md").write_text(original)
+    run = tmp_path / "runs/train/initial-probe"
+    event = ensure_baseline_event(repo_root=ROOT, run_root=run, baseline_event=None,
+        cell=cell, initial_harness=source)
+    assert len(model.calls) == 4
+    assert all(original in json.dumps(call["messages"]) for call in model.calls)
+    baseline = json.loads(event.read_text())
+    assert baseline["baseline_fingerprint"]["initial_harness_sha256"]
+    count = len(model.calls)
+    # Omitting input on restart reuses the frozen baseline and complete traces.
+    assert ensure_baseline_event(repo_root=ROOT, run_root=run, baseline_event=None, cell=cell) == event
+    assert len(model.calls) == count
+    repository = CellHarnessRepository(cell=cell, repo_root=ROOT, run_id=run.name, evidence_root=run / "rollout_evidence")
+    child = repository.materialize_candidate(base_version="v0", candidate_label="candidate-01", delta={"instructions": ["CHILD_RULE"]})
+    service = TrainRolloutService(cell=cell, repo_root=ROOT, run_id=run.name, artifact_root=run / "rollout_artifacts",
+        train_task_ids=["train-a"], initial_budget=1, evidence_root=run / "rollout_evidence", workspace_root=run / "workspaces", local_rootless_rollout=False)
+    result = service.run(RolloutRequest("child", run.name, "TRAIN", child, {"train-a": 1}, 1, "candidate inherits initial"))
+    assert result.metrics["trial_success_count"] == 1
+    assert original in json.dumps(model.calls[-1]) and "CHILD_RULE" in json.dumps(model.calls[-1])
+    # Publish the parent after a rejected/no-improvement candidate. TEST loading
+    # and a subsequent experiment must retain its actual files, even named v0.
+    module = MainAgentModule(repo_root=ROOT, run_root=run, cell=cell,
+        budget=CreationBudget(run / "creation_budget.json", total=200, baseline_used=4))
+    module.publish_selected(selected_version="v0", iteration_history=[], dispositions_path=run / "dispositions.json")
+    final = run / "submission/final.json"
+    loaded = _load_workspace_submission(final, repo_root=tmp_path, harness="opencode")
+    assert loaded["workspace"] == repository.read_workspace_snapshot("v0")
+    package = json.loads(final.read_text())["harness_package"]["path"]
+    imported = freeze_initial_harness(run_root=tmp_path / "runs/train/next", cell=cell, source=package)
+    assert imported["workspace"] == loaded["workspace"]
+    holdout = run_test_baseline(repo_root=tmp_path, run_id="initial-holdout", benchmark=cell, repeats=1, initial_harness=source)
+    assert holdout.response.metrics["trial_success_count"] == 1
+    assert original in json.dumps(model.calls[-1])
+    (source / "AGENTS.md").write_text("DIFFERENT_INITIAL_RULE")
+    for policy in ("strict", "harness_only"):
+        monkeypatch.setenv("HAI_BASELINE_REUSE_POLICY", policy)
+        with pytest.raises(ValueError, match="fingerprint|initial Harness"):
+            ensure_baseline_event(repo_root=ROOT, run_root=tmp_path / ("changed-" + policy), baseline_event=event,
+                cell=cell, initial_harness=source)
+    assert (source / "AGENTS.md").read_text() == "DIFFERENT_INITIAL_RULE"

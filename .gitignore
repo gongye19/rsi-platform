@@ -7,6 +7,7 @@
 # Benchmark checkouts and agent runtimes are external; see docs/benchmarks.md
 /third_party
 /runtime
+/harnesses/
 .pi-agent/
 
 # Run artifacts: TRAIN controller runs, blind-TEST baselines and candidates

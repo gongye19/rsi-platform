@@ -20,12 +20,21 @@ def history(identity):
     root = ROOT / "runs/train" / identity
     known, versions, bundles, steps = {}, [], [], []
     components = []
+    initial = read(root / "initial_harness.json", {})
+    initial_root = Path(initial.get("snapshot_path") or root / "missing")
+    if not initial_root.resolve().is_relative_to(root.resolve()):
+        raise ValueError("Initial snapshot must stay inside the experiment")
+    initial_files = grouped_files(read(initial_root / "harness/opencode/workspace.json", {}),
+                                  read(initial_root / "harness/opencode/manifest.json", {}))
     for key, name in COMPONENTS:
         bid = key + "_baseline"
-        known[(key, "baseline")] = bid
+        files = sorted(initial_files[key], key=lambda item: (item["path"], item["content"]))
+        digest = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest() if files else "baseline"
+        known[(key, digest)] = bid
         components.append({"id": key, "name": name, "description": name, "baseline_version_id": bid})
         versions.append({"id": bid, "component_id": key, "label": "H0", "parent_id": None,
-            "step": 0, "round": 0, "digest": "baseline", "present": False, "files": [], "notes": "初始配置"})
+            "step": 0, "round": 0, "digest": digest, "present": bool(files),
+            "files": [{"path": item["path"], "change": "snapshot", "diff": item["content"]} for item in files], "notes": "冻结的初始配置"})
     current = {key: key + "_baseline" for key, _ in COMPONENTS}
     bundles.append({"id": "v0", "label": "H0", "step": 0, "round": 0, "components": dict(current),
                     "execution": {"status": "baseline"}, "metrics": {}})
@@ -62,23 +71,7 @@ def history(identity):
         step_index = len(steps)
         lineage = read(snapshot / "lineage.json", {})
         parent = bundle_components.get(lineage.get("parent"), bundle_components["v0"])
-        grouped = {key: [] for key, _ in COMPONENTS}
-        workspace = read(path, {"files": []})
-        for item in workspace.get("files", []):
-            name, content = item["path"], item["content"]
-            if name.endswith("opencode.json"):
-                for field, value in config_leaves(read_text_json(content)):
-                    owner = config_component(field)
-                    if owner in grouped:
-                        grouped[owner].append({"path": name + "#" + field, "content": json.dumps(value, ensure_ascii=False)})
-            else:
-                owner = ("skills" if "/skills/" in name else "agent_definitions" if "/agents/" in name else
-                         "commands" if "/commands/" in name else "plugin_tool_system" if "/plugins/" in name else
-                         "custom_tools" if "/tools/" in name else "instructions_rules" if name == "AGENTS.md" else "reference_sources")
-                grouped[owner].append({"path": name, "content": content})
-        manifest = read(path.with_name("manifest.json"), {})
-        for text in [*manifest.get("instructions", []), *manifest.get("prompt_appends", [])]:
-            grouped["instructions_rules"].append({"path": "manifest/instructions", "content": text})
+        grouped = grouped_files(read(path, {"files": []}), read(path.with_name("manifest.json"), {}))
         active = {}
         for key, _ in COMPONENTS:
             data = sorted(grouped[key], key=lambda item: (item["path"], item["content"]))
@@ -115,3 +108,22 @@ def read_text_json(text):
         return value if isinstance(value, dict) else {}
     except ValueError:
         return {}
+
+
+def grouped_files(workspace, manifest):
+    grouped = {key: [] for key, _ in COMPONENTS}
+    for item in workspace.get("files", []):
+        name, content = item["path"], item["content"]
+        if name.endswith("opencode.json") or name == "config.json":
+            for field, value in config_leaves(read_text_json(content)):
+                owner = config_component(field)
+                if owner in grouped:
+                    grouped[owner].append({"path": name + "#" + field, "content": json.dumps(value, ensure_ascii=False)})
+        else:
+            owner = ("skills" if "/skills/" in name else "agent_definitions" if "/agents/" in name else
+                     "commands" if "/commands/" in name else "plugin_tool_system" if "/plugins/" in name else
+                     "custom_tools" if "/tools/" in name else "instructions_rules" if name == "AGENTS.md" else "reference_sources")
+            grouped[owner].append({"path": name, "content": content})
+    for text in [*manifest.get("instructions", []), *manifest.get("prompt_appends", [])]:
+        grouped["instructions_rules"].append({"path": "manifest/instructions", "content": text})
+    return grouped
