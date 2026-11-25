@@ -896,3 +896,47 @@ def test_initial_experience_group_still_hard_fails_after_three_exact_retries(
     assert _AlwaysInvalidRunner.payloads[2]["retry_context"].endswith(
         "exact-error-2"
     )
+
+
+@pytest.mark.parametrize(('public_task', 'expected'), [
+    ({'query': 'Open-ended question'}, {'instruction': 'Open-ended question'}),
+    ({'query': {'instruction': 'Structured task', 'context': {'period': '2026'}}},
+     {'instruction': 'Structured task', 'context': {'period': '2026'}}),
+    ({'input': {'question': 'Business question', 'context': ['public context']}},
+     {'question': 'Business question', 'context': ['public context']}),
+])
+def test_baseline_and_comparison_accept_public_query_formats(tmp_path, monkeypatch, public_task, expected):
+    """Both analysis paths accept text questions and generic business inputs."""
+    module = object.__new__(ExperienceModule)
+    module.repo_root = tmp_path
+    module.run_root = tmp_path / 'run'
+    module.root = module.run_root / 'experience'
+    module.cell = 'synthetic'
+    paths = []
+    for slot in range(2):
+        path = tmp_path / f'trial_{slot}.jsonl'
+        path.write_text(json.dumps({'task_id': '1', 'trial': slot, 'reward': 1,
+            'messages': [{'role': 'user', 'content': 'Public task'}]}) + '\n')
+        paths.append(str(path))
+    baseline = SimpleNamespace(task_ids=('1',), trajectories_by_task={'1': paths},
+        evidence_by_path={p: f'ev_{i}' for i, p in enumerate(paths)})
+    monkeypatch.setattr(experience_module, 'benchmark_task_explorer_input', lambda **_: {
+        'tasks': [{'task_id': '1', 'answer': 'PRIVATE_GT_MUST_NOT_ENTER_BUNDLE', **public_task}],
+        'evaluation_contract': {'outcome_authority': 'authoritative'}})
+    index = module._write_baseline_bundles(baseline, ('1',), label='baseline')
+    baseline_bundle = json.loads(Path(index['task_bundle_paths'][0]).read_text())
+    assert baseline_bundle['query'] == expected
+    assert 'PRIVATE_GT_MUST_NOT_ENTER_BUNDLE' not in json.dumps(baseline_bundle)
+    monkeypatch.setattr(experience_module.BaselineDataset, 'from_ingest_event', lambda _: baseline)
+    rollout = tmp_path / 'rollout.json'
+    rollout.write_text(json.dumps({'requested_task_ids': ['1'], 'harness_version': 'candidate',
+        'records': [{'task_id': '1', 'trajectory_paths': paths}]}))
+    def inspect_comparison(label, group, comparison_index):
+        packet = json.loads(Path(comparison_index['bundle_paths']['1']).read_text())
+        assert packet['query'] == expected
+        assert 'PRIVATE_GT_MUST_NOT_ENTER_BUNDLE' not in json.dumps(packet)
+        raise RuntimeError('comparison reached analysis boundary')
+    monkeypatch.setattr(module, '_run_comparison_group', inspect_comparison)
+    with pytest.raises(RuntimeError, match='reached analysis boundary'):
+        module.run_comparison(baseline_event=tmp_path / 'baseline.json', rollout_output=rollout,
+                              label='candidate-01')

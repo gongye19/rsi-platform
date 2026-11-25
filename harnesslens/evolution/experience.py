@@ -19,7 +19,7 @@ from harnesslens.harnesses.runner import (
     intelligent_stdout_path,
     parse_json_object,
 )
-from harnesslens.benchmarks.task_data import BaselineDataset, benchmark_task_explorer_input
+from harnesslens.benchmarks.task_data import BaselineDataset, benchmark_task_explorer_input, _normalized_query
 from harnesslens.core.train_protocol import TRAIN_ROLLOUT_REPEATS
 
 
@@ -313,7 +313,7 @@ class ExperienceModule:
             baseline=baseline,
             cell=self.cell,
         )
-        queries = {str(item["task_id"]): dict(item["query"]) for item in task_input["tasks"]}
+        queries = {str(item["task_id"]): _normalized_query(item.get("query", item.get("input"))) for item in task_input["tasks"]}
         bundle_root = self.root / f"{label}_task_bundles"
         index: dict[str, Any] = {
             "task_ids": list(task_ids),
@@ -895,7 +895,7 @@ class ExperienceModule:
             baseline=baseline,
             cell=self.cell,
         )
-        queries = {str(item["task_id"]): dict(item["query"]) for item in task_input["tasks"]}
+        queries = {str(item["task_id"]): _normalized_query(item.get("query", item.get("input"))) for item in task_input["tasks"]}
         bundle_root = self.root / f"{label}_task_bundles"
         bundle_paths: list[str] = []
         evidence_refs: list[str] = []
