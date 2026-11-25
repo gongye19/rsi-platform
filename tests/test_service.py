@@ -18,9 +18,9 @@ from harnesslens.service.api import server
 
 
 @pytest.fixture
-def profile(tmp_path):
+def profile(tmp_path, model_tables):
     path = tmp_path / "ready.toml"
-    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\nreadiness="ready"\n')
+    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\nreadiness="ready"\n' + model_tables)
     return path
 
 
@@ -56,7 +56,7 @@ def test_transactional_queue_claim_and_fingerprint(tmp_path, profile):
 def test_worker_real_subprocess_stop_resume_and_secret_not_persisted(tmp_path, profile):
     private = tmp_path / "private.env"
     private.write_text("DEEPSEEK_API_KEY=service-test-secret-not-for-artifacts\n")
-    profile.write_text(profile.read_text() + 'env_file="private.env"\n')
+    profile.write_text('env_file="private.env"\n' + profile.read_text())
     store = Store(tmp_path / "state")
     store.create("one", profile); store.transition("one", "start")
     worker = Worker(store)
@@ -109,6 +109,10 @@ def test_api_lifecycle_auth_cursor_and_path_boundaries(tmp_path, profile):
     try:
         assert request("/health", auth=False)[0] == 200
         assert request("/v1/runs", auth=False)[0] == 401
+        preview = json.loads(request("/v1/profiles?name=ready.toml")[1])
+        assert preview["models"]["analysis"]["model"] == "test/analysis"
+        assert "test-only" not in json.dumps(preview)
+        assert request("/v1/profiles?name=../outside.toml")[0] == 400
         assert request("/v1/runs", {"profile": "../outside.toml"})[0] == 400
         assert request("/v1/runs", {"profile": "ready.toml", "run_id": "../../escape"})[0] == 400
         assert request("/v1/runs", {"profile": "ready.toml", "run_id": "api_one"})[0] == 201

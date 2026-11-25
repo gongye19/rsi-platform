@@ -18,7 +18,7 @@ def run_id(value):
 def load_profile(path):
     path = Path(path).resolve()
     raw = tomllib.loads(path.read_text())
-    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components"} or raw.get("schema") != "harnesslens.experiment.v1":
+    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components", "models"} or raw.get("schema") != "harnesslens.experiment.v1":
         raise ValueError("Unsupported experiment profile")
     mode = raw.get("mode", "train")
     if mode not in {"train", "test_baseline", "test_candidate"}:
@@ -30,6 +30,9 @@ def load_profile(path):
         benchmark = str((path.parent / benchmark).resolve())
     files = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()}
     result = {**raw, "mode": mode, "benchmark": benchmark, "profile_path": str(path)}
+    if "models" in raw:
+        from harnesslens.core.model_config import normalize_models
+        result["models"] = normalize_models(raw["models"])
     from harnesslens.harnesses.component_policy import normalize_policy
     policy = normalize_policy(raw.get("components"))
     result["components"] = {k: policy[k] for k in ("allowed", "denied", "experimental_fields")}
@@ -62,6 +65,12 @@ def load_profile(path):
             raise ValueError("Secrets must be in the private env_file, not the profile")
         if type(value) not in {str, int, float, bool}:
             raise ValueError("Environment settings must be scalar")
+    # Endpoint/model changes invalidate resume; rotating credentials does not.
+    if result.get("models"):
+        model_env = profile_environment(result) if not result["env_file"] or Path(result["env_file"]).is_file() else dict(os.environ)
+        for role, row in result["models"].items():
+            if row.get("base_url_env"):
+                files["model_endpoint:" + role] = hashlib.sha256(model_env.get(row["base_url_env"], "").encode()).hexdigest()
     result["fingerprint"] = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
     return result
 
@@ -70,19 +79,10 @@ def invocation(profile, identity):
     identity = run_id(identity)
     if profile.get("readiness", "ready") != "ready":
         raise ValueError("Profile is draft: finish business/data/trace integration before starting")
-    env = dict(os.environ)
-    if profile["env_file"]:
-        target = Path(profile["env_file"])
-        if not target.is_file():
-            raise ValueError("Private env_file is missing")
-        for raw in target.read_text().splitlines():
-            line = raw.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
-                    raise ValueError("Invalid env_file variable")
-                env[key] = value.strip().strip('"').strip("'")
-    env.update({key: str(value) for key, value in profile.get("environment", {}).items()})
+    env = profile_environment(profile)
+    from harnesslens.core.model_config import configure_models
+    receipt = configure_models(profile.get("models"), env, business=bool(profile["agent_config"]))
+    env["HAI_MODEL_CONNECTIONS"] = json.dumps(receipt, sort_keys=True)
     from harnesslens.harnesses.component_policy import ENV
     env[ENV] = json.dumps(profile["components"], sort_keys=True)
     env["HARNESSLENS_ROOT"] = str(ROOT)
@@ -108,3 +108,20 @@ def invocation(profile, identity):
             raise ValueError("test_candidate needs submission")
         argv += ["--patch-json", profile["submission"]]
     return argv, env
+
+
+def profile_environment(profile):
+    env = dict(os.environ)
+    if profile["env_file"]:
+        target = Path(profile["env_file"])
+        if not target.is_file():
+            raise ValueError("Private env_file is missing")
+        for raw in target.read_text().splitlines():
+            line = raw.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
+                    raise ValueError("Invalid env_file variable")
+                env[key] = value.strip().strip('"').strip("'")
+    env.update({key: str(value) for key, value in profile.get("environment", {}).items()})
+    return env

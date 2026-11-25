@@ -81,16 +81,16 @@ def test_scoped_directory_and_exported_package_retain_files(tmp_path):
     assert load_initial_harness(package["path"]) == first
 
 
-def test_profile_optional_initial_and_queue_detects_input_changes(tmp_path):
+def test_profile_optional_initial_and_queue_detects_input_changes(tmp_path, model_tables):
     path = tmp_path / "experiment.toml"
     base = 'schema="harnesslens.experiment.v1"\nbenchmark="crm"\n'
-    path.write_text(base)
+    path.write_text(base + model_tables)
     profile = load_profile(path)
     assert profile["initial_harness"] == ""
     assert "--initial-harness" not in invocation(profile, "one")[0]
     source = tmp_path / "initial"; source.mkdir()
     (source / "AGENTS.md").write_text("One")
-    path.write_text(base + 'initial_harness="initial"\n')
+    path.write_text(base + 'initial_harness="initial"\n' + model_tables)
     profile = load_profile(path)
     command = invocation(profile, "one")[0]
     assert command[command.index("--initial-harness") + 1] == str(source)

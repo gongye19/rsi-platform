@@ -122,11 +122,12 @@ def build_baseline_fingerprint(
     extension_fields = adapter.baseline_fields(target_harness) if adapter else {}
     if extension_fields:
         rollout = {"repeats": TRAIN_ROLLOUT_REPEATS, **extension_fields["rollout"]}
+    from harnesslens.core.model_config import execution_model
     payload = {
         "schema": f"harnesslens.{config.cell}-baseline.v1",
         "benchmark": config.benchmark,
         "harness": target_harness,
-        "target_model": "deepseek/deepseek-v4-flash",
+        "target_model": execution_model(),
         "user_model": "openai/deepseek-v4-flash",
         "cell": config.cell,
         "task_ids": list(normalized),
@@ -146,6 +147,9 @@ def build_baseline_fingerprint(
     if extension_fields:
         payload.update(extension_fields)
         payload["rollout"] = rollout
+    if os.environ.get("HAI_EXECUTION_MODEL") and not extension_fields:
+        from harnesslens.core.model_config import connection
+        payload["execution_connection"] = {k: v for k, v in connection("execution").items() if k != "api_key"}
     if initial_harness_digest:
         payload["initial_harness_sha256"] = initial_harness_digest
     payload["fingerprint_sha256"] = hashlib.sha256(

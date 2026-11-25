@@ -79,13 +79,17 @@ def check_python(report: Report) -> None:
 
 def check_credentials(report: Report) -> None:
     report.section("Credentials")
-    key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-    if key:
-        report.line(OK, "DEEPSEEK_API_KEY", f"set ({len(key)} chars)")
-    else:
-        report.line(MISSING, "DEEPSEEK_API_KEY", "set it in .env or export it")
-    base = os.environ.get("DEEPSEEK_BASE_URL", "").strip()
-    report.line(OK if base else OPTIONAL, "DEEPSEEK_BASE_URL", base or "provider default")
+    from harnesslens.core.model_config import connection
+    for role in ("execution", "analysis"):
+        if role == "execution" and os.environ.get("HAI_AGENT_CONFIG"):
+            report.line(OK, "execution model", "managed by business agent")
+            continue
+        selected = connection(role)
+        prefix = "HAI_" + role.upper()
+        report.line(OK if selected["api_key"] else MISSING, prefix + "_API_KEY",
+                    "configured" if selected["api_key"] else "set in private env_file")
+        report.line(OK if selected["base_url"] else MISSING, prefix + "_BASE_URL",
+                    selected["base_url"] or "missing")
 
 
 def check_runtime(report: Report, harness: str) -> None:

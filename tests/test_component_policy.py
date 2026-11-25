@@ -15,10 +15,11 @@ def test_default_is_all_sixteen_not_a_benchmark_whitelist(monkeypatch):
     assert not allowed_components() & PROPOSAL_ONLY
 
 
-def test_startup_policy_is_applied_before_subprocess_and_model_discovery(tmp_path, monkeypatch):
+def test_startup_policy_is_applied_before_subprocess_and_model_discovery(tmp_path, monkeypatch, model_tables):
     monkeypatch.setenv("HAI_COMPONENT_POLICY", '{"allowed":["skills"]}')
     path = tmp_path / "experiment.toml"
     path.write_text('schema="harnesslens.experiment.v1"\n[components]\nallowed=["*"]\ndenied=["permissions","mcp_servers"]\nexperimental_fields=["batch_tool"]\n')
+    path.write_text(path.read_text() + model_tables)
     profile = load_profile(path)
     _, env = invocation(profile, "policy-test")
     policy = json.loads(env["HAI_COMPONENT_POLICY"])

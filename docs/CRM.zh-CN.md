@@ -26,13 +26,14 @@ uv pip install --python .venv/bin/python -e '.[crm,dev]'
 其他机器可在该目录放置同一 checkout，或设置 `HAI_DAB_ROOT`。
 `configs/crm_postgres_fingerprint.json` 来自既有实验的规范快照；该接入不会自动重建或修改数据库。
 
-本机 `.env` 为权限 0600 的 gitignored 文件，复用已有智谱 provider。主要选项：
+本机 `.env` 为权限 0600 的 gitignored 文件；执行连接保留已有 GLM，分析使用 David AI GPT。两组在任务配置中明确选择，见 [模型连接](model-connections.zh-CN.md)。主要选项：
 
 | 变量 | 用途 |
 | --- | --- |
-| `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` | 历史变量名；此处实际配置智谱兼容接口 |
-| `HAI_CRM_MODEL=crm/glm-5.2` | 求解模型；provider 名称 crm 只用于本地路由 |
-| `HAI_MODEL=crm/glm-5.2` | 分析、编辑等演化角色的模型 |
+| `HAI_EXECUTION_API_KEY` / `HAI_EXECUTION_BASE_URL` | 执行接口凭据与地址 |
+| `HAI_ANALYSIS_API_KEY` | 分析连接的独立凭据 |
+| `HAI_EXECUTION_MODEL=crm/glm-5.2` | 求解模型；provider 名称 crm 只用于本地路由 |
+| `HAI_ANALYSIS_MODEL=david/gpt-6.2-sol` | 分析、编辑等演化角色的模型 |
 | `HAI_OPENCODE_BIN` | 本机固定的 OpenCode 1.18.32 官方 macOS ARM64 二进制 |
 | `HAI_OPENCODE_VERSION=1.18.32` | 启动前校验版本；不匹配立即停止 |
 | `HAI_CRM_RUNTIME_ROOT` | `runtime/opencode-1.18.32`；运行时供 agent 只读访问 |

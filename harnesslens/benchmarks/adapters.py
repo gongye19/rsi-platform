@@ -18,7 +18,7 @@ def sha(path):
 
 def runtime_sources():
     return tuple(str(Path(__file__).resolve().parents[1] / name) for name in (
-        "benchmarks/adapters.py", "benchmarks/jsonl_adapter.py", "benchmarks/grader_worker.py", "evaluation/business_runtime.py",
+        "core/model_config.py", "core/model_trace.py", "core/model_trace.py", "benchmarks/adapters.py", "benchmarks/jsonl_adapter.py", "benchmarks/grader_worker.py", "evaluation/business_runtime.py",
         "benchmarks/cell_config.py", "benchmarks/benchmark_splits.py", "evaluation/rollout_bridge.py",
         "harnesses/business_agent.py", "harnesses/business_worker.py", "harnesses/opencode_components.py",
         "harnesses/candidate_config_runtime.py", "harnesses/native_candidate_runtime.py",

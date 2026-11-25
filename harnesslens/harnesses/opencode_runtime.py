@@ -138,8 +138,10 @@ class OpenCodeIntelligentAdapter:
                 allowed_builtin_tools=self.allowed_builtin_tools,
                 base_url=f"http://127.0.0.1:{port}/v1",
             )
+            from harnesslens.core.model_config import without_credentials
             env = {
-                **os.environ,
+                **without_credentials(os.environ),
+                "DEEPSEEK_API_KEY": "analysis-local-proxy",
                 "XDG_DATA_HOME": str(run_root / ".oc_data"),
                 "XDG_CONFIG_HOME": str(run_root / ".oc_config"),
                 "XDG_STATE_HOME": str(run_root / ".oc_state"),
@@ -280,26 +282,33 @@ def write_opencode_config(
     model_options: Mapping[str, Any] | None = None,
     allowed_builtin_tools: tuple[str, ...] = (),
     base_url: str | None = None,
+    api: str | None = None,
 ) -> Path:
     if "/" not in model:
         raise ValueError("OpenCode model must use provider/model format")
+    from harnesslens.core.model_config import connection
+    selected = connection("analysis")
+    api = api or selected["api"]
+    if api not in {"chat_completions", "responses"}:
+        raise ValueError("Unsupported model API protocol")
+    options = dict(model_options or {})
+    if api == "responses":
+        options["store"] = False
     provider_id, model_id = model.split("/", 1)
     allowed = set(allowed_builtin_tools)
     provider = {
         "models": {
             model_id: {
                 "limit": {"context": int(context_limit), "output": int(output_limit)},
-                **({"options": dict(model_options)} if model_options else {}),
+                **({"options": options} if options else {}),
             }
         },
-        "npm": "@ai-sdk/openai-compatible",
-        "name": "DeepSeek",
+        "npm": "@ai-sdk/openai" if api == "responses" else "@ai-sdk/openai-compatible",
+        "name": "HarnessLens model provider",
         "options": {
             "baseURL": str(
                 base_url
-                or os.environ.get("DEEPSEEK_BASE_URL")
-                or os.environ.get("DEEPSEEK_URL")
-                or DEFAULT_UPSTREAM_BASE_URL
+                or selected["base_url"]
             ).rstrip("/"),
             "apiKey": "{env:DEEPSEEK_API_KEY}",
         },
@@ -354,14 +363,15 @@ def collect_opencode_usage(stdout: str) -> dict[str, int] | None:
     return usage if found else None
 
 
-def _start_proxy(*, run_root: Path, call_id: str) -> tuple[subprocess.Popen[str], int]:
+def _start_proxy(*, run_root: Path, call_id: str, role: str = "analysis") -> tuple[subprocess.Popen[str], int]:
     script = (
         Path(__file__).resolve().parents[1]
         / "infrastructure"
         / "chat_completions_proxy.py"
     )
-    key = str(os.environ.get("DEEPSEEK_API_KEY") or "")
-    if not script.is_file() or not key:
+    from harnesslens.core.model_config import proxy_environment
+    proxy_env = proxy_environment(role)
+    if not script.is_file():
         raise RuntimeError("OpenCode trace proxy prerequisites are unavailable")
     seed = int.from_bytes(
         hashlib.sha256(f"harnesslens-intelligent\0{call_id}".encode()).digest()[:4], "big"
@@ -378,7 +388,7 @@ def _start_proxy(*, run_root: Path, call_id: str) -> tuple[subprocess.Popen[str]
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ),
+        env=proxy_env,
     )
     ready = process.stdout.readline().strip() if process.stdout else ""
     if not ready.startswith("PORT="):

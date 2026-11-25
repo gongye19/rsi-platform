@@ -96,6 +96,7 @@ class Worker:
             directory.mkdir(parents=True, exist_ok=True)
             # Private env_file contents and credentials never enter this manifest.
             manifest = {key: value for key, value in profile.items() if key != "environment"}
+            manifest["model_connections"] = json.loads(env["HAI_MODEL_CONNECTIONS"])
             (directory / "experiment.json").write_text(json.dumps(manifest, indent=2))
             with (directory / f"attempt-{job['attempt']}.log").open("w") as log:
                 process = subprocess.Popen(command_override or argv, env=env, cwd=ROOT,

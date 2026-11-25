@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams;
   const id = query.get("run");
   if (id && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(id)) return Response.json({ error: "无效实验编号" }, { status: 400 });
-  if (query.get("profiles") === "1") return platform("/v1/profiles");
+  if (query.get("profiles") === "1") return platform("/v1/profiles" + (query.get("name") ? "?" + new URLSearchParams({ name: query.get("name")! }) : ""));
   if (id && query.get("events") === "1") return platform(`/v1/runs/${id}/events?after=${Number(query.get("after") || 0)}`);
   if (id && query.has("path")) return platform(`/v1/runs/${id}/artifact?${new URLSearchParams({root: query.get("root") || "0", path: query.get("path") || ""})}`);
   if (id && query.get("artifacts") === "1") return platform(`/v1/runs/${id}/artifacts`);

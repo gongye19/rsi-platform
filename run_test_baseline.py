@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--benchmark", required=True, type=benchmark_cell, help="Benchmark name or benchmark.toml path")
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--models-config", type=Path, help="TOML containing explicit models.execution and models.analysis")
     parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")
     parser.add_argument("--initial-harness", type=Path, help="Optional initial OpenCode directory/package; omitted means empty v0")
     parser.add_argument("--retrieval-config", default="bm25")
@@ -79,6 +80,9 @@ def main() -> int:
             )
         )
         return 0
+    from harnesslens.core.model_config import task_models
+    task_models(args.models_config, business=bool(args.agent_config or os.environ.get("HAI_AGENT_CONFIG")),
+                run_root=root / "runs/test_baselines" / args.run_id)
     result = run_test_baseline(
         repo_root=root,
         run_id=args.run_id,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.core.model_config import execution_model, proxy_environment
+
 import json
 import os
 import queue
@@ -596,11 +598,11 @@ def run_single_pi_tau2_trial(
             "pairing_slot": int(trial),
             "simulation_seed": simulation_seed,
             "harness": "pi",
-            "model": MODEL,
+            "model": execution_model().split("/", 1)[-1],
             "reward": reward,
             "evaluation": evaluation,
             "runtime_models": {
-                "target_agent": MODEL,
+                "target_agent": execution_model().split("/", 1)[-1],
                 "user_simulator": llm_settings["model"],
                 "evaluator": llm_settings["model"],
             },
@@ -846,7 +848,7 @@ def _pi_rpc_command(
         "--provider",
         "deepseek",
         "--model",
-        MODEL,
+        execution_model().split("/", 1)[-1],
         "--approve",
         "--no-builtin-tools",
         "--no-session",
@@ -934,11 +936,11 @@ def _write_pi_project(
                     "deepseek": {
                         "baseURL": base_url,
                         "apiKeyEnvVar": "DEEPSEEK_API_KEY",
-                        "models": [MODEL],
+                        "models": [execution_model().split("/", 1)[-1]],
                     }
                 },
             },
-            "model": MODEL,
+            "model": execution_model().split("/", 1)[-1],
         },
     )
     (pi_dir / "settings.json").write_text(
@@ -959,7 +961,7 @@ def _write_pi_project(
                         },
                         "models": [
                             {
-                                "id": MODEL,
+                                "id": execution_model().split("/", 1)[-1],
                                 "reasoning": True,
                                 "contextWindow": 65_536,
                                 "maxTokens": 24_576,
@@ -1086,7 +1088,7 @@ def _start_pi_logging_proxy(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ),
+        env=proxy_environment("execution"),
         start_new_session=True,
     )
     assert process.stdout is not None

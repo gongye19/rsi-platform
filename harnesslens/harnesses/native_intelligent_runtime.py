@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from harnesslens.core.config import pi_binary, pi_install_root
+from harnesslens.core.model_config import connection, proxy_environment, without_credentials
 from harnesslens.core.budget import CreationBudget
 from harnesslens.infrastructure.process_isolation import (
     bubblewrap_command,
@@ -297,7 +298,7 @@ class NativeIntelligentAdapter:
                     "providers": {
                         "harness-query": {
                             "baseUrl": f"http://127.0.0.1:{port}/v1",
-                            "api": "openai-completions",
+                            "api": "openai-responses" if connection("analysis")["api"] == "responses" else "openai-completions",
                             "apiKey": "probe",
                             "compat": {
                                 "supportsDeveloperRole": False,
@@ -305,7 +306,7 @@ class NativeIntelligentAdapter:
                             },
                             "models": [
                                 {
-                                    "id": "deepseek-v4-flash",
+                                    "id": self.model.split("/", 1)[-1],
                                     "reasoning": True,
                                     "contextWindow": self.context_limit,
                                     "maxTokens": self.output_limit,
@@ -330,7 +331,7 @@ class NativeIntelligentAdapter:
             "--provider",
             "harness-query",
             "--model",
-            "deepseek-v4-flash",
+            self.model.split("/", 1)[-1],
             "--thinking",
             "high",
         ]
@@ -339,7 +340,7 @@ class NativeIntelligentAdapter:
         else:
             command.append("--no-tools")
         env = {
-            **os.environ,
+            **without_credentials(os.environ),
             "HOME": str(run_root / ".home"),
             "PI_CODING_AGENT_DIR": str(home),
             "PI_OFFLINE": "1",
@@ -376,8 +377,9 @@ class NativeIntelligentAdapter:
         shell_enabled = "bash" in self.allowed_builtin_tools
         shell_flag = "true" if shell_enabled else "false"
         sandbox_mode = "workspace-write" if tools_enabled else "read-only"
+        configured_model = self.model.split("/", 1)[-1] if connection("analysis")["api"] == "responses" else "gpt-5.4"
         config_path.write_text(
-            f"""model = "gpt-5.4"
+            f"""model = "{configured_model}"
 model_provider = "deepseek"
 model_reasoning_effort = "high"
 sandbox_mode = "{sandbox_mode}"
@@ -416,8 +418,8 @@ unified_exec = false
             "-",
         ]
         env = {
-            **os.environ,
-            "OPENAI_API_KEY": str(os.environ.get("DEEPSEEK_API_KEY") or ""),
+            **without_credentials(os.environ),
+            "OPENAI_API_KEY": "editor-local-proxy",
             "CODEX_HOME": str(codex_home),
             "HOME": str(run_root / ".home"),
             "XDG_CONFIG_HOME": str(run_root / ".config"),
@@ -523,7 +525,7 @@ def _start_chat_proxy(path: Path, *, call_id: str) -> tuple[subprocess.Popen[str
         / "infrastructure"
         / "chat_completions_proxy.py"
     )
-    key = str(os.environ.get("DEEPSEEK_API_KEY") or "")
+    key = connection("analysis")["api_key"]
     if not script.is_file() or not key:
         raise RuntimeError("Pi trace proxy prerequisites are unavailable")
     seed = (
@@ -543,6 +545,7 @@ def _start_chat_proxy(path: Path, *, call_id: str) -> tuple[subprocess.Popen[str
         stderr=subprocess.PIPE,
         text=True,
         start_new_session=True,
+        env=proxy_environment("analysis"),
     )
     ready = process.stdout.readline().strip() if process.stdout else ""
     if not ready.startswith("PORT="):
@@ -558,12 +561,14 @@ def _start_responses_proxy(
     *,
     workspace_editor_root: Path | None = None,
 ) -> tuple[subprocess.Popen[str], int]:
+    if connection("analysis")["api"] == "responses":
+        return _start_chat_proxy(context_log, call_id=context_log.parent.name)
     script = (
         Path(__file__).resolve().parents[1]
         / "infrastructure"
         / "codex_responses_proxy.py"
     )
-    key = str(os.environ.get("DEEPSEEK_API_KEY") or "")
+    key = connection("analysis")["api_key"]
     if not key:
         raise RuntimeError("Codex trace proxy prerequisites are unavailable")
     command = [
@@ -584,6 +589,7 @@ def _start_responses_proxy(
         stderr=subprocess.PIPE,
         text=True,
         start_new_session=True,
+        env=proxy_environment("analysis"),
     )
     ready = process.stdout.readline().strip() if process.stdout else ""
     if not ready.startswith("PORT="):

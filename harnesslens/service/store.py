@@ -73,6 +73,8 @@ class Store:
                     raise ValueError("Experiment profile changed; create a new run")
                 if profile.get("readiness", "ready") != "ready":
                     raise ValueError("Draft profile: business/data/trace integration is not ready")
+                from .config import invocation
+                invocation(profile, identity)  # Validate both connections before queueing.
                 db.execute("UPDATE jobs SET state='queued',stop=0,error='',updated=? WHERE id=?", (time.time(), identity))
             elif action == "stop":
                 if row["state"] not in {"queued", "running", "stopping"}:

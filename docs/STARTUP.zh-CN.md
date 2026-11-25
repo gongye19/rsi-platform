@@ -7,8 +7,10 @@
 | `benchmark` | 内置题库名称，或外部 `benchmark.toml` 路径 | 本轮用 `crm` |
 | `initial_harness` | 初始 OpenCode Harness 目录，或已导出的完整 Harness JSON 包 | **省略或空字符串表示空 v0** |
 | `agent_config` | HTTP/Python 调用、答案和 trace 映射配置 | 省略则使用本机原生 OpenCode |
-| `env_file` | 私有模型地址、模型名、凭据、外部数据位置等 | 模板使用仓库 `.env` |
+| `env_file` | 私有模型地址、凭据、外部数据位置等 | 模板使用仓库 `.env` |
+| `[models.execution]` / `[models.analysis]` | **必填**，各自选择模型、协议、地址、密钥环境变量名 | 不再默认共用；见 [模型连接](model-connections.zh-CN.md) |
 | `mode` | train、test_baseline 或 test_candidate | train |
+| `[models.execution]` / `[models.analysis]` | 分别指定执行与分析的模型、协议、地址和凭据变量名 | **启动必填**；业务执行显式设 managed_by |
 | `[environment]` | 会话预算和并发等实验设置 | 模板预算200、并发1 |
 | `[components]` | 优化组件的实验边界；模型在范围内自行发现和选择 | 默认16类全允许，denied为空 |
 
@@ -30,6 +32,24 @@ HAI_TOTAL_CREATION_BUDGET = 200
 HAI_MAX_ROLLOUT_CONCURRENCY = 1
 HAI_MAX_ANALYSIS_CONCURRENCY = 1
 HAI_PROVIDER_MAX_CONCURRENCY = 1
+
+[models.execution]
+managed_by = "business_agent"
+
+[models.analysis]
+model = "david/gpt-6.2-sol"
+api = "responses"
+base_url = "https://api.david-ai.net/v1"
+api_key_env = "HAI_ANALYSIS_API_KEY"
+
+[models.execution]
+managed_by = "business_agent"
+
+[models.analysis]
+model = "david/gpt-6.2-sol"
+api = "responses"
+base_url = "https://api.david-ai.net/v1"
+api_key_env = "HAI_ANALYSIS_API_KEY"
 
 [components]
 allowed = ["*"]
@@ -87,11 +107,11 @@ harnesses/business-agent/
 直接运行算法也支持可选参数（预算等环境变量需在进程启动前设置）：
 
 ```bash
-.venv/bin/python run_e2e.py --cell crm --harness opencode --run-id crm-001
+.venv/bin/python run_e2e.py --cell crm --harness opencode --run-id crm-001 --models-config configs/experiments/crm-local.toml
 # 有初版时增加 --initial-harness /absolute/path/to/harness
 # 接业务服务时增加 --agent-config /absolute/path/to/agent.toml
 ```
 
 独立评测初版：`run_test_baseline.py --initial-harness ...`；不提供时评测空初版。评测最终版本：`run_test_candidate.py --patch-json .../submission/final.json`，加载所选快照，无需再指定初版。
 
-部署和 Linux/HTTP 测试数据的边界见 [INTRANET.zh-CN.md](INTRANET.zh-CN.md)。本机真实模型实验仍待 API 恢复后启动。
+部署和 Linux/HTTP 测试数据的边界见 [INTRANET.zh-CN.md](INTRANET.zh-CN.md)。本机分析连接已验证；13题完整实验尚未启动。

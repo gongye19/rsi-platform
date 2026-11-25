@@ -1,5 +1,7 @@
 # HarnessLens
 
+Task startup requires independent execution/analysis model selections: [模型连接配置](docs/model-connections.zh-CN.md).
+
 Internal Linux deployment without Docker: [Chinese deployment guide](docs/INTRANET.zh-CN.md).
 Includes uv lockfile, local API/worker queue, experiment UI and offline dependency preparation.
 Company HTTP/trace/test-data integration remains site-specific; the shipped profile is a non-runnable draft.

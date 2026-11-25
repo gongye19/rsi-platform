@@ -63,6 +63,8 @@ def main():
     print(json.dumps({"preflight": probes, "tasks": 13, "train": 10, "test": 3}, ensure_ascii=False), flush=True)
     if not args.smoke:
         return 0
+    from harnesslens.core.model_config import task_models
+    task_models(business=bool(args.agent_config))
     repository = CellHarnessRepository(cell="crmarenapro", repo_root=ROOT, run_id=args.run_id,
                                        evidence_root=root / "evidence", harness="opencode")
     versions = ["v0"]

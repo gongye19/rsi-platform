@@ -6,6 +6,19 @@ readiness = "ready"
 # Native local experiment: no company HTTP endpoint is required.
 # Optional initial_harness = "../../harnesses/business-agent"
 
+# Both model roles are selected explicitly for every task.
+[models.execution]
+model = "crm/glm-5.2"
+api = "chat_completions"
+base_url_env = "HAI_EXECUTION_BASE_URL"
+api_key_env = "HAI_EXECUTION_API_KEY"
+
+[models.analysis]
+model = "david/gpt-6.2-sol"
+api = "responses"
+base_url = "https://api.david-ai.net/v1"
+api_key_env = "HAI_ANALYSIS_API_KEY"
+
 [components]
 # Discovery considers every component; this does not force all of them to change.
 allowed = ["*"]

@@ -1,5 +1,7 @@
 # HarnessLens
 
+任务启动需分别指定执行与分析模型，详见 [模型连接配置](docs/model-connections.zh-CN.md)。
+
 **Verify Smarter, Evolve Further：通过行为感知验证实现高效 Harness 演化**
 
 本仓库提供论文在 OpenCode、Codex CLI 和 Pi Coding Agent 上的实现，包括完整的 TRAIN
@@ -66,7 +68,7 @@ cd HarnessLens
 scripts/setup.sh
 
 # 配置 provider。
-$EDITOR .env  # DEEPSEEK_API_KEY；DEEPSEEK_BASE_URL 可选
+$EDITOR .env  # 执行/分析密钥；任务 TOML 分别指定两组模型
 ```
 
 ## 环境准备

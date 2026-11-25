@@ -1,4 +1,4 @@
-"""HarnessLens pass-through logging proxy for Chat Completions clients.
+"""HarnessLens pass-through logging proxy for Chat Completions and Responses.
 
 OpenCode talks the OpenAI-compatible Chat Completions API, so unlike the codex
 (Responses) and claude (Anthropic) proxies this one does NO format translation —
@@ -204,7 +204,7 @@ def _effective_request(role, request):
     if not isinstance(request, dict):
         return request
     effective = dict(request)
-    if role == "agent" and AGENT_SEED is not None:
+    if role == "agent" and AGENT_SEED is not None and os.environ.get("HAI_PROXY_API") != "responses" and "input" not in effective:
         effective["seed"] = int(AGENT_SEED)
     return effective
 
@@ -268,6 +268,8 @@ def _graceful_shutdown(_signum, _frame):
 def _assemble_stream(buf_text):
     """Reconstruct an OpenAI chat-completion response object from a buffered SSE
     stream (sequence of `data: {chunk}` lines). Returns (response_obj, usage)."""
+    if any(line.startswith("event: response.") or '"type":"response.' in line.replace(" ", "") for line in buf_text.splitlines()):
+        return _assemble_responses_stream(buf_text)
     content_parts = []
     reasoning_parts = []
     tool_calls = {}          # index -> {id, name, arguments}
@@ -329,6 +331,43 @@ def _assemble_stream(buf_text):
     if stream_error:
         resp_obj["error"] = stream_error
     return resp_obj, usage
+
+
+def _assemble_responses_stream(buf_text):
+    """Keep the provider's native response, including reasoning/tool items."""
+    events = []
+    response = None
+    for line in buf_text.splitlines():
+        if not line.startswith("data:"):
+            continue
+        try:
+            event = json.loads(line[5:].strip())
+        except ValueError:
+            continue
+        events.append(event)
+        if event.get("type") in {"response.completed", "response.failed", "response.incomplete"}:
+            response = event.get("response")
+    if not isinstance(response, dict):
+        return {"object": "response", "status": "interrupted", "events": events}, None
+    return response, _normalized_usage(response.get("usage"))
+
+
+def _normalized_usage(usage):
+    if isinstance(usage, dict) and "input_tokens" in usage and "output_tokens" in usage:
+        return {**usage, "total_tokens": usage["input_tokens"] + usage["output_tokens"]}
+    return usage
+
+
+def _stream_terminal(line):
+    line = line.strip()
+    if line == b"data: [DONE]":
+        return True
+    if line.startswith(b"data:"):
+        try:
+            return json.loads(line[5:]).get("type") in {"response.completed", "response.failed", "response.incomplete"}
+        except (ValueError, AttributeError):
+            pass
+    return False
 
 
 class H(http.server.BaseHTTPRequestHandler):
@@ -506,8 +545,9 @@ class H(http.server.BaseHTTPRequestHandler):
                         except (OSError, ValueError):
                             pass  # Retain upstream response even after client cancellation.
                         tail = stream_tail + chunk
-                        done = any(line.strip() == b"data: [DONE]" for line in tail.split(b"\n")[:-1])
-                        stream_tail = tail[-128:]
+                        lines = tail.split(b"\n")
+                        done = any(_stream_terminal(line) for line in lines[:-1])
+                        stream_tail = lines[-1]
                         if done:
                             break  # DONE ends SSE; do not wait for a delayed TCP EOF.
             except Exception as exc:
@@ -517,7 +557,9 @@ class H(http.server.BaseHTTPRequestHandler):
             raw = b"".join(chunks)
             if is_stream:
                 resp_json, usage = _assemble_stream(raw.decode("utf-8", "replace"))
-                finished = any(item.get("finish_reason") for item in resp_json.get("choices", []))
+                finished = any(item.get("finish_reason") for item in resp_json.get("choices", [])) or resp_json.get("status") == "completed"
+                if resp_json.get("object") == "response" and resp_json.get("status") != "completed":
+                    read_error = read_error or "upstream Responses generation did not complete"
                 if resp_json.get("error") or any(item.get("finish_reason") in {"error", "network_error", "server_error"} for item in resp_json.get("choices", [])):
                     read_error = read_error or "upstream SSE reported a generation error"
                 if not read_error and b"[DONE]" not in raw and not finished:
@@ -528,9 +570,11 @@ class H(http.server.BaseHTTPRequestHandler):
                 except (ValueError, UnicodeDecodeError):
                     resp_json = None
                     read_error = read_error or "upstream returned invalid JSON"
-                usage = resp_json.get("usage") if isinstance(resp_json, dict) else None
+                usage = _normalized_usage(resp_json.get("usage")) if isinstance(resp_json, dict) else None
                 if isinstance(resp_json, dict) and resp_json.get("error"):
                     read_error = read_error or "upstream returned an error payload"
+                if isinstance(resp_json, dict) and resp_json.get("object") == "response" and resp_json.get("status") != "completed":
+                    read_error = read_error or "upstream Responses generation did not complete"
             entry = {"ts": ts, "call_index": call_index, "harness": "opencode", "role": role,
                      "model": req_json.get("model") if isinstance(req_json, dict) else None, "request": req_json,
                      "response": None if read_error else resp_json, "usage": usage,

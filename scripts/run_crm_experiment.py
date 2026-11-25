@@ -55,15 +55,13 @@ def run(*, profile_path, identity, live=False, smoke_only=False):
     training, env = invocation(profile, identity)
     directory = ROOT / "runs/local_experiments" / identity
     directory.mkdir(parents=True, exist_ok=True)
-    config = {"profile": profile["profile_path"], "fingerprint": profile["fingerprint"], "run_id": identity}
+    config = {"profile": profile["profile_path"], "fingerprint": profile["fingerprint"], "run_id": identity, "models": json.loads(env["HAI_MODEL_CONNECTIONS"])}
     path = directory / "configuration.json"
     if path.is_file() and json.loads(path.read_text()) != config:
         raise ValueError("Launch configuration changed; use a new run ID")
     write_json(path, config)
     print(json.dumps({"run_id": identity, "training_output": str(ROOT / "runs/train" / identity),
-        "optimizer_model": env.get("HAI_MODEL", "deepseek/deepseek-v4-flash"),
-        "solver_model": env.get("HAI_CRM_MODEL", "crm/glm-5.2"),
-        "provider_key_configured": bool(env.get("DEEPSEEK_API_KEY")),
+        "models": json.loads(env["HAI_MODEL_CONNECTIONS"]),
         "mode": "live" if live or smoke_only else "offline-check", "components": profile["components"], "settings": profile.get("environment", {})}, ensure_ascii=False, indent=2), flush=True)
     python = sys.executable
     execute([python, "scripts/run_crm.py", "--run-id", identity + "-check"], env, "offline_preflight", directory)
@@ -75,8 +73,6 @@ def run(*, profile_path, identity, live=False, smoke_only=False):
     if not live and not smoke_only:
         print("Local preflight passed; no provider requests made. Use --smoke-only or --run after API recovery.", flush=True)
         return
-    if not env.get("DEEPSEEK_API_KEY"):
-        raise ValueError("Model key missing from private env_file")
     execute([python, "scripts/run_crm.py", "--run-id", identity + "-smoke", "--smoke", "--probe-candidate"], env, "paid_smoke", directory)
     if smoke_only:
         return

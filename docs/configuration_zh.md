@@ -28,8 +28,11 @@ cp .env.example .env
 
 | 变量 | 说明 |
 | --- | --- |
-| `DEEPSEEK_API_KEY` | provider 凭据。所有智能角色 + 所有候选 harness rollout 都用它。 |
-| `DEEPSEEK_BASE_URL` | OpenAI 兼容的 chat-completions 端点。解析顺序 `DEEPSEEK_BASE_URL` → `DEEPSEEK_URL`（旧名）→ `https://api.deepseek.com/v1`，统一由 `config.provider_base_url()` 负责。 |
+| `HAI_EXECUTION_API_KEY` | 执行连接的凭据；远程业务执行由业务服务管理时不需要。 |
+| `HAI_EXECUTION_BASE_URL` | 执行连接地址；由任务的 models.execution.base_url_env 引用。 |
+| `HAI_ANALYSIS_API_KEY` | 分析连接的独立凭据。 |
+
+每次任务须在 TOML 中明确配置 `[models.execution]` 与 `[models.analysis]`，分别选择模型、协议、地址和凭据变量名。详见 [模型连接](model-connections.zh-CN.md)。服务启动时以所选 TOML 为准，私有 env_file 提供引用值；直接 CLI 支持 `--models-config` 或两组显式的通用环境变量。
 
 ---
 
@@ -61,8 +64,8 @@ CRM 扩展配置见 [CRM 接入](CRM.zh-CN.md)，主要变量如下：
 | `HAI_DAB_ROOT` | `third_party/dataagentbench` | CRMarenapro 原始任务、数据与官方 grader 所在 checkout。 |
 | `HAI_CRM_RUNTIME_ROOT` | 根据二进制推断 | 原生求解/编辑器沙箱可只读访问的 OpenCode 运行时目录。 |
 | `HAI_CRM_POSTGRES_PORT` | `55432` | 宿主 PostgreSQL 端口；原生 agent 经临时受限代理访问。 |
-| `HAI_CRM_MODEL` | `crm/glm-5.2` | CRM 原生求解模型。 |
-| `HAI_MODEL` | 角色默认配置 | 覆盖分析、编辑等智能角色的模型；本机与求解模型保持一致。 |
+| `HAI_EXECUTION_MODEL` | 启动时指定 | 通用执行模型；替代 HAI_CRM_MODEL。 |
+| `HAI_ANALYSIS_MODEL` | 启动时指定 | 通用分析/编辑模型；替代 HAI_MODEL。本机使用 David AI gpt-6.2-sol。 |
 
 ---
 
@@ -171,3 +174,7 @@ CRM 扩展配置见 [CRM 接入](CRM.zh-CN.md)，主要变量如下：
 
 它会真的去解析 `benchmark_config()`，所以报出来的是所选 cell **实际**需要的
 文件、虚拟环境和可执行文件，而不是一份猜测清单。缺任何一项都会以非 0 退出。
+
+## 历史变量与内部桥接
+
+`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_URL` 仅供旧底层适配兼容；新任务必须明确选择两组连接。`HAI_MODEL_CONNECTIONS` 是启动器传给任务的无密钥连接记录，`HAI_PROXY_API` 是记录代理使用的协议选择，`HAI_PROXY_MODEL` 是旧协议转换代理使用的上游模型；这两个由系统生成，无需手工设置。

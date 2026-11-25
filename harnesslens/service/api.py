@@ -42,7 +42,16 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                     return
                 parts = url.path.strip("/").split("/")
                 if parts == ["v1", "profiles"]:
-                    self.json([str(p.relative_to(profiles)) for p in sorted(profiles.glob("*.toml"))])
+                    name = parse_qs(url.query).get("name", [""])[0]
+                    if name:
+                        path = (profiles / name).resolve()
+                        if not path.is_relative_to(profiles) or path.suffix != ".toml" or not path.is_file():
+                            raise ValueError("Unknown profile")
+                        from .config import load_profile
+                        profile = load_profile(path)
+                        self.json({"name": name, "models": profile.get("models", {}), "readiness": profile.get("readiness", "ready")})
+                    else:
+                        self.json([str(p.relative_to(profiles)) for p in sorted(profiles.glob("*.toml"))])
                 elif parts == ["v1", "runs"]:
                     self.json(store.list())
                 elif len(parts) in {3, 4} and parts[:2] == ["v1", "runs"]:

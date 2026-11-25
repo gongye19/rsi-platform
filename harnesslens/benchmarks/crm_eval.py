@@ -46,7 +46,8 @@ def model() -> str:
     business = load_config()
     if business:
         return business["agent"]["name"]
-    return os.environ.get("HAI_CRM_MODEL", "crm/glm-5.2")
+    from harnesslens.core.model_config import connection
+    return connection("execution")["model"] or "crm/glm-5.2"
 
 
 def effective_limits():
@@ -84,11 +85,13 @@ def runtime_fingerprint(repo_root: Path) -> dict:
         return {"model": business["agent"]["name"], "business_agent": fingerprint(business), "component_protocol": protocol_manifest(), "shared_runtime_sources": shared,
                 "adapter_sources": {name: sha(Path(__file__).with_name(name)) for name in ("crm.py", "crm_eval.py", "crm_business.py", "crm_query.py", "crm_postgres.py")},
                 "database": pg_fingerprint(repo_root), "data": data_fingerprint(repo_root)}
+    from harnesslens.core.model_config import connection
+    selected = connection("execution")
     from harnesslens.core.config import opencode_version
     binary = executable()
     runtime_root = Path(os.environ.get("HAI_CRM_RUNTIME_ROOT") or binary.parent.parent).resolve()
     entry = runtime_root / "app/src/index.js"
-    return {"model": model(), "provider_base_url": os.environ.get("DEEPSEEK_BASE_URL", ""), "component_protocol": protocol_manifest(), "shared_runtime_sources": shared,
+    return {"model": model(), "provider_base_url": selected["base_url"], "provider_api": selected["api"], "component_protocol": protocol_manifest(), "shared_runtime_sources": shared,
             "opencode_version": opencode_version(binary),
             "binary": str(binary), "binary_sha256": sha(binary),
             "runtime_entry_sha256": sha(entry) if entry.is_file() else None,
@@ -152,6 +155,8 @@ def prepare_harness(trial: Path, manifest: dict, port: int, limits: CrmLimits) -
     instructions = [agents.read_text() if agents.is_file() else "", *manifest.get("instructions", []), *manifest.get("prompt_appends", [])]
     agents.write_text("\n\n".join(instructions) + "\n")
     candidate = relocate(candidate_config(home, workspace, manifest), home=home, project=workspace)
+    from harnesslens.core.model_config import connection
+    selected = connection("execution")
     provider_id, model_id = model().split("/", 1)
     # Defaults are below candidate behavioral edits. Only infrastructure/model
     # settings are fixed above them; the sandbox enforces data/network boundaries.
@@ -163,10 +168,10 @@ def prepare_harness(trial: Path, manifest: dict, port: int, limits: CrmLimits) -
     config = deep_merge(defaults, candidate)
     fixed = {"$schema": "https://opencode.ai/config.json", "autoupdate": False, "share": "disabled",
         "model": model(), "small_model": model(), "enabled_providers": [provider_id],
-        "provider": {provider_id: {"npm": "@ai-sdk/openai-compatible", "name": "CRM provider",
+        "provider": {provider_id: {"npm": "@ai-sdk/openai" if selected["api"] == "responses" else "@ai-sdk/openai-compatible", "name": "Execution provider",
             "options": {"baseURL": f"http://127.0.0.1:{port}/v1", "apiKey": "local-proxy", "timeout": 300000},
             "models": {model_id: {"name": model_id, "limit": {"context": 200000, "output": limits.output_tokens},
-                                    "options": {"thinking": {"type": "disabled"}}}}}}}
+                                    "options": {"thinking": {"type": "disabled"}} if "/glm-" in model() else ({"store": False} if selected["api"] == "responses" else {})}}}}}
     config = deep_merge(config, fixed)
     config["instructions"] = list(dict.fromkeys([str(agents.resolve()), *config.get("instructions", [])]))
     # Skills delivered in HOME remain discoverable without loading uncontrolled
@@ -225,10 +230,8 @@ def _messages(events: list[dict], session_id=None) -> list[dict]:
     if not completed:
         return []
     last = completed[-1]
-    messages = list(last["request"].get("messages", []))
-    choices = (last.get("response") or {}).get("choices", [])
-    if choices and choices[0].get("message"):
-        messages.append(choices[0]["message"])
+    from harnesslens.core.model_trace import conversation
+    messages = conversation(last["request"], last.get("response"))
     normalized = []
     for raw in messages:
         item = dict(raw)
@@ -303,7 +306,7 @@ def _trial(*, repo_root: Path, trial_root: Path, task_id: str, trial: int, pairi
         try:
             prompt = prepare_task(repo_root, workspace, task_id, pg_port)
             before = _inventory(workspace / "source")
-            proxy, port = _start_proxy(run_root=trial_root, call_id=f"crm/{task_id}/slot-{pairing_slot}")
+            proxy, port = _start_proxy(run_root=trial_root, call_id=f"crm/{task_id}/slot-{pairing_slot}", role="execution")
             home, config, report = prepare_harness(trial_root, manifest, port, limits)
             fixed = {str(p.relative_to(workspace)): sha(p) for p in [workspace / "AGENTS.md", workspace / "opencode.json", *[p for p in home.rglob("*") if p.is_file()], *[p for p in (workspace / ".opencode").rglob("*") if p.is_file()]]}
             settings = json.loads((workspace / ".runtime/harnesslens/settings.json").read_text())
@@ -350,10 +353,10 @@ def _trial(*, repo_root: Path, trial_root: Path, task_id: str, trial: int, pairi
                 info = (event.get("event", {}).get("properties") or {}).get("info", {})
                 if info.get("id") in sessions:
                     sessions[info["id"]]["parent_session_id"] = info.get("parentID")
+            from harnesslens.core.model_trace import tool_call_count
             row.update(api_calls_jsonl=str(trace), primary_session_id=primary_session, model_sessions=sessions,
                        messages=messages, runtime_load_report=report, model_context=report,
-                       n_messages=len(messages), n_tool_calls=sum(len(choice.get("message", {}).get("tool_calls", []))
-                           for event in events for choice in (event.get("response") or {}).get("choices", [])))
+                       n_messages=len(messages), n_tool_calls=sum(tool_call_count(event.get("response")) for event in events))
             errors = [value for value in [*component_errors, validate_api_trace(trace), harness_execution_error(stdout, stderr),
                       "native OpenCode exited unsuccessfully" if code != 0 else ""] if value]
             if before != _inventory(workspace / "source") or any(not (workspace / p).is_file() or sha(workspace / p) != value for p, value in fixed.items()):

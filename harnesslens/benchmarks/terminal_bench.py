@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.core.model_config import execution_model, apply_execution_provider, proxy_environment
+
 import functools
 import hashlib
 import json
@@ -1746,7 +1748,7 @@ def _prepare_opencode(
             "list": "allow",
         },
     }
-    config = merge_candidate_config(candidate, fixed=fixed)
+    config = merge_candidate_config(candidate, fixed=apply_execution_provider(fixed))
     if manifest.get("instructions"):
         instruction_path = output_root / "opencode-candidate-instructions.md"
         instruction_path.write_text(
@@ -1768,7 +1770,7 @@ def _prepare_opencode(
     return (
         "cd /app && export PATH=/opt/harness/bin:$PATH && export OPENCODE_CONFIG=/app/opencode.json && "
         "export OPENCODE_DISABLE_AUTOCOMPACT=1 OPENCODE_DISABLE_PRUNE=1 && "
-        f"opencode run -m deepseek/deepseek-v4-flash --pure --auto --format json {shlex.quote(effective_instruction)}"
+        f"opencode run -m {shlex.quote(execution_model())} --pure --auto --format json {shlex.quote(effective_instruction)}"
     )
 
 
@@ -1792,7 +1794,7 @@ def _start_chat_proxy(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=os.environ,
+        env=proxy_environment("execution"),
         start_new_session=True,
     )
     assert process.stdout is not None
@@ -1869,7 +1871,7 @@ def _start_codex_proxy(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=os.environ,
+        env=proxy_environment("execution"),
         start_new_session=True,
     )
     assert process.stdout is not None

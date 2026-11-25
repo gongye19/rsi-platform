@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.core.model_config import execution_model, apply_execution_provider, proxy_environment
+
 import json
 import hashlib
 import os
@@ -459,11 +461,11 @@ def run_single_opencode_tau2_trial(
             "pairing_slot": int(trial),
             "simulation_seed": simulation_seed,
             "harness": "opencode",
-            "model": MODEL,
+            "model": execution_model().split("/", 1)[-1],
             "reward": reward,
             "evaluation": evaluation,
             "runtime_models": {
-                "target_agent": MODEL,
+                "target_agent": execution_model().split("/", 1)[-1],
                 "user_simulator": llm_settings["model"],
                 "evaluator": llm_settings["model"],
             },
@@ -521,7 +523,7 @@ def _start_opencode_proxy(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=dict(os.environ),
+        env=proxy_environment("execution"),
         start_new_session=True,
     )
     ready = process.stdout.readline().strip() if process.stdout else ""
@@ -546,7 +548,7 @@ def _run_opencode_turn(
         str(binary),
         "run",
         "-m",
-        OPENCODE_MODEL,
+        execution_model(),
         "--pure",
         "--auto",
         "--dir",
@@ -778,8 +780,8 @@ def _write_opencode_project(
         "autoupdate": False,
         "share": "disabled",
         "snapshot": False,
-        "model": OPENCODE_MODEL,
-        "small_model": OPENCODE_MODEL,
+        "model": execution_model(),
+        "small_model": execution_model(),
         "enabled_providers": ["deepseek"],
         "provider": {
             "deepseek": {
@@ -792,7 +794,7 @@ def _write_opencode_project(
                     "chunkTimeout": 60000,
                 },
                 "models": {
-                    MODEL: {
+                    execution_model().split("/", 1)[-1]: {
                         "name": "DeepSeek V4 Flash",
                         "limit": {
                             "context": DEFAULT_OPENCODE_CONTEXT_LIMIT,
@@ -832,6 +834,7 @@ def _write_opencode_project(
             }
         },
     }
+    fixed = apply_execution_provider(fixed)
     config = _deep_merge(candidate_config, fixed)
     control_root = runtime_home / ".hai"
     control_root.mkdir(parents=True, exist_ok=True)

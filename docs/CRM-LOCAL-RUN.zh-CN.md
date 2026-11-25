@@ -3,7 +3,7 @@
 本轮使用已有 CRMarenapro 13题及配套官方 validator，**不依赖尚未实现的开放问答模型评分器**。
 本机原生 OpenCode 1.18.32、数据和六表 PostgreSQL 指纹已经预检。原生 CRM 的本机隔离当前使用 macOS Seatbelt；Linux 内网业务 HTTP 接入见 INTRANET.zh-CN.md。
 
-## 明天 API 恢复后
+## API 可用后
 
 在仓库根目录运行：
 
@@ -36,10 +36,12 @@
 
 ## 固定启动配置
 
-默认读取 `configs/experiments/crm-local.toml`，私有 API/model 设置从 `.env` 读取。与公司 HTTP 草稿配置分开：本次不需要公司的接口地址。
+默认读取 `configs/experiments/crm-local.toml`，模型在 `[models.execution]`、`[models.analysis]` 中指定；私有地址和凭据由 `.env` 提供。与公司 HTTP 草稿配置分开：本次不需要公司的接口地址。
 
 | 设置 | 本轮值 |
 | --- | --- |
+| 执行模型 | `crm/glm-5.2`，沿用当前执行接口 |
+| 分析模型 | David AI `david/gpt-6.2-sol`，Responses API，独立密钥 |
 | 初始 Harness | 默认空 v0；可在私有 profile 设置 initial_harness |
 | 组件范围 | 16类全纳入探索；模型自行选择，逐项经过加载/请求/触发验证 |
 | TRAIN 创建预算 | 200，包含20次 TRAIN 基线会话；不是费用或 token 上限 |
@@ -79,3 +81,5 @@
 - `runs/local_experiments/<id>/result.json`：完成后汇总 TRAIN 和 TEST 产物位置。
 
 尚未进行真实付费优化。当前通过的是本机环境检查、真实 OpenCode 加本地模拟模型的集成验证及故障注入；不能据此承诺真实 API 已恢复、实际吞吐或优化效果。
+
+两组模型可分别更改，完整参数见 [模型连接](model-connections.zh-CN.md)。分析连接及原生工具调用已验证，13题完整优化尚未启动。

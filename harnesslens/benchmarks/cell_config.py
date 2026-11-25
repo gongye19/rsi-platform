@@ -14,6 +14,7 @@ DEFAULT_RETAIL_TRAIN_TASK_IDS = (
 )
 
 BASELINE_RUNTIME_FILES = (
+    "harnesslens/core/model_config.py",
     "harnesslens/harnesses/component_policy.py",
     "harnesslens/harnesses/component_preflight.py",
     "harnesslens/harnesses/opencode_execution.py",
@@ -51,6 +52,7 @@ class BenchmarkConfig:
 
     def runtime_files(self) -> tuple[str, ...]:
         common = (
+            "harnesslens/core/model_config.py",
             "harnesslens/harnesses/component_policy.py",
             "harnesslens/harnesses/component_preflight.py",
             "harnesslens/harnesses/opencode_execution.py",
@@ -97,6 +99,7 @@ class BenchmarkConfig:
             )
         if self.kind == "bird":
             return (
+                "harnesslens/core/model_config.py",
                 "harnesslens/benchmarks/bird_eval.py",
                 "harnesslens/benchmarks/bird_sql.py",
                 "harnesslens/benchmarks/bird_mcp_server.py",

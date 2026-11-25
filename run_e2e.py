@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from harnesslens.benchmarks.cell_config import benchmark_cell, benchmark_config, supported_cell_help
@@ -19,6 +20,7 @@ def configure_cell_runtime(repo_root: Path, cell: str) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--models-config", type=Path, help="TOML containing explicit models.execution and models.analysis")
     parser.add_argument("--agent-config", type=Path, help="Existing Python/HTTP business-agent adapter TOML")
     parser.add_argument("--initial-harness", type=Path, help="Optional initial OpenCode directory/package; omitted means an empty v0")
     parser.add_argument("--baseline-event", type=Path)
@@ -55,6 +57,9 @@ def main() -> int:
     load_repo_env(root)
     from harnesslens.harnesses.business_agent import select_config
     select_config(args.agent_config)
+    from harnesslens.core.model_config import task_models
+    task_models(args.models_config, business=bool(args.agent_config or os.environ.get("HAI_AGENT_CONFIG")),
+                run_root=root / "runs/train" / args.run_id)
     configure_cell_runtime(root, args.cell)
     result = IterationController(
         repo_root=root,

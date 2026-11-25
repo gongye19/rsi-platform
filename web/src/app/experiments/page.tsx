@@ -4,10 +4,12 @@ import Link from "next/link";
 
 type Run = { id: string; state: string; error: string; attempt: number };
 type File = {root: number; path: string; bytes: number};
+type Model = {model?: string; api?: string; base_url?: string; base_url_env?: string; managed_by?: string};
 export default function Experiments() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [profiles, setProfiles] = useState<string[]>([]);
   const [profile, setProfile] = useState("");
+  const [models, setModels] = useState<{execution?: Model; analysis?: Model} | null>(null);
   const [id, setId] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,11 +29,20 @@ export default function Experiments() {
     const timer = setInterval(() => void refresh(abort.signal), 3000);
     return () => { abort.abort(); clearTimeout(first); clearInterval(timer); };
   }, [refresh]);
+  useEffect(() => {
+    if (!profile) return;
+    const abort = new AbortController();
+    void fetch("/api/platform?" + new URLSearchParams({profiles: "1", name: profile}), {signal: abort.signal})
+      .then(async response => { const value = await response.json(); if (!response.ok) throw new Error(value.error); return value; })
+      .then(value => setModels(value.models))
+      .catch(e => { if (!abort.signal.aborted) setError((e as Error).message); });
+    return () => abort.abort();
+  }, [profile]);
   async function act(action: string, run?: string) {
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/platform", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, run_id: run || id, profile: profile || profiles[0] }) });
+        body: JSON.stringify({ action, run_id: run || id, profile }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "操作失败");
       await refresh();
@@ -58,10 +69,13 @@ export default function Experiments() {
     <Link href="/">← 自进化谱系</Link><h1 style={{ fontSize: 28, margin: "20px 0" }}>实验管理</h1>
     <p>创建实验不调用模型；启动或恢复会使用配置的真实模型和业务服务。草稿配置不可启动。</p>
     <form onSubmit={e => { e.preventDefault(); void act("create"); }} style={{ display: "flex", gap: 12, flexWrap: "wrap", margin: "24px 0" }}>
-      <label>配置 <select value={profile || profiles[0] || ""} onChange={e => setProfile(e.target.value)}>{profiles.map(p => <option key={p}>{p}</option>)}</select></label>
+      <label>配置 <select required value={profile} onChange={e => {setProfile(e.target.value); setModels(null);}}><option value="" disabled>请选择启动配置</option>{profiles.map(p => <option key={p}>{p}</option>)}</select></label>
       <label>实验编号 <input value={id} onChange={e => setId(e.target.value)} placeholder="可留空自动生成" pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,95}" /></label>
-      <button disabled={busy || !profiles.length} type="submit">创建实验</button>
+      <button disabled={busy || !profile || !models?.execution || !models?.analysis} type="submit">创建实验</button>
     </form>
+    {profile && models ? <p>执行：{models.execution?.managed_by === "business_agent" ? "由业务服务管理" : `${models.execution?.model || "未指定"} · ${models.execution?.api || ""}`}<br />
+      分析：{models.analysis?.model || "未指定"} · {models.analysis?.api || ""}<br />
+      两组模型在所选 TOML 的 models.execution / models.analysis 中配置；密钥保存在服务端。缺少配置将阻止启动。</p> : null}
     {error ? <p role="alert" style={{ color: "#b42318" }}>{error}</p> : null}
     <table style={{ width: "100%", borderCollapse: "collapse" }}><thead><tr>{["实验", "状态", "尝试", "操作"].map(t => <th key={t} style={{ textAlign: "left", padding: 10 }}>{t}</th>)}</tr></thead>
       <tbody>{runs.map(run => <tr key={run.id} style={{ borderTop: "1px solid #ddd" }}>

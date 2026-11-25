@@ -29,11 +29,11 @@ echo "==> installing HarnessLens and dependencies"
 
 if [[ ! -f .env ]]; then
   cp .env.example .env
-  echo "==> wrote .env from .env.example — fill in DEEPSEEK_API_KEY before running"
+  echo "==> wrote .env from .env.example — fill in execution/analysis keys before running"
 fi
 
 echo
 echo "==> done. Next steps:"
-echo "    1. edit .env and set DEEPSEEK_API_KEY"
+echo "    1. edit .env and configure models.execution/models.analysis in your task profile"
 echo "    2. provide the benchmark checkouts under third_party/ (docs/benchmarks.md)"
 echo "    3. $VENV/bin/python scripts/check_env.py --cell retail"

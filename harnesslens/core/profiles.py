@@ -61,9 +61,10 @@ def power_profile(harness: str, *, max_steps: int) -> HarnessProfile:
         if normalized == "opencode"
         else DEFAULT_CONTEXT_LIMIT
     )
+    from harnesslens.core.model_config import connection
     return HarnessProfile(
         harness=normalized,
-        model=os.environ.get("HAI_MODEL") or models[normalized],
+        model=connection("analysis")["model"] or models[normalized],
         reasoning_effort="high",
         max_steps=int(max_steps),
         context_limit=_positive_env_int(

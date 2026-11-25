@@ -8,6 +8,15 @@ env_file = "../../.env"
 # Change to ready in YOUR private profile only after data/tools/trace smoke passes.
 readiness = "draft"
 
+[models.execution]
+managed_by = "business_agent"
+
+[models.analysis]
+model = "david/gpt-6.2-sol"
+api = "responses"
+base_url = "https://api.david-ai.net/v1"
+api_key_env = "HAI_ANALYSIS_API_KEY"
+
 [components]
 allowed = ["*"]
 denied = []

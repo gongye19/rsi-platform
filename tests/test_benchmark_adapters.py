@@ -146,7 +146,9 @@ def test_second_benchmark_train_preflight_test_cache_and_fingerprints(dataset, b
     if agent_config.read_text().startswith('[agent]\ntype="http"'):
         patch = tmp_path / "candidate.json"
         patch.write_text(json.dumps({"instructions": ["GENERIC_CLI_RULE"]}))
-        env = {**os.environ, "DEEPSEEK_BASE_URL": "http://127.0.0.1:1/unused"}
+        env = {**os.environ, "DEEPSEEK_BASE_URL": "http://127.0.0.1:1/unused",
+               "HAI_ANALYSIS_MODEL": "test/unused-analysis", "HAI_ANALYSIS_BASE_URL": "http://127.0.0.1:1/unused",
+               "HAI_ANALYSIS_API": "responses", "HAI_ANALYSIS_API_KEY": "local-test-unused"}
         env.pop("DEEPSEEK_API_KEY", None)
         for entry in ("run_test_baseline.py", "run_test_candidate.py"):
             extra = ["--patch-json", str(patch)] if entry == "run_test_candidate.py" else []

@@ -207,7 +207,7 @@ def _translate_request(req: dict[str, Any]) -> dict[str, Any]:
         )
     if deferred_tool_search is not None:
         tools.append(deferred_tool_search)
-    chat = {"model": UPSTREAM_MODEL, "messages": messages}
+    chat = {"model": os.environ.get("HAI_PROXY_MODEL") or os.environ.get("HAI_EXECUTION_MODEL", "").split("/", 1)[-1] or UPSTREAM_MODEL, "messages": messages}
     if tools:
         chat["tools"] = tools
     if tau2_tools:

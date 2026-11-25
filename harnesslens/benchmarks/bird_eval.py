@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.core.model_config import execution_model, apply_execution_provider, proxy_environment
+
 import json
 import os
 import queue
@@ -662,7 +664,7 @@ def _start_chat_logging_proxy(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        env=os.environ,
+        env=proxy_environment("execution"),
         start_new_session=True,
     )
     assert process.stdout is not None
@@ -893,7 +895,7 @@ def _opencode_config(
             }
         },
     }
-    return merge_candidate_config(candidate, fixed=fixed)
+    return merge_candidate_config(candidate, fixed=apply_execution_provider(fixed))
 
 
 def _write_codex_home(
@@ -1024,7 +1026,7 @@ def _run_opencode_turn(
         str(opencode_binary()),
         "run",
         "-m",
-        "deepseek/deepseek-v4-flash",
+        execution_model(),
         "--pure",
         "--auto",
         "--dir",

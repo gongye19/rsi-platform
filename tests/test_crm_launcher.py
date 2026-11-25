@@ -6,7 +6,7 @@ import pytest
 
 
 @pytest.fixture
-def launcher(tmp_path, monkeypatch):
+def launcher(tmp_path, monkeypatch, model_tables):
     path = Path(__file__).resolve().parents[1] / "scripts/run_crm_experiment.py"
     spec = importlib.util.spec_from_file_location("crm_launcher", path)
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
@@ -16,7 +16,7 @@ def launcher(tmp_path, monkeypatch):
     source = tmp_path / "initial"; source.mkdir()
     (source / "AGENTS.md").write_text("Initial rules")
     profile = tmp_path / "local.toml"
-    profile.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\nenv_file="private.env"\ninitial_harness="initial"\n')
+    profile.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\nenv_file="private.env"\ninitial_harness="initial"\n' + model_tables)
     return module, profile
 
 
@@ -34,7 +34,8 @@ def test_launcher_train_then_frozen_test_and_avoids_duplicate_v0_test(launcher, 
     module, profile = launcher
     calls = []
     def fake(command, env, stage, directory):
-        assert env["DEEPSEEK_API_KEY"] == "local-test-only"
+        assert env["HAI_EXECUTION_API_KEY"] == "execution-test-only"
+        assert env["HAI_ANALYSIS_API_KEY"] == "analysis-test-only"
         calls.append((stage, command))
         if stage == "train":
             from harnesslens.harnesses.initial_harness import freeze_initial_harness
