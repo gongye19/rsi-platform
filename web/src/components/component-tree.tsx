@@ -26,8 +26,8 @@ const VersionPoint = memo(function VersionPoint({ data }: NodeProps<LineagePoint
         data-node-role={data.stage}
         data-graph-round={data.round}
         data-node-variant={data.rejected ? "rejected" : "normal"}
-        aria-label={`${data.componentName} ${data.label}，${data.caption || (data.stage === "experiment" ? "实验候选" : "起点")}，第${data.round}轮`}
-        title="查看版本差异与执行证据"
+        aria-label={`${data.componentName} ${data.label}, ${data.caption || (data.stage === "experiment" ? "Candidate" : "Starting version")}, round ${data.round}`}
+        title="Inspect version snapshot and evidence"
       >
         {data.root && <span className="ce-component-name">{data.componentName}</span>}
         <span className="ce-node-glyph" aria-hidden="true">{data.rejected ? "×" : ""}</span>
@@ -77,10 +77,9 @@ const edgeTypes = { branch: Branch };
 type Props = {
   data: ComponentHistory;
   step: number;
-  progress: number;
   selected: string;
   onSelect: (id: string) => void;
-  playing: boolean;
+  followLive: boolean;
   configuration?: Record<string, string>;
   selectedRound: number;
   focusedRound: number | null;
@@ -89,7 +88,7 @@ type Props = {
   onHoverRound: (round: number | null) => void;
 };
 
-function LineageCanvas({ data, step, progress, selected, configuration, selectedRound, focusedRound, focusRevision, onRound, onHoverRound, onSelect, playing }: Props) {
+function LineageCanvas({ data, step, selected, configuration, selectedRound, focusedRound, focusRevision, onRound, onHoverRound, onSelect, followLive }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 620, height: 540 });
@@ -120,9 +119,9 @@ function LineageCanvas({ data, step, progress, selected, configuration, selected
   }, [flow, zoom, maxPan]);
   useEffect(() => {
     // Hover links the score chart but must never move the canvas under the pointer.
-    const targetRound = playing ? data.steps[step]?.round : focusedRound;
+    const targetRound = focusedRound ?? (followLive ? data.steps[step]?.round : null);
     const index = layout.rounds.findIndex((r) => r.round === targetRound && r.firstStep <= step);
-    const requestKey = `${playing ? "replay" : "focus"}:${targetRound}:${playing ? 0 : focusRevision}`;
+    const requestKey = `${followLive ? "live" : "inspect"}:${targetRound}:${focusRevision}`;
     if (index < 0 || lastAutoRound.current === requestKey) return;
     lastAutoRound.current = requestKey;
     const x = index === 0 ? 0 : Math.max(0, (layout.inputX(index) - 28) * zoom);
@@ -130,7 +129,7 @@ function LineageCanvas({ data, step, progress, selected, configuration, selected
     const current = flow.getViewport();
     if (x + current.x < 0 || end + current.x > size.width)
       void flow.setViewport({ x: -Math.min(maxPan, x), y: 0, zoom }, { duration: 500 });
-  }, [focusedRound, focusRevision, data.steps, layout, flow, step, playing, maxPan, size.width, zoom]);
+  }, [focusedRound, focusRevision, data.steps, layout, flow, step, followLive, maxPan, size.width, zoom]);
 
   const nodes = useMemo(() => graph.nodes.map((node) => ({
     ...node,
@@ -151,9 +150,7 @@ function LineageCanvas({ data, step, progress, selected, configuration, selected
     <div
       className={`ce-flow-host ${compact ? "is-compact" : ""}`}
       ref={host}
-      style={{ "--ce-event-progress": progress } as CSSProperties}
-      data-replay-step={step}
-      data-event-progress={progress.toFixed(2)}
+      data-recorded-step={step}
       data-canvas-zoom={zoom}
       data-linked-round={selectedRound}
     >
@@ -215,24 +212,22 @@ function LineageCanvas({ data, step, progress, selected, configuration, selected
           {layout.rounds.map((r, i) => {
             const visible = r.firstStep <= step;
             const count = visible ? roundChanges(data, r, step).filter((c) => c.generated.length).length : 0;
-            const roundProgress = !visible ? 0 : Math.min(1, ((step - r.firstStep) + progress) / (r.lastStep - r.firstStep + 1));
             return <div key={r.round} className={`ce-flow-round ${visible ? "" : "is-future"}`} style={{ left: layout.inputX(i) - 18, width: layout.resultX(i) - layout.inputX(i) + 36 }}>
-              <button className="nopan nodrag" disabled={!visible} aria-pressed={selectedRound === r.round} onClick={() => { onRound(r.round); moveTo(i === 0 ? 0 : -(layout.inputX(i) - 28) * zoom); }} onMouseEnter={() => visible && onHoverRound(r.round)} onMouseLeave={() => onHoverRound(null)} onFocus={() => visible && onHoverRound(r.round)} onBlur={() => onHoverRound(null)} aria-label={`查看第${r.round}轮`}>
-                <span>第 {String(r.round).padStart(2, "0")} 轮</span><small>{visible ? `${count} 个组件更新` : "待开始"}</small>
+              <button className="nopan nodrag" disabled={!visible} aria-pressed={selectedRound === r.round} onClick={() => { onRound(r.round); moveTo(i === 0 ? 0 : -(layout.inputX(i) - 28) * zoom); }} onMouseEnter={() => visible && onHoverRound(r.round)} onMouseLeave={() => onHoverRound(null)} onFocus={() => visible && onHoverRound(r.round)} onBlur={() => onHoverRound(null)} aria-label={`Inspect round ${r.round}`}>
+                <span>Round {String(r.round).padStart(2, "0")}</span><small>{visible ? `${count} updated` : "Pending"}</small>
               </button>
-              <div className="ce-round-progress"><i style={{ width: `${roundProgress * 100}%` }} /></div>
-              <span className="ce-phase-label" style={{ left: 18 }}>{i ? "起点" : "初始配置"}</span>
-              <span className="ce-phase-label" style={{ left: layout.candidateX(i) - layout.inputX(i) + 18 }}>实验</span>
-              <span className="ce-phase-label" style={{ left: layout.testX(i) - layout.inputX(i) + 18 }}>测试</span>
+              <span className="ce-phase-label" style={{ left: 18 }}>{i ? "Parent" : "Baseline"}</span>
+              <span className="ce-phase-label" style={{ left: layout.candidateX(i) - layout.inputX(i) + 18 }}>Candidate</span>
+              <span className="ce-phase-label" style={{ left: layout.testX(i) - layout.inputX(i) + 18 }}>Evaluation</span>
             </div>;
           })}
-          <span className="ce-final-label" style={{ left: layout.resultX(Math.max(0, layout.rounds.length - 1)) - 20 }}>最终配置</span>
+          <span className="ce-final-label" style={{ left: layout.resultX(Math.max(0, layout.rounds.length - 1)) - 20 }}>Selected configuration</span>
         </ViewportPortal>
       </ReactFlow>
       <div className="ce-canvas-tools">
-        <button aria-label="向前查看谱系" disabled={viewport.x >= -1} onClick={() => moveTo(viewport.x + size.width * 0.7)}><ArrowLeft size={13} /></button>
-        <button aria-label="返回谱系起点" onClick={() => moveTo(0)}><ScanLine size={14} /></button>
-        <button aria-label="向后查看谱系" disabled={viewport.x <= -maxPan + 1} onClick={() => moveTo(viewport.x - size.width * 0.7)}><ArrowRight size={13} /></button>
+        <button aria-label="Pan left" disabled={viewport.x >= -1} onClick={() => moveTo(viewport.x + size.width * 0.7)}><ArrowLeft size={13} /></button>
+        <button aria-label="Go to lineage start" onClick={() => moveTo(0)}><ScanLine size={14} /></button>
+        <button aria-label="Pan right" disabled={viewport.x <= -maxPan + 1} onClick={() => moveTo(viewport.x - size.width * 0.7)}><ArrowRight size={13} /></button>
       </div>
       <div ref={scroll} className="ce-canvas-scroll" onScroll={(e) => {
         const x = -e.currentTarget.scrollLeft;
@@ -241,7 +236,7 @@ function LineageCanvas({ data, step, progress, selected, configuration, selected
           return;
         }
         if (Math.abs(viewport.x - x) > 1) void flow.setViewport({ x, y: 0, zoom });
-      }} aria-label="横向移动组件谱系" tabIndex={0}><div style={{ width: Math.max(size.width, layout.width * zoom), height: 1 }} /></div>
+      }} aria-label="Pan component lineage" tabIndex={0}><div style={{ width: Math.max(size.width, layout.width * zoom), height: 1 }} /></div>
     </div>
   );
 }

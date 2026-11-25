@@ -98,7 +98,7 @@ systemctl --user status harnesslens-api harnesslens-worker harnesslens-web
 
 从界面选择 `.local.toml` 模板，再选择执行/分析模型、16组件开放范围、预算、TRAIN/TEST重复次数和并发；更多设置可调整超时、重试、初始Harness与experimental字段。原5类proposal_only保持只读。业务HTTP/Python执行模型由业务服务管理，界面不会覆盖其模型。
 
-点击创建，将本次配置冻结到 `runs/service/profiles/{id}/profile.toml`，不修改模板，也不调用模型。之后在列表点击启动；启动/恢复会消耗模型配额。默认执行TRAIN→冻结v0与最终版本→TEST；如果最终仍是v0，只评一次TEST并复用该结果。可取消训练后TEST。会话预算沿用原算法的TRAIN创建计数，TEST与其他已有独立预算不计入其中，并非总费用上限。可查看谱系、状态/预算、事件和产物。示例谱系明确标为示例，与真实结果分开。日志/trace可能含业务内容，按公司数据权限保存。
+点击 Start run 将创建并启动；Save draft 只保存草稿。两者都先将本次配置冻结到 `runs/service/profiles/{id}/profile.toml`，不修改模板。Save draft 不调用模型；Start run 随后排队，由 Worker 调用真实模型。草稿可之后在控制台点击 Start run；Resume run 恢复、Stop run 请求停止。启动/恢复会消耗模型配额。默认执行TRAIN→冻结v0与最终版本→TEST；如果最终仍是v0，只评一次TEST并复用该结果。可取消训练后TEST。会话预算沿用原算法的TRAIN创建计数，TEST与其他已有独立预算不计入其中，并非总费用上限。可查看谱系、状态/预算、事件和产物。正式控制台只展示真实实验记录，不提供示例回放。日志/trace可能含业务内容，按公司数据权限保存。
 
 ## CLI、API 与恢复
 

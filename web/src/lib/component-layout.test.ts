@@ -191,11 +191,11 @@ test("the experiment contains generation and full test results, separated from t
 test("experiment results include passed, failed, unchanged and retained-original versions", () => {
   const first = experimentResults(data, evolutionRounds(data)[0], 9);
   assert.equal(new Set(first.map((o) => o.componentId)).size, data.components.length);
-  assert.equal(first.find((o) => o.versionId === "subagent-v1")?.caption, "通过");
-  assert.equal(first.find((o) => o.versionId === "system_prompt-v1")?.caption, "未通过");
+  assert.equal(first.find((o) => o.versionId === "subagent-v1")?.caption, "Passed");
+  assert.equal(first.find((o) => o.versionId === "system_prompt-v1")?.caption, "Failed");
   assert.equal(first.find((o) => o.versionId === "system_prompt-v1")?.rejected, true);
-  assert.equal(first.find((o) => o.versionId === "system_prompt-v0")?.caption, "保留原版");
-  assert.equal(first.find((o) => o.versionId === "memory-v0")?.caption, "未优化");
+  assert.equal(first.find((o) => o.versionId === "system_prompt-v0")?.caption, "Parent retained");
+  assert.equal(first.find((o) => o.versionId === "memory-v0")?.caption, "Unchanged");
 });
 
 test("experiment outcomes do not leak future verdicts or invent individual test passes", () => {
@@ -206,8 +206,8 @@ test("experiment outcomes do not leak future verdicts or invent individual test 
     ...d, scope: "bundle", outcome: d.outcome === "failed" ? "not_retained" : "retained",
   }));
   const results = experimentResults(bundleOnly, evolutionRounds(bundleOnly)[0], 9);
-  assert(!results.some((o) => o.caption === "通过" || o.caption === "未通过"));
-  assert.equal(results.find((o) => o.versionId === "subagent-v1")?.caption, "采用");
+  assert(!results.some((o) => o.caption === "Passed" || o.caption === "Failed"));
+  assert.equal(results.find((o) => o.versionId === "subagent-v1")?.caption, "Retained");
 });
 
 test("sibling candidates align horizontally; only actual same-round descendants advance", () => {

@@ -55,7 +55,7 @@ export interface ComponentHistory {
   source: "historical" | "example";
   notice: string;
   profile?: { id: string; runtime: string; version: string };
-  context: { task_id?: string; domain?: string; question?: string };
+  context: { initial_ready?: boolean; task_id?: string; domain?: string; question?: string };
   tasks?: { id: string; domain: string }[];
   components: HarnessComponent[];
   versions: ComponentVersion[];
@@ -82,10 +82,10 @@ export const COMPONENT_COLORS = [
   "#7b758e",
 ];
 export const decisionLabels = {
-  passed: "组件对照通过",
-  failed: "组件对照无效",
-  retained: "随配置采用",
-  not_retained: "未随配置采用",
+  passed: "Component check passed",
+  failed: "Component check failed",
+  retained: "Retained with Harness",
+  not_retained: "Not retained with Harness",
 };
 export function decisionAt(data: ComponentHistory, id: string, step: number) {
   return data.decisions

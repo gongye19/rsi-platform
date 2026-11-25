@@ -47,3 +47,6 @@ web/tsconfig.tsbuildinfo
 *.sqlite-shm
 configs/experiments/*.local.toml
 examples/agents/*.local.toml
+
+# Local UI reference and verification material
+.ui-work/

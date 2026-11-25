@@ -1,4 +1,2 @@
-import ComponentStudio from "@/components/component-studio";
-export default function Home() {
-  return <ComponentStudio />;
-}
+import ExperimentConsole from '@/components/experiment-console';
+export default function Home() {return <ExperimentConsole/>;}

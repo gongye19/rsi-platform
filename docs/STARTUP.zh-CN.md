@@ -86,7 +86,7 @@ harnesses/business-agent/
 
 ## 启动
 
-界面：在实验管理页选择配置模板，可直接选择执行/分析模型、16组件开放范围、预算、重复次数、并发和更多设置，创建后点击启动。每个任务保存独立配置，不改模板；API 与 Worker 需事先运行。本机可用 `.venv/bin/python scripts/start_local_platform.py` 启动平台，打开 http://127.0.0.1:3210/experiments。密钥仅留服务端。
+界面：在 Experiment console 点击 New experiment，在 Configure your run 中选择配置模板、执行/分析模型、16组件开放范围和进化参数，点击 Start run 即创建并排队；也可用 Save draft 仅保存。左侧切换真实实验，Overview 保持左谱系、右曲线；Configuration 查看冻结配置，Artifacts 查看原始日志/trace/答案，Activity 查看队列和检查点事件。已移除示例选择、播放和回放进度条。每个任务保存独立配置，不改模板；API 与 Worker 需事先运行。本机可用 `.venv/bin/python scripts/start_local_platform.py` 启动平台，打开 http://127.0.0.1:3210/experiments。密钥仅留服务端。
 
 无需 Web/API 时，同样可用本地队列入口执行配置：
 

@@ -137,3 +137,48 @@ def test_history_attaches_only_actual_bundle_reviews_and_non_preflight_scores(tm
     assert result['bundles'][0]['metrics']['score'] == .75
     assert result['bundles'][1]['metrics'] == {}
     assert result['decisions'] == [{'version_id': 'candidate-01', 'step': 1, 'scope': 'bundle', 'outcome': 'not_retained', 'reason': 'Command not invoked', 'evidence': 'channel_preflight_failed'}]
+
+
+@pytest.mark.parametrize('state,checkpoint,launcher,expected', [
+    ('draft', {}, {}, 'Not started'),
+    ('queued', {}, {}, 'Queued'),
+    ('running', {}, {'stage':'train'}, 'Baseline evaluation'),
+    ('running', {'stage':'baseline_ready'}, {'stage':'train'}, 'Discovery'),
+    ('failed', {'stage':'discovery_complete'}, {'stage':'train'}, 'Experience'),
+    ('running', {'stage':'experience_complete'}, {'stage':'train'}, 'Analysis'),
+    ('running', {'stage':'iteration-01_reviewed'}, {'stage':'train'}, 'Evolution'),
+    ('running', {'stage':'finalized'}, {'stage':'test_initial'}, 'TEST evaluation'),
+    ('succeeded', {'stage':'finalized'}, {'stage':'test_initial'}, 'TEST complete'),
+])
+def test_live_phase_follows_persisted_records_without_a_synthetic_percentage(state, checkpoint, launcher, expected):
+    from harnesslens.service.records import execution_phase
+    actual = execution_phase({'state':state},checkpoint,launcher,False)
+    assert actual['label'] == expected
+    assert actual['initial_ready'] is False
+    assert 'percent' not in actual
+
+
+def test_live_history_has_no_claimed_initial_snapshot_before_freezing(tmp_path, monkeypatch):
+    module = importlib.import_module('harnesslens.service.history')
+    monkeypatch.setattr(module,'ROOT',tmp_path)
+    assert module.history('waiting')['context']['initial_ready'] is False
+
+
+def test_live_preflight_rejection_preserves_actual_nonempty_parent(tmp_path, monkeypatch):
+    module=importlib.import_module('harnesslens.service.history')
+    monkeypatch.setattr(module,'ROOT',tmp_path)
+    root=tmp_path/'runs/train/live'
+    payloads={
+        'rollout_evidence/run/versions_percell/crm/champion/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'parent'}]},
+        'rollout_evidence/run/versions_percell/crm/champion/lineage.json': {'parent':'v0'},
+        'rollout_evidence/run/versions_percell/crm/candidate-02/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'candidate'}]},
+        'rollout_evidence/run/versions_percell/crm/candidate-02/lineage.json': {'parent':'champion'},
+        'channel_preflight/iteration-02-candidate-02.json': {'harness_version':'candidate-02','passed':False},
+        'main_agent/iteration-02.json': {'harness_version':'candidate-02','candidate':{'parent_version':'champion'}},
+    }
+    for relative,value in payloads.items():
+        p=root/relative;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(value))
+    result=module.history('live')
+    assert result['steps'][-1]['active_bundle_id']=='champion'
+    assert result['decisions'][-1]['outcome']=='not_retained'
+    assert result['decisions'][-1]['scope']=='bundle'

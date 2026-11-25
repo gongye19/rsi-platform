@@ -13,18 +13,18 @@ from harnesslens.harnesses.opencode_components import COMPONENTS, PROPOSAL_ONLY
 
 # Bounds mirror the corresponding runtime settings. No invented optimizer knobs.
 PARAMETERS = {
-    'HAI_TOTAL_CREATION_BUDGET': ('会话总预算', 200, 1, 10000),
-    'HAI_TRAIN_ROLLOUT_REPEATS': ('TRAIN 每题重复次数', 2, 1, 2),
-    'HAI_TEST_ROLLOUT_REPEATS': ('TEST 每题重复次数', 2, 1, 2),
-    'HAI_MAX_ROLLOUT_CONCURRENCY': ('任务并发', 4, 1, 30),
-    'HAI_MAX_ANALYSIS_CONCURRENCY': ('分析并发', 2, 1, 20),
-    'HAI_PROVIDER_MAX_CONCURRENCY': ('模型请求总并发', 4, 1, 64),
-    'HAI_CRM_TIMEOUT_S': ('原生 CRM 执行超时（秒）', 900, 30, 7200),
-    'HAI_INTELLIGENT_TIMEOUT_S': ('分析超时（秒）', 1200, 30, 7200),
-    'HAI_PROVIDER_HTTP_TIMEOUT_S': ('模型请求超时（秒）', 180, 1, 7200),
-    'HAI_PROVIDER_REQUEST_BUDGET_S': ('单请求重试总时限（秒）', 420, 1, 7200),
-    'HAI_PROVIDER_RETRY_ATTEMPTS': ('模型请求最多尝试次数', 4, 1, 6),
-    'HAI_INTELLIGENT_CONTEXT_LIMIT': ('分析上下文上限（token）', 200000, 4096, 1050000),
+    'HAI_TOTAL_CREATION_BUDGET': ('Creation budget', 200, 1, 10000),
+    'HAI_TRAIN_ROLLOUT_REPEATS': ('TRAIN repeats per task', 2, 1, 2),
+    'HAI_TEST_ROLLOUT_REPEATS': ('TEST repeats per task', 2, 1, 2),
+    'HAI_MAX_ROLLOUT_CONCURRENCY': ('Task concurrency', 4, 1, 30),
+    'HAI_MAX_ANALYSIS_CONCURRENCY': ('Analysis concurrency', 2, 1, 20),
+    'HAI_PROVIDER_MAX_CONCURRENCY': ('Model request concurrency', 4, 1, 64),
+    'HAI_CRM_TIMEOUT_S': ('Native execution timeout (s)', 900, 30, 7200),
+    'HAI_INTELLIGENT_TIMEOUT_S': ('Analysis timeout (s)', 1200, 30, 7200),
+    'HAI_PROVIDER_HTTP_TIMEOUT_S': ('Model request timeout (s)', 180, 1, 7200),
+    'HAI_PROVIDER_REQUEST_BUDGET_S': ('Request retry deadline (s)', 420, 1, 7200),
+    'HAI_PROVIDER_RETRY_ATTEMPTS': ('Maximum request attempts', 4, 1, 6),
+    'HAI_INTELLIGENT_CONTEXT_LIMIT': ('Analysis context limit (tokens)', 200000, 4096, 1050000),
 }
 _cache = {}
 _lock = threading.Lock()

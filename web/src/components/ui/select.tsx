@@ -9,7 +9,7 @@ const Select = SelectPrimitive.Root;
 const SelectValue = SelectPrimitive.Value;
 
 function SelectTrigger({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
-  return <SelectPrimitive.Trigger className={cn("ce-select-trigger", className)} {...props}>
+  return <SelectPrimitive.Trigger data-slot="select-trigger" className={cn("ce-select-trigger", className)} {...props}>
     {children}<SelectPrimitive.Icon asChild><ChevronDown size={13} /></SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>;
 }

@@ -43,7 +43,7 @@ test("all component outcomes remain in the experiment and only selected versions
   assert.equal(new Set(graph.nodes.filter((n) => n.data.stage === "test").map((n) => n.data.componentId)).size, 8);
   assert.equal(graph.edges.filter((e) => e.data!.kind === "retained").length, 8);
   assert(!graph.edges.some((e) => e.source === "system_prompt-v1:tested:1"));
-  assert(graph.nodes.some((n) => n.data.caption === "未优化"));
+  assert(graph.nodes.some((n) => n.data.caption === "Unchanged"));
 });
 test("playback consumes presentation time continuously and preserves boundaries at any frame rate", () => {
   assert.equal(advanceReplay(data, 0.4, 0), 0.4);

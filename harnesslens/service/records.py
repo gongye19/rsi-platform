@@ -72,4 +72,24 @@ def run_record(job):
     return {**job, 'checkpoint': checkpoint, 'budget': budget, 'baseline_metrics': baseline,
             'candidates': candidates, 'tests': tests, 'selected_version': final.get('selected_version'),
             'iteration_history': final.get('iteration_history', []), 'models': models,
-            'configuration': configuration, 'stage': read(local / 'stage.json', {}).get('stage') or checkpoint.get('stage')}
+            'configuration': configuration, 'stage': read(local / 'stage.json', {}).get('stage') or checkpoint.get('stage'),
+            'phase': execution_phase(job, checkpoint, read(local / 'stage.json', {}), (root / 'initial_harness.json').is_file())}
+
+
+def execution_phase(job, checkpoint, launcher, initial_ready):
+    """Expose persisted checkpoints without inventing a completion percentage."""
+    state = job['state']
+    checkpoint_name = checkpoint.get('stage', '')
+    stage = launcher.get('stage', '')
+    if state in {'draft', 'queued'}:
+        identity, label = state, 'Not started' if state == 'draft' else 'Queued'
+    elif stage in {'test_initial', 'test_selected'}:
+        identity, label = 'test', 'TEST complete' if state == 'succeeded' else 'TEST evaluation'
+    elif checkpoint_name == 'finalized':
+        identity, label = 'finalized', 'Completed' if state == 'succeeded' else 'Finalizing'
+    elif checkpoint_name.startswith('iteration-'):
+        identity, label = 'evolution', 'Evolution'
+    else:
+        identity, label = {'baseline_ready': ('discovery','Discovery'), 'discovery_complete': ('experience','Experience'),
+            'experience_complete': ('analysis','Analysis'), 'analyzer_complete': ('evolution','Evolution')}.get(checkpoint_name, ('baseline','Baseline evaluation'))
+    return {'id': identity, 'label': label, 'checkpoint': checkpoint_name, 'initial_ready': initial_ready}

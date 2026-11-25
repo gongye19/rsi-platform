@@ -97,17 +97,17 @@ export function experimentResults(
         (!!change.after && change.after !== v.id);
       const caption =
         decision?.scope === "component" && decision.outcome === "failed"
-          ? "未通过"
+          ? "Failed"
           : decision?.scope === "component" && decision.outcome === "passed"
-            ? rejected ? "通过·未采用" : "通过"
-            : rejected ? "未采用" : "采用";
+            ? rejected ? "Passed · not retained" : "Passed"
+            : rejected ? "Not retained" : "Retained";
       results.push({ versionId: v.id, componentId: v.component_id, caption, rejected });
     }
     if (change.after && !change.generated.some((v) => v.id === change.after))
       results.push({
         versionId: change.after,
         componentId: change.component.id,
-        caption: !change.generated.length ? "未优化" : change.after === change.before ? "保留原版" : "回退",
+        caption: !change.generated.length ? "Unchanged" : change.after === change.before ? "Parent retained" : "Reverted",
         rejected: false,
       });
     return results;

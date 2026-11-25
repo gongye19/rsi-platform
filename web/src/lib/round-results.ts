@@ -28,7 +28,7 @@ export function roundResults(
   const points: RoundResult[] = [
     {
       round: 0,
-      label: "初始",
+      label: "Baseline",
       value: value(baseline),
       bundle: baseline,
       reused: false,
@@ -39,7 +39,7 @@ export function roundResults(
       continue;
     points.push({
       round: r.round,
-      label: `第 ${r.round} 轮`,
+      label: `Round ${r.round}`,
       value: value(r.result),
       bundle: r.result,
       reused: r.result.round !== r.round,

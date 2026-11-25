@@ -28,7 +28,7 @@ export default function EvolutionWorkspace({ left, right }: { left: ReactNode; r
     <ResizablePanelGroup orientation="horizontal" className="ce-dual" groupRef={group} defaultLayout={initialLayout}
       onLayoutChanged={(layout, meta) => { if (meta.isUserInteraction) preference.current = layout.lineage; }}>
       <ResizablePanel id="lineage" defaultSize="60%" minSize="520px" maxSize="72%">{left}</ResizablePanel>
-      <ResizableHandle withHandle aria-label="调整左右图宽度" title="拖动调整比例，双击恢复自适应" className="ce-split-handle"
+      <ResizableHandle withHandle aria-label="Resize lineage and results" title="Drag to resize. Double-click to reset." className="ce-split-handle"
         onDoubleClick={() => {
           preference.current = null;
           const left = preferredLineagePercent(width.current);

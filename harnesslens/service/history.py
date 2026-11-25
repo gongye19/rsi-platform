@@ -34,14 +34,14 @@ def history(identity):
         components.append({"id": key, "name": name, "description": name, "baseline_version_id": bid})
         versions.append({"id": bid, "component_id": key, "label": "H0", "parent_id": None,
             "step": 0, "round": 0, "digest": digest, "present": bool(files),
-            "files": [{"path": item["path"], "change": "snapshot", "diff": item["content"]} for item in files], "notes": "冻结的初始配置"})
+            "files": [{"path": item["path"], "change": "snapshot", "diff": item["content"]} for item in files], "notes": "Frozen initial configuration"})
     current = {key: key + "_baseline" for key, _ in COMPONENTS}
     baseline = read(root / "baseline/bootstrap_event.json", {}).get("metrics", {})
     baseline_metrics = {k: v for k, v in baseline.items() if type(v) in {int, float}}
     if "pass_at_1" in baseline_metrics: baseline_metrics["score"] = baseline_metrics["pass_at_1"]
     bundles.append({"id": "v0", "label": "H0", "step": 0, "round": 0, "components": dict(current),
                     "execution": {"status": "baseline"}, "metrics": baseline_metrics})
-    steps.append({"index": 0, "round": 0, "label": "初始版本", "kind": "baseline", "bundle_id": "v0", "active_bundle_id": "v0"})
+    steps.append({"index": 0, "round": 0, "label": "Initial version", "kind": "baseline", "bundle_id": "v0", "active_bundle_id": "v0"})
     snapshots = sorted(root.glob("rollout_evidence/**/versions_percell/*/*/harness/opencode/workspace.json"), key=lambda p: p.stat().st_mtime_ns)
     bundle_components = {"v0": dict(current)}
     final = read(root / "submission/final.json", {})
@@ -55,6 +55,18 @@ def history(identity):
         label = decision.stem
         review = read(root / "main_agent" / (label + "-confirmation-review.json")) or read(root / "main_agent" / (label + "-review.json"), {})
         recorded.setdefault(row["harness_version"], {"iteration": int(match[1]), "selected_version": review.get("selected_version")})
+    checkpoint = read(root / "controller_state.json", {})
+    latest = checkpoint.get("details", {}).get("record", {})
+    if latest.get("candidate_version"):
+        recorded[latest["candidate_version"]] = {**recorded.get(latest["candidate_version"], {}), **latest}
+    for path in sorted((root / "channel_preflight").glob("*.json")):
+        report = read(path, {})
+        version = report.get("harness_version")
+        match = re.match(r"iteration-(\d+)", path.stem)
+        if version and match and report.get("passed") is False and not recorded.get(version, {}).get("review_decision"):
+            proposal = read(root / "main_agent" / (f"iteration-{int(match[1]):02d}.json"), {})
+            recorded[version] = {"iteration": int(match[1]), "selected_version": proposal.get("candidate", {}).get("parent_version") or proposal.get("parent_version"),
+                "review_decision": "channel_preflight_failed", "review_rationale": "Candidate did not pass component runtime preflight."}
     seen = {"v0"}
     metrics = {}
     for record in sorted((root / "rollout").glob("*.json")):
@@ -89,7 +101,7 @@ def history(identity):
                 versions.append({"id": vid, "component_id": key, "label": version, "parent_id": parent[key],
                     "step": step_index, "round": round_number, "digest": digest, "present": bool(data),
                     "files": [{"path": item["path"], "change": "snapshot", "diff": item["content"]} for item in data],
-                    "notes": "真实配置快照；整包采用不等于单组件独立验证"})
+                    "notes": "Recorded snapshot; bundle adoption does not establish independent component gains"})
             active[key] = vid
         current = active
         bundle_components[version] = dict(active)
@@ -97,20 +109,22 @@ def history(identity):
             "components": active, "execution": {"status": (read(snapshot / "meta.json", {}) or {}).get("status", "candidate")}, "metrics": metrics.get(version, {})})
         steps.append({"index": step_index, "round": round_number, "label": version, "kind": "candidate", "bundle_id": version})
         selected = record.get("selected_version")
+        if not selected and record.get("review_decision") == "channel_preflight_failed":
+            selected = lineage.get("parent")
         if record.get("review_decision"):
             decisions.append({"version_id": version, "step": step_index, "scope": "bundle",
                 "outcome": "retained" if selected == version else "not_retained",
                 "reason": record.get("review_rationale") or record["review_decision"],
                 "evidence": record["review_decision"]})
         if selected in bundle_components:
-            steps.append({"index": len(steps), "round": round_number, "label": "记录中的整包选择", "kind": "select", "active_bundle_id": selected})
+            steps.append({"index": len(steps), "round": round_number, "label": "Recorded Harness selection", "kind": "select", "active_bundle_id": selected})
     selected = final.get("selected_version")
     if selected and any(bundle["id"] == selected for bundle in bundles):
-        steps.append({"index": len(steps), "round": steps[-1]["round"], "label": "最终冻结版本", "kind": "select", "active_bundle_id": selected})
+        steps.append({"index": len(steps), "round": steps[-1]["round"], "label": "Final frozen version", "kind": "select", "active_bundle_id": selected})
     return {"schema_version": "1.0", "id": identity, "title": identity, "algorithm": "HarnessLens",
-        "source": "historical", "notice": "真实实验记录。组件快照不代表单组件独立收益。TRAIN 各候选评测题目范围可能不同；最终 TEST 成绩见实验管理。",
+        "source": "historical", "notice": "Recorded experiment. Component snapshots do not establish independent gains. Candidate TRAIN task scopes may differ; inspect TEST results in the console.",
         "profile": {"id": "opencode-1.18.32", "runtime": "OpenCode", "version": "1.18.32"},
-        "context": {}, "components": components, "versions": versions, "bundles": bundles, "steps": steps, "decisions": decisions}
+        "context": {"initial_ready": bool(initial)}, "components": components, "versions": versions, "bundles": bundles, "steps": steps, "decisions": decisions}
 
 
 def read_text_json(text):
