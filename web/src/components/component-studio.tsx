@@ -49,7 +49,7 @@ async function request<T>(
   return r.json();
 }
 export default function ComponentStudio() {
-  const [source, setSource] = useState<"live" | "harnesslens">("harnesslens");
+  const [source, setSource] = useState<"live" | "harnesslens">("live");
   const [run, setRun] = useState("");
   useEffect(() => {
     const first = setTimeout(() => {

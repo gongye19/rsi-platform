@@ -53,6 +53,7 @@ def clean_base_url(value):
 def configure_models(raw, env, *, business=False):
     """Apply a launch profile to a child environment; return public receipt."""
     models = normalize_models(raw)
+    source_env = dict(env)
     receipt = {}
     for role, row in models.items():
         prefix = "HAI_" + role.upper()
@@ -65,10 +66,10 @@ def configure_models(raw, env, *, business=False):
             continue
         if role == "execution" and business:
             raise ValueError("HTTP/Python execution model belongs to the business agent; set managed_by=business_agent")
-        base = row.get("base_url") or env.get(row.get("base_url_env"), "")
+        base = row.get("base_url") or source_env.get(row.get("base_url_env"), "")
         if not base:
             raise ValueError(f"models.{role} base URL is missing from its referenced environment variable")
-        key = env.get(row["api_key_env"], "").strip()
+        key = source_env.get(row["api_key_env"], "").strip()
         if not key:
             raise ValueError(f"models.{role} credential is missing: {row['api_key_env']}")
         base = clean_base_url(base)

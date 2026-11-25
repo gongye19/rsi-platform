@@ -36,8 +36,11 @@ def history(identity):
             "step": 0, "round": 0, "digest": digest, "present": bool(files),
             "files": [{"path": item["path"], "change": "snapshot", "diff": item["content"]} for item in files], "notes": "冻结的初始配置"})
     current = {key: key + "_baseline" for key, _ in COMPONENTS}
+    baseline = read(root / "baseline/bootstrap_event.json", {}).get("metrics", {})
+    baseline_metrics = {k: v for k, v in baseline.items() if type(v) in {int, float}}
+    if "pass_at_1" in baseline_metrics: baseline_metrics["score"] = baseline_metrics["pass_at_1"]
     bundles.append({"id": "v0", "label": "H0", "step": 0, "round": 0, "components": dict(current),
-                    "execution": {"status": "baseline"}, "metrics": {}})
+                    "execution": {"status": "baseline"}, "metrics": baseline_metrics})
     steps.append({"index": 0, "round": 0, "label": "初始版本", "kind": "baseline", "bundle_id": "v0", "active_bundle_id": "v0"})
     snapshots = sorted(root.glob("rollout_evidence/**/versions_percell/*/*/harness/opencode/workspace.json"), key=lambda p: p.stat().st_mtime_ns)
     bundle_components = {"v0": dict(current)}
@@ -56,8 +59,11 @@ def history(identity):
     metrics = {}
     for record in sorted((root / "rollout").glob("*.json")):
         payload = read(record, {})
-        if payload.get("harness_version"):
+        if payload.get("harness_version") and "preflight" not in record.stem:
             metrics[payload["harness_version"]] = {key: value for key, value in payload.get("metrics", {}).items() if type(value) in {int, float}}
+    for values in metrics.values():
+        if "pass_at_1" in values: values["score"] = values["pass_at_1"]
+    decisions = []
     for index, path in enumerate(snapshots, 1):
         snapshot = path.parents[2]
         version = snapshot.name
@@ -91,15 +97,20 @@ def history(identity):
             "components": active, "execution": {"status": (read(snapshot / "meta.json", {}) or {}).get("status", "candidate")}, "metrics": metrics.get(version, {})})
         steps.append({"index": step_index, "round": round_number, "label": version, "kind": "candidate", "bundle_id": version})
         selected = record.get("selected_version")
+        if record.get("review_decision"):
+            decisions.append({"version_id": version, "step": step_index, "scope": "bundle",
+                "outcome": "retained" if selected == version else "not_retained",
+                "reason": record.get("review_rationale") or record["review_decision"],
+                "evidence": record["review_decision"]})
         if selected in bundle_components:
             steps.append({"index": len(steps), "round": round_number, "label": "记录中的整包选择", "kind": "select", "active_bundle_id": selected})
     selected = final.get("selected_version")
     if selected and any(bundle["id"] == selected for bundle in bundles):
         steps.append({"index": len(steps), "round": steps[-1]["round"], "label": "最终冻结版本", "kind": "select", "active_bundle_id": selected})
     return {"schema_version": "1.0", "id": identity, "title": identity, "algorithm": "HarnessLens",
-        "source": "historical", "notice": "真实实验记录。组件快照不代表单组件独立收益。",
+        "source": "historical", "notice": "真实实验记录。组件快照不代表单组件独立收益。TRAIN 各候选评测题目范围可能不同；最终 TEST 成绩见实验管理。",
         "profile": {"id": "opencode-1.18.32", "runtime": "OpenCode", "version": "1.18.32"},
-        "context": {}, "components": components, "versions": versions, "bundles": bundles, "steps": steps, "decisions": []}
+        "context": {}, "components": components, "versions": versions, "bundles": bundles, "steps": steps, "decisions": decisions}
 
 
 def read_text_json(text):

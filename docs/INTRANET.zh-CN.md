@@ -96,7 +96,9 @@ systemctl --user status harnesslens-api harnesslens-worker harnesslens-web
 
 界面使用 SSH 隧道访问，例如 `ssh -L 3000:127.0.0.1:3000 user@platform-host`，打开 `http://127.0.0.1:3000/experiments`。浏览器端没有独立登录；对多人开放时必须由公司反向代理提供 TLS/SSO/访问控制，API 仍留 loopback。API token 不等于浏览器用户权限。
 
-从界面选择 `.local.toml` 配置→创建→启动。创建只登记任务；启动/恢复会消耗模型配额。可查看谱系、状态/预算、事件和产物。示例谱系明确标为示例，与真实结果分开。日志/trace可能含业务内容，按公司数据权限保存。
+从界面选择 `.local.toml` 模板，再选择执行/分析模型、16组件开放范围、预算、TRAIN/TEST重复次数和并发；更多设置可调整超时、重试、初始Harness与experimental字段。原5类proposal_only保持只读。业务HTTP/Python执行模型由业务服务管理，界面不会覆盖其模型。
+
+点击创建，将本次配置冻结到 `runs/service/profiles/{id}/profile.toml`，不修改模板，也不调用模型。之后在列表点击启动；启动/恢复会消耗模型配额。默认执行TRAIN→冻结v0与最终版本→TEST；如果最终仍是v0，只评一次TEST并复用该结果。可取消训练后TEST。会话预算沿用原算法的TRAIN创建计数，TEST与其他已有独立预算不计入其中，并非总费用上限。可查看谱系、状态/预算、事件和产物。示例谱系明确标为示例，与真实结果分开。日志/trace可能含业务内容，按公司数据权限保存。
 
 ## CLI、API 与恢复
 
@@ -114,12 +116,13 @@ API 使用 `Authorization: Bearer $HAI_SERVICE_TOKEN`：
 | --- | --- |
 | GET /health | 不带鉴权的存活检查 |
 | GET /v1/profiles | 管理员配置目录内可选 TOML |
-| POST /v1/runs | `{profile, run_id?}` 创建草稿 |
+| GET /v1/options | 服务端模型目录、16组件与参数边界；不返回密钥 |
+| POST /v1/runs | `{profile, run_id?, settings?: {models, components, parameters, initial_harness, full_evaluation}}` 创建草稿 |
 | GET /v1/runs、/v1/runs/{id} | 列表、状态和预算/检查点 |
 | POST /v1/runs/{id}/start、stop、resume | 操作任务 |
 | GET /v1/runs/{id}/events?after=序号 | 增量事件，最多500条；支持 SSE 格式的有限批次，客户端重连携带游标 |
 | GET /v1/runs/{id}/history | 真实产物转换的16组件谱系 |
-| GET /v1/runs/{id}/artifacts | 产物目录（最多2000条；完整文件在平台本地） |
+| GET /v1/runs/{id}/artifacts | 产物目录（最多2500条；完整文件在平台本地） |
 | GET /v1/runs/{id}/artifact?root=0&path=... | 受目录约束的文本读取，单文件最多16MiB |
 
 SQLite 队列和事件在 `runs/service/`；训练在 `runs/train/{id}/`，测试在 `runs/test_baselines/{id}/`、`runs/test_candidates/{id}/`；都写平台端。当前只有**同一主机一个 Worker**，不是多机调度系统。
@@ -129,3 +132,15 @@ SQLite 队列和事件在 `runs/service/`；训练在 `runs/train/{id}/`，测�
 最终候选为 `runs/train/{id}/submission/final.json` 及其中的不可变 Harness 包，默认只作为实验输出，不自动发布到线上。保持 query1–10 TRAIN、query11–13 工程留出；留出3题此前已在工程中出现，不宣称全新盲测。
 
 接其他 benchmark 时添加外部 `benchmark.toml` 并把实验 profile 的 benchmark 指向该文件；详见 [BENCHMARK-ADAPTERS.zh-CN.md](BENCHMARK-ADAPTERS.zh-CN.md)，不需要为每个数据集改优化器。
+
+## 本机快速打开界面
+
+已有 uv 环境、Node 与前端构建后，可以运行：
+
+```bash
+.venv/bin/python scripts/start_local_platform.py
+# http://127.0.0.1:3210/experiments
+.venv/bin/python scripts/start_local_platform.py --stop
+```
+
+启动API、Worker、Next生产服务，不启动实验。不占用其他项目已使用的端口；可用 `--web-port` / `--api-port` 调整。私有令牌自动写入被git忽略的 `.env`、`web/.env.local`，模型密钥仅留在后端。已有CLI完成/失败实验只读登记，其原始产物与重复次数不变。端口、进程记录和日志在 `runs/platform/`；内网长期运行仍使用前述systemd方式。

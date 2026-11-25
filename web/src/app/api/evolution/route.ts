@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const response = await platform("/v1/runs");
     if (!response.ok) return response;
     const runs = await response.json();
-    id = runs[0]?.id;
+    id = runs.find((run: {selected_version?: string; state: string}) => run.selected_version || run.state === "running")?.id || runs.find((run: {state: string}) => run.state !== "draft")?.id || runs[0]?.id;
   }
   if (!id) return Response.json({ error: "暂无真实实验，请先在实验管理页创建" }, { status: 404 });
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(id)) return Response.json({ error: "无效实验编号" }, { status: 400 });

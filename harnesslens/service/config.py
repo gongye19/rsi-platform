@@ -18,8 +18,10 @@ def run_id(value):
 def load_profile(path):
     path = Path(path).resolve()
     raw = tomllib.loads(path.read_text())
-    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components", "models"} or raw.get("schema") != "harnesslens.experiment.v1":
+    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components", "models", "full_evaluation"} or raw.get("schema") != "harnesslens.experiment.v1":
         raise ValueError("Unsupported experiment profile")
+    if "full_evaluation" in raw and type(raw["full_evaluation"]) is not bool:
+        raise ValueError("full_evaluation must be boolean")
     mode = raw.get("mode", "train")
     if mode not in {"train", "test_baseline", "test_candidate"}:
         raise ValueError("Unsupported experiment mode")
@@ -77,6 +79,8 @@ def load_profile(path):
 
 def invocation(profile, identity):
     identity = run_id(identity)
+    if profile.get("full_evaluation") and profile["mode"] == "train":
+        run_id(identity + "-test")
     if profile.get("readiness", "ready") != "ready":
         raise ValueError("Profile is draft: finish business/data/trace integration before starting")
     env = profile_environment(profile)
@@ -107,6 +111,10 @@ def invocation(profile, identity):
         if not profile["submission"]:
             raise ValueError("test_candidate needs submission")
         argv += ["--patch-json", profile["submission"]]
+    if profile.get("full_evaluation") and profile["mode"] == "train":
+        argv = [sys.executable, "-m", "harnesslens.service.experiment", "--profile", profile["profile_path"], "--run-id", identity]
+    elif profile["mode"] != "train" and env.get("HAI_TEST_ROLLOUT_REPEATS"):
+        argv += ["--repeats", env["HAI_TEST_ROLLOUT_REPEATS"]]
     return argv, env
 
 

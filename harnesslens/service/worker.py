@@ -74,7 +74,7 @@ class Worker:
 
     def recover(self):
         for job in self.store.list():
-            if job["state"] in {"running", "stopping"}:
+            if job["state"] in {"running", "stopping"} and not job.get("read_only"):
                 if job["pid"]:
                     stop_owned(job["pid"], job["identity"])
                 self.store.update(job["id"], state="interrupted", error="Worker restarted; inspect unfinished business calls before resuming")

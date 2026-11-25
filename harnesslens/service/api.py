@@ -9,6 +9,7 @@ import uuid
 
 from .config import ROOT, run_id
 from .history import history, read
+from .records import run_record, artifacts
 
 
 def server(store, token, host="127.0.0.1", port=8765, profiles=None):
@@ -47,19 +48,21 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                         path = (profiles / name).resolve()
                         if not path.is_relative_to(profiles) or path.suffix != ".toml" or not path.is_file():
                             raise ValueError("Unknown profile")
-                        from .config import load_profile
-                        profile = load_profile(path)
-                        self.json({"name": name, "models": profile.get("models", {}), "readiness": profile.get("readiness", "ready")})
+                        from .settings import profile_preview
+                        self.json(profile_preview(path, profiles))
                     else:
                         self.json([str(p.relative_to(profiles)) for p in sorted(profiles.glob("*.toml"))])
+                elif parts == ["v1", "options"]:
+                    from .settings import catalog
+                    self.json(catalog(profiles))
                 elif parts == ["v1", "runs"]:
-                    self.json(store.list())
+                    store.sync_local_runs()
+                    self.json([run_record(job) for job in store.list()])
                 elif len(parts) in {3, 4} and parts[:2] == ["v1", "runs"]:
+                    store.sync_local_runs()
                     identity = run_id(parts[2]); job = store.get(identity)
                     if len(parts) == 3:
-                        state = read(ROOT / "runs/train" / identity / "controller_state.json", {})
-                        budget = read(ROOT / "runs/train" / identity / "creation_budget.json", {})
-                        self.json({**job, "checkpoint": state, "budget": budget})
+                        self.json(run_record(job))
                     elif parts[3] == "history":
                         self.json(history(identity))
                     elif parts[3] == "events":
@@ -79,15 +82,22 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                         else:
                             self.json(events)
                     elif parts[3] == "artifacts":
-                        roots = [ROOT / "runs/train" / identity, store.directory / "jobs" / identity,
-                                 ROOT / "runs/test_baselines" / identity, ROOT / "runs/test_candidates" / identity]
-                        self.json([{ "root": index, "path": str(p.relative_to(root)), "bytes": p.stat().st_size}
-                                   for index, root in enumerate(roots) if root.is_dir()
-                                   for p in sorted(root.rglob("*")) if p.is_file() and not p.is_symlink()][:2000])
+                        import os
+                        roots = artifacts(identity, store.directory)
+                        files = []
+                        for index, root in enumerate(roots):
+                            if not root.is_dir(): continue
+                            for directory, folders, names in os.walk(root):
+                                folders[:] = [f for f in folders if f not in {'node_modules', '.git', '.oc_data', '.oc_cache', '.oc_config', '.cache', '.home', '.tmp', '.venv', '.pytest_cache', '__pycache__', '.npm'}]
+                                for name in names:
+                                    p = Path(directory) / name
+                                    if p.is_symlink() or not p.is_file(): continue
+                                    files.append({'root': index, 'path': str(p.relative_to(root)), 'bytes': p.stat().st_size})
+                        files.sort(key=lambda x: (Path(x['path']).name not in {'final.json','result.json','background.log','api_calls.jsonl','trial.jsonl','answer.txt','baseline_result.json'}, x['root'], x['path']))
+                        self.json(files[:2500])
                     elif parts[3] == "artifact":
                         query = parse_qs(url.query)
-                        roots = [ROOT / "runs/train" / identity, store.directory / "jobs" / identity,
-                                 ROOT / "runs/test_baselines" / identity, ROOT / "runs/test_candidates" / identity]
+                        roots = artifacts(identity, store.directory)
                         index = int(query.get("root", ["0"])[0])
                         if index not in range(len(roots)):
                             raise ValueError("Unknown artifact root")
@@ -121,7 +131,7 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                     if not profile.is_relative_to(profiles) or profile.suffix != ".toml" or not profile.is_file():
                         raise ValueError("Profile must belong to the configured profile directory")
                     identity = body.get("run_id") or "run_" + time.strftime("%Y%m%d_%H%M%S", time.gmtime()) + "_" + uuid.uuid4().hex[:8]
-                    self.json(store.create(identity, profile), 201)
+                    self.json(store.create(identity, profile, settings=body.get("settings"), profiles=profiles), 201)
                 elif len(parts) == 4 and parts[:2] == ["v1", "runs"]:
                     self.json(store.transition(run_id(parts[2]), parts[3]))
                 else:

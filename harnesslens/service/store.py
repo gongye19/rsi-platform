@@ -19,6 +19,11 @@ class Store:
                 stop INTEGER DEFAULT 0, attempt INTEGER DEFAULT 0, pid INTEGER, identity TEXT, error TEXT DEFAULT '');
                 CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT,
                 run TEXT NOT NULL, at REAL NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL);''')
+            db.execute("BEGIN IMMEDIATE")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
+            for name, definition in [("origin", "TEXT NOT NULL DEFAULT 'service'"), ("read_only", "INTEGER NOT NULL DEFAULT 0")]:
+                if name not in columns:
+                    db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {definition}")
         self.path.chmod(0o600)
 
     @contextmanager
@@ -36,8 +41,18 @@ class Store:
         with self.connect() as db:
             db.execute("INSERT INTO events(run,at,kind,payload) VALUES(?,?,?,?)", (identity, time.time(), kind, json.dumps(payload)))
 
-    def create(self, identity, path):
+    def create(self, identity, path, settings=None, profiles=None):
         run_id(identity)
+        if settings is not None:
+            import sqlite3
+            if any(job['id'] == identity for job in self.list()):
+                raise sqlite3.IntegrityError('Run ID already exists')
+            from .settings import snapshot_profile
+            from .config import ROOT
+            for directory in [ROOT / "runs/train" / identity, ROOT / "runs/local_experiments" / identity]:
+                if directory.exists():
+                    raise ValueError("Run ID already has experiment evidence; choose a new ID")
+            path = snapshot_profile(path, settings, self.directory / "profiles" / identity, profiles)
         profile = load_profile(path)
         now = time.time()
         with self.connect() as db:
@@ -64,6 +79,8 @@ class Store:
             row = db.execute("SELECT * FROM jobs WHERE id=?", (identity,)).fetchone()
             if row is None:
                 raise KeyError(identity)
+            if row["read_only"]:
+                raise ValueError("Imported experiments are read-only; create a new experiment to run again")
             if action in {"start", "resume"}:
                 permitted = {"draft"} if action == "start" else {"stopped", "failed", "interrupted"}
                 if row["state"] not in permitted:
@@ -107,3 +124,29 @@ class Store:
         with self.connect() as db:
             return [{**dict(row), "payload": json.loads(row["payload"])} for row in
                     db.execute("SELECT * FROM events WHERE run=? AND seq>? ORDER BY seq LIMIT 500", (identity, after))]
+
+
+    def sync_local_runs(self):
+        """Register completed CLI runs. Their execution and timestamps stay intact."""
+        from .config import ROOT
+        from .history import read
+        for path in (ROOT / 'runs/local_experiments').glob('*/configuration.json'):
+            identity = path.parent.name
+            try: run_id(identity)
+            except ValueError: continue
+            stage = read(path.parent / 'stage.json', {})
+            result = read(path.parent / 'result.json', {})
+            if stage.get('status') not in {'succeeded', 'failed', 'interrupted'}: continue
+            if not result and stage.get('stage') not in {'train', 'test_initial', 'test_selected'}: continue
+            config = read(path, {})
+            profile = config.get('profile', '')
+            if not profile: continue
+            state = 'succeeded' if result else 'failed' if stage.get('status') == 'failed' else 'interrupted'
+            with self.connect() as db:
+                existing = db.execute('SELECT origin FROM jobs WHERE id=?', (identity,)).fetchone()
+                if existing: continue
+                db.execute('INSERT INTO jobs(id,profile,fingerprint,state,created,updated,attempt,origin,read_only,error) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                    (identity, profile, config.get('fingerprint',''), state, path.stat().st_mtime,
+                     (path.parent / 'stage.json').stat().st_mtime, 1, 'cli_import', 1,
+                     '' if result else '原命令行实验停止，详情见原始日志'))
+            self.event(identity, 'imported', {'source': 'local_cli', 'original_evidence_preserved': True})

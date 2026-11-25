@@ -10,8 +10,8 @@
 | `env_file` | 私有模型地址、凭据、外部数据位置等 | 模板使用仓库 `.env` |
 | `[models.execution]` / `[models.analysis]` | **必填**，各自选择模型、协议、地址、密钥环境变量名 | 不再默认共用；见 [模型连接](model-connections.zh-CN.md) |
 | `mode` | train、test_baseline 或 test_candidate | train |
-| `[models.execution]` / `[models.analysis]` | 分别指定执行与分析的模型、协议、地址和凭据变量名 | **启动必填**；业务执行显式设 managed_by |
-| `[environment]` | 会话预算和并发等实验设置 | 模板预算200、并发1 |
+| `full_evaluation` | TRAIN 后冻结并评测 TEST | 界面默认开启；直接使用 TOML 时需显式 true |
+| `[environment]` | 会话预算和并发等实验设置 | 预算200；并发由模板和界面选择 |
 | `[components]` | 优化组件的实验边界；模型在范围内自行发现和选择 | 默认16类全允许，denied为空 |
 
 模型凭据只写私有 `.env`。远程业务 Agent 的固定运行时和模型由业务服务配置；平台模型用于分析、编辑和选优。
@@ -22,6 +22,7 @@
 schema = "harnesslens.experiment.v1"
 benchmark = "crm"
 mode = "train"
+full_evaluation = true
 initial_harness = ""  # 默认空；也可填 ../../harnesses/business-agent
 agent_config = "../../examples/agents/company-http.local.toml"
 env_file = "../../.env"
@@ -32,15 +33,6 @@ HAI_TOTAL_CREATION_BUDGET = 200
 HAI_MAX_ROLLOUT_CONCURRENCY = 1
 HAI_MAX_ANALYSIS_CONCURRENCY = 1
 HAI_PROVIDER_MAX_CONCURRENCY = 1
-
-[models.execution]
-managed_by = "business_agent"
-
-[models.analysis]
-model = "david/gpt-6.2-sol"
-api = "responses"
-base_url = "https://api.david-ai.net/v1"
-api_key_env = "HAI_ANALYSIS_API_KEY"
 
 [models.execution]
 managed_by = "business_agent"
@@ -94,7 +86,7 @@ harnesses/business-agent/
 
 ## 启动
 
-界面：在实验管理页选择配置，创建后启动；API 与 Worker 需事先运行。
+界面：在实验管理页选择配置模板，可直接选择执行/分析模型、16组件开放范围、预算、重复次数、并发和更多设置，创建后点击启动。每个任务保存独立配置，不改模板；API 与 Worker 需事先运行。本机可用 `.venv/bin/python scripts/start_local_platform.py` 启动平台，打开 http://127.0.0.1:3210/experiments。密钥仅留服务端。
 
 无需 Web/API 时，同样可用本地队列入口执行配置：
 
@@ -114,4 +106,4 @@ harnesses/business-agent/
 
 独立评测初版：`run_test_baseline.py --initial-harness ...`；不提供时评测空初版。评测最终版本：`run_test_candidate.py --patch-json .../submission/final.json`，加载所选快照，无需再指定初版。
 
-部署和 Linux/HTTP 测试数据的边界见 [INTRANET.zh-CN.md](INTRANET.zh-CN.md)。本机分析连接已验证；13题完整实验尚未启动。
+部署和 Linux/HTTP 测试数据的边界见 [INTRANET.zh-CN.md](INTRANET.zh-CN.md)。本机已有完整实验记录，可从实验管理页查看 TRAIN/TEST、候选采用结果和原始证据；查看不会重新运行。
