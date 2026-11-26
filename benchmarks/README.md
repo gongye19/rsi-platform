@@ -50,9 +50,11 @@ name = "FDABench Lite · Reports"
 adapter = "fdabench"
 ```
 
-The bundled CRM, FDABench, Tau², BIRD and Terminal-Bench registrations preserve
-their native dataset/runtime setup. Their data may remain at the configured
+The console ships with CRM Arena Pro and FDABench Lite · Reports registrations.
+Their data may remain at the configured
 external data root; registering an adapter does not download or install it.
+Other native adapters remain usable through the CLI; add a registration manifest
+under this directory when they are needed in the console.
 FDABench exposes its public database groups. New JSONL benchmarks can use either
 `--cell <id>` or the descriptor path; legacy external descriptor paths remain
 supported by the CLI/API. See [adapter protocol](../docs/BENCHMARK-ADAPTERS.zh-CN.md).

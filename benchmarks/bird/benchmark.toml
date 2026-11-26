@@ -1,4 +1,0 @@
-schema = "rsi.benchmark.v1"
-id = "bird"
-name = "BIRD Mini-Dev"
-adapter = "bird"

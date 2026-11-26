@@ -217,3 +217,11 @@ after training in this implementation, without feeding its results into selectio
 There is no outer loop that repeatedly evaluates TEST after each candidate. A
 train-only profile has no fabricated TEST curve. Latest evaluation proof:
 `runs/platform/test-evaluation-ui.png`.
+
+## Focused benchmark catalog
+
+New experiment offers CRM Arena Pro and FDABench Lite · Reports only, in both the
+local console and the public demo's simulated configuration. Unused native
+registration manifests are removed; directory discovery stays generic and custom
+benchmark registrations can still be added later. Native CLI adapters and existing
+experiment records are preserved. Proof: `runs/platform/benchmark-options-ui.png`.

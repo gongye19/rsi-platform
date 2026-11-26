@@ -187,7 +187,7 @@ def test_live_preflight_rejection_preserves_actual_nonempty_parent(tmp_path, mon
 def test_benchmark_can_be_selected_independently_of_runtime_profile(tmp_path, profile):
     original = profile.read_bytes()
     available = {row['id'] for row in catalog(tmp_path, discover=False)['benchmarks']}
-    assert {'crm', 'retail', 'banking', 'bird', 'terminal-bench'} <= available
+    assert available == {'crm', 'fdabench'}
     saved = snapshot_profile(profile, {'benchmark': 'retail'}, tmp_path/'selected', tmp_path)
     loaded = load_profile(saved)
     assert loaded['benchmark'] == 'retail'

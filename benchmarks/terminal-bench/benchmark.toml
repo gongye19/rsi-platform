@@ -1,4 +1,0 @@
-schema = "rsi.benchmark.v1"
-id = "terminal-bench"
-name = "Terminal-Bench"
-adapter = "terminal-bench"

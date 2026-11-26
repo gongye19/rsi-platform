@@ -1,4 +1,0 @@
-schema = "rsi.benchmark.v1"
-id = "retail"
-name = "Tau² Retail"
-adapter = "retail"
