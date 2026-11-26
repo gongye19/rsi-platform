@@ -22,6 +22,6 @@ export async function POST(request: NextRequest) {
   if (!body || typeof body !== "object") return Response.json({ error: "Invalid request" }, { status: 400 });
   const action = body.action;
   if (action === "create") return platform("/v1/runs", { method: "POST", body: JSON.stringify({ profile: body.profile, run_id: body.run_id || undefined, settings: body.settings }) });
-  if (!["start", "stop", "resume"].includes(action) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(body.run_id || "")) return Response.json({ error: "Invalid action" }, { status: 400 });
+  if (!["start", "stop", "resume", "delete", "restore"].includes(action) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(body.run_id || "")) return Response.json({ error: "Invalid action" }, { status: 400 });
   return platform(`/v1/runs/${body.run_id}/${action}`, { method: "POST", body: "{}" });
 }

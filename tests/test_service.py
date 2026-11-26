@@ -152,3 +152,84 @@ def test_history_uses_real_branch_parent_and_does_not_invent_component_results(t
     assert versions[2]["parent_id"] == versions[0]["id"]
     assert data["decisions"] == []
     assert data["bundles"][-1]["components"] == data["bundles"][1]["components"]
+
+
+def test_deleted_experiment_is_recoverable_and_cannot_start(tmp_path, profile):
+    store = Store(tmp_path / 'state')
+    store.create('removed', profile)
+    evidence = tmp_path / 'answer.txt'
+    evidence.write_text('recorded answer')
+    assert store.transition('removed', 'delete') == {'id': 'removed', 'deleted': True}
+    assert store.list() == []
+    with pytest.raises(KeyError):
+        store.get('removed')
+    with pytest.raises(ValueError, match='Restore'):
+        store.transition('removed', 'start')
+    assert evidence.read_text() == 'recorded answer'
+    assert Store(tmp_path / 'state').list() == []
+    import sqlite3
+    with pytest.raises(sqlite3.IntegrityError):
+        store.create('removed', profile, settings={})
+    store.transition('removed', 'restore')
+    assert store.get('removed')['state'] == 'draft'
+    assert [e['kind'] for e in store.events('removed')] == ['created', 'deleted', 'restored']
+
+
+@pytest.mark.parametrize('state', ['queued', 'running', 'stopping'])
+def test_deletion_rejects_active_experiments(tmp_path, profile, state):
+    store = Store(tmp_path / 'state')
+    store.create('active', profile)
+    store.update('active', state=state)
+    with pytest.raises(ValueError, match='Stop'):
+        store.transition('active', 'delete')
+    assert store.get('active')['state'] == state
+    assert len(store.list()) == 1
+
+
+def test_deleted_import_does_not_reappear_during_sync(tmp_path, profile, monkeypatch):
+    from harnesslens.service import config
+    monkeypatch.setattr(config, 'ROOT', tmp_path)
+    directory = tmp_path / 'runs/local_experiments/imported'
+    directory.mkdir(parents=True)
+    (directory / 'configuration.json').write_text(json.dumps({'profile': str(profile)}))
+    (directory / 'stage.json').write_text(json.dumps({'status': 'succeeded', 'stage': 'test_selected'}))
+    (directory / 'result.json').write_text(json.dumps({'score': .75}))
+    store = Store(tmp_path / 'state')
+    store.sync_local_runs()
+    assert store.get('imported')['read_only'] == 1
+    store.transition('imported', 'delete')
+    store.sync_local_runs()
+    assert store.list() == []
+    store.transition('imported', 'restore')
+    assert store.get('imported')['read_only'] == 1
+    assert json.loads((directory / 'result.json').read_text()) == {'score': .75}
+
+
+def test_delete_api_requires_auth_and_supports_restore(tmp_path, profile):
+    store = Store(tmp_path / 'state')
+    store.create('api_delete', profile)
+    token = 'test-token-' + 'x' * 24
+    httpd = server(store, token, port=0, profiles=profile.parent)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    base = f'http://127.0.0.1:{httpd.server_port}'
+    def post(action, authenticated=True):
+        headers = {'Content-Type': 'application/json'}
+        if authenticated:
+            headers['Authorization'] = 'Bearer ' + token
+        request = urllib.request.Request(base + '/v1/runs/api_delete/' + action, data=b'{}', headers=headers)
+        return urllib.request.urlopen(request)
+    try:
+        with pytest.raises(urllib.error.HTTPError) as error:
+            post('delete', authenticated=False)
+        assert error.value.code == 401
+        with post('delete') as response:
+            assert json.load(response)['deleted'] is True
+        assert not store.list()
+        with post('restore') as response:
+            assert json.load(response)['deleted'] is False
+        assert store.get('api_delete')['state'] == 'draft'
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        thread.join(timeout=2)

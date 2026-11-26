@@ -260,3 +260,11 @@
 .ce-phase-label{transform:none;padding-left:6px}
 .ce-flow-host .ce-version-label,.ce-flow-host.is-compact .ce-version-label,.ce-flow-host .is-member .ce-version-label{font-weight:400}
 .ce-flow-host .is-inspected .ce-version-label{font-weight:500}
+/* One full-width chart at a time, with the same recorded snapshot and round. */
+.ce-view-tabs { display: flex; gap: 3px; padding: 3px; border: 1px solid #e7e7e9; background: #f5f5f6; border-radius: 7px; flex-shrink: 0; }
+.ce-view-tabs > button { border: 0; padding: 4px 11px; background: transparent; border-radius: 4px; font-size: 12px; line-height: 18px; color: #73757b; }
+.ce-view-tabs > button[aria-selected="true"] { color: #34353a; background: #fff; box-shadow: 0 1px 3px #25263012; }
+.ce-snapshot-control { margin-left: 12px; }
+.ce-single-view { display: flex; flex: 1; min-height: 0; min-width: 0; width: 100%; }
+.ce-single-view .ce-lineages,.ce-single-view .ce-results { flex: 1; min-width: 0; }
+@media(max-width:760px) { .ce-inspection-toolbar { flex-wrap: wrap; } .ce-snapshot-control { margin-left: 0; } }

@@ -21,7 +21,7 @@ class Store:
                 run TEXT NOT NULL, at REAL NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL);''')
             db.execute("BEGIN IMMEDIATE")
             columns = {row[1] for row in db.execute("PRAGMA table_info(jobs)")}
-            for name, definition in [("origin", "TEXT NOT NULL DEFAULT 'service'"), ("read_only", "INTEGER NOT NULL DEFAULT 0")]:
+            for name, definition in [("origin", "TEXT NOT NULL DEFAULT 'service'"), ("read_only", "INTEGER NOT NULL DEFAULT 0"), ("deleted_at", "REAL")]:
                 if name not in columns:
                     db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {definition}")
         self.path.chmod(0o600)
@@ -45,7 +45,7 @@ class Store:
         run_id(identity)
         if settings is not None:
             import sqlite3
-            if any(job['id'] == identity for job in self.list()):
+            if self._exists(identity):
                 raise sqlite3.IntegrityError('Run ID already exists')
             from .settings import snapshot_profile
             from .config import ROOT
@@ -61,24 +61,46 @@ class Store:
         self.event(identity, "created", {"mode": profile["mode"], "benchmark": profile["benchmark"]})
         return self.get(identity)
 
+    def _exists(self, identity):
+        with self.connect() as db:
+            return db.execute("SELECT 1 FROM jobs WHERE id=?", (identity,)).fetchone() is not None
+
     def get(self, identity):
         run_id(identity)
         with self.connect() as db:
             row = db.execute("SELECT * FROM jobs WHERE id=?", (identity,)).fetchone()
-        if row is None:
+        if row is None or row["deleted_at"] is not None:
             raise KeyError(identity)
         return dict(row)
 
     def list(self):
         with self.connect() as db:
-            return [dict(row) for row in db.execute("SELECT * FROM jobs ORDER BY created DESC")]
+            return [dict(row) for row in db.execute("SELECT * FROM jobs WHERE deleted_at IS NULL ORDER BY created DESC")]
 
-    def transition(self, identity, action):
+    def set_deleted(self, identity, deleted):
+        """Remove a stopped record from the directory, retaining evidence for Undo."""
+        run_id(identity)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM jobs WHERE id=?", (identity,)).fetchone()
             if row is None:
                 raise KeyError(identity)
+            if deleted and row["state"] in {"queued", "running", "stopping"}:
+                raise ValueError("Stop the experiment before deleting it")
+            db.execute("UPDATE jobs SET deleted_at=? WHERE id=?", (time.time() if deleted else None, identity))
+        self.event(identity, "deleted" if deleted else "restored", {})
+        return {"id": identity, "deleted": deleted}
+
+    def transition(self, identity, action):
+        if action in {"delete", "restore"}:
+            return self.set_deleted(identity, action == "delete")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM jobs WHERE id=?", (identity,)).fetchone()
+            if row is None:
+                raise KeyError(identity)
+            if row["deleted_at"] is not None:
+                raise ValueError("Restore the experiment before running it")
             if row["read_only"]:
                 raise ValueError("Imported experiments are read-only; create a new experiment to run again")
             if action in {"start", "resume"}:
@@ -106,7 +128,7 @@ class Store:
     def claim(self):
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT id FROM jobs WHERE state='queued' ORDER BY created LIMIT 1").fetchone()
+            row = db.execute("SELECT id FROM jobs WHERE state='queued' AND deleted_at IS NULL ORDER BY created LIMIT 1").fetchone()
             if row is None:
                 return None
             db.execute("UPDATE jobs SET state='running',attempt=attempt+1,updated=? WHERE id=?", (time.time(), row["id"]))

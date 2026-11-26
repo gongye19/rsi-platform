@@ -1202,3 +1202,39 @@
 @media (max-width: 600px) { .console-config-sheet .config-field { grid-template-columns: minmax(0,1fr); gap: 8px; } .console-config-sheet .console-config-scroll { padding-inline: 20px; } }
 
 .console-config-overlay { backdrop-filter: none; }
+/* Compact removable records; the title and delete action are separate controls. */
+.experiment-list-entry { display: flex; align-items: center; height: 34px; margin-bottom: 2px; border-radius: 5px; padding-right: 4px; }
+.experiment-list-entry:hover { background: #ebebed; }
+.experiment-list-entry[data-selected="true"] { background: #e6e6e9; }
+.experiment-list-entry .experiment-list-row { flex: 1; width: auto; min-width: 0; margin: 0; background: transparent; }
+.experiment-delete-trigger { color: #85878f; flex-shrink: 0; opacity: .65; }
+.experiment-list-entry:hover .experiment-delete-trigger,.experiment-delete-trigger:focus-visible { opacity: 1; }
+.experiment-delete-confirm { width: 290px; padding: 16px; font: 12px/1.6 var(--font-ui); }
+.experiment-delete-confirm h3 { font-size: 13px; font-weight: 550; }
+.experiment-delete-confirm p { color: #73757b; margin: 8px 0 14px; overflow-wrap: anywhere; }
+.experiment-delete-confirm strong { font-weight: 400; color: #34353a; }
+.experiment-delete-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
+.console-notice > button { margin-left: auto; }
+/* Inset floating drawer, with state-based animations (Radix emits data-state). */
+.console-config-sheet {
+  inset-block: 12px;
+  right: 12px;
+  height: calc(100dvh - 24px);
+  width: min(640px,calc(100vw - 24px)) !important;
+  max-width: 640px !important;
+  border: 1px solid #e5e5e9;
+  border-radius: 14px;
+  outline: none;
+  overflow: hidden;
+  box-shadow: 0 12px 48px #2526301a, 0 2px 8px #25263008;
+  transition: none;
+}
+.console-config-sheet[data-state="open"] { animation: strata-drawer-in 220ms cubic-bezier(.2,.8,.2,1) both; }
+.console-config-sheet[data-state="closed"] { animation: strata-drawer-out 180ms cubic-bezier(.4,0,1,1) both; }
+.console-config-overlay[data-state="open"] { animation: strata-overlay-in 220ms ease both; }
+.console-config-overlay[data-state="closed"] { animation: strata-overlay-out 180ms ease both; }
+@keyframes strata-drawer-in { from { opacity: 0; transform: translateX(calc(100% + 16px)); } to { opacity: 1; transform: translateX(0); } }
+@keyframes strata-drawer-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(calc(100% + 16px)); } }
+@keyframes strata-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes strata-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .console-config-sheet[data-state],.console-config-overlay[data-state] { animation-duration: .01ms; } }

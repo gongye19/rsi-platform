@@ -23,6 +23,7 @@ export default function ExperimentConsole() {
   const [error,setError] = useState('');
   const [configError,setConfigError] = useState('');
   const [notice,setNotice] = useState('');
+  const [deletedRun,setDeletedRun] = useState<string | null>(null);
   const [connectionError,setConnectionError] = useState('');
   const [connected,setConnected] = useState(true);
   const [loading,setLoading] = useState(true);
@@ -52,23 +53,39 @@ export default function ExperimentConsole() {
     return () => {abort.abort();clearTimeout(timer);clearTimeout(choices);};
   },[refresh,loadChoices]);
   function select(id: string) {
-    setSelected(id);setError('');setNotice('');
+    setSelected(id);setError('');setNotice('');setDeletedRun(null);
     mainRef.current?.scrollTo({top:0});
     const url = new URL(window.location.href);
-    url.searchParams.set('run',id);
+    if (id) url.searchParams.set('run',id); else url.searchParams.delete('run');
     window.history.replaceState(null,'',url);
   }
   function openConfiguration(mode: 'new' | 'saved') {configurationTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;setConfiguration(mode);}
   function newExperiment() {openConfiguration('new');setConfigError('');if (!options) void loadChoices();}
+  async function deleteExperiment(id:string) {
+    if (busy) return false;
+    setBusy(true);setError('');setNotice('');
+    try {
+      await platformRead('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',run_id:id})});
+      setRuns(current => current.filter(row => row.id !== id));
+      if (selected === id) select(runs.find(row => row.id !== id)?.id || '');
+      setDeletedRun(id);await refresh();return true;
+    } catch(e) {setError((e as Error).message);return false;} finally {setBusy(false);}
+  }
+  async function undoDelete() {
+    if (!deletedRun || busy) return;
+    const id=deletedRun;setBusy(true);setError('');
+    try {await platformRead('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'restore',run_id:id})});select(id);await refresh();}
+    catch(e) {setError((e as Error).message);} finally {setBusy(false);}
+  }
   async function action(kind: string) {
     if (!run || busy) return;
-    setBusy(true);setError('');setNotice('');
+    setBusy(true);setError('');setNotice('');setDeletedRun(null);
     try {await platformRead('',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:kind,run_id:run.id})});await refresh();setNotice(kind === 'stop' ? 'Stop requested. Evidence will be preserved.' : 'Run queued. The worker will continue from its recorded state.');}
     catch(e) {setError((e as Error).message);} finally {setBusy(false);}
   }
   async function submit(profile: string,settings: Settings) {
     if (busy) return;
-    setBusy(true);setConfigError('');setError('');setNotice('');
+    setBusy(true);setConfigError('');setError('');setNotice('');setDeletedRun(null);
     const identity = 'exp-'+new Date().toISOString().replace(/\D/g,'').slice(0,14)+'-'+crypto.randomUUID().slice(0,8);
     let created = false;
     try {
@@ -85,10 +102,10 @@ export default function ExperimentConsole() {
   const phase = run?.phase?.label || (run?.stage ? run.stage.replaceAll('_',' ') : 'Not started');
   return <div className="experiment-console">
     <header className="console-topbar"><a className="console-brand" href="/experiments">{PLATFORM_NAME}</a><span className="console-topbar-divider"/><span className="console-breadcrumb">Experiments</span>{run && <><span className="console-path-divider" aria-hidden="true">/</span><span className="console-current-run">{run.id}</span></>}<div className="console-topbar-right"><span className="console-runtime">OpenCode 1.18.32</span></div></header>
-    <div className="console-body"><ExperimentList runs={runs} selected={selected} loading={loading} busy={busy} onSelect={select} onNew={newExperiment}/>
+    <div className="console-body"><ExperimentList runs={runs} selected={selected} loading={loading} busy={busy} onSelect={select} onNew={newExperiment} onDelete={deleteExperiment}/>
       <main ref={mainRef} className="console-main">
         <div className="console-page-heading"><div><h1>{run?.id || selected || 'Experiments'}{run && <Status state={run.state}/>}</h1><p>{run ? `${run.configuration?.benchmark || 'Benchmark'} · ${run.read_only ? 'Imported execution · read only' : `Attempt ${run.attempt}`} · ${new Date(run.created*1000).toLocaleString('en-GB')}` : 'Configure an experiment to start a real evolution run.'}</p></div><div className="console-header-actions">{run && <Button variant="ghost" onClick={() => openConfiguration('saved')}>Run settings</Button>}<Button className="console-new-button" disabled={busy} onClick={newExperiment}>New experiment</Button><Button variant="outline" size="icon" aria-label="Refresh console" onClick={() => {setError('');void refresh();if (!options) void loadChoices();}}><RefreshCw size={15}/></Button>{run && !run.read_only && <>{run.state === 'draft' && <Button disabled={busy} onClick={() => void action('start')}>{busy ? <Loader2 size={14} className="animate-spin"/> : <ArrowRight size={14}/>}Start run</Button>}{activeStates.has(run.state) && <Button variant="outline" disabled={busy || run.state === 'stopping'} onClick={() => void action('stop')}><Square size={13}/>{run.state === 'stopping' ? 'Stopping…' : 'Stop run'}</Button>}{['failed','interrupted','stopped'].includes(run.state) && <Button disabled={busy} onClick={() => void action('resume')}><ArrowRight size={14}/>Resume run</Button>}</>}</div></div>
-        {(!connected || error) && <div className="console-alert console-main-alert" role="alert">{!connected && <WifiOff size={14}/>}<span>{error || connectionError || 'Connection interrupted. Showing the last received records.'}</span></div>}{notice && <div className="console-notice" role="status"><Check size={14}/>{notice}</div>}
+        {(!connected || error) && <div className="console-alert console-main-alert" role="alert">{!connected && <WifiOff size={14}/>}<span>{error || connectionError || 'Connection interrupted. Showing the last received records.'}</span></div>}{(notice || deletedRun) && <div className="console-notice" role="status"><Check size={14}/><span>{deletedRun ? 'Experiment deleted.' : notice}</span>{deletedRun && <Button variant="ghost" size="sm" disabled={busy} onClick={() => void undoDelete()}>Undo</Button>}</div>}
         {run ? <>
           <section className="console-metrics" aria-label="Experiment summary"><div><span>Execution stage</span><strong className="console-phase-value">{phase}</strong><small>{activeStates.has(run.state) ? connected ? 'Following worker checkpoints' : 'Connection lost' : stateLabels[run.state]}</small></div><div><span>TRAIN baseline</span><strong>{metric(run.baseline_metrics)}</strong><small>{counts(run.baseline_metrics)}</small></div><div><span>Final TEST</span><strong>{metric(run.tests?.selected?.metrics)}</strong><small>{run.tests?.selected ? `${counts(run.tests.selected.metrics)} · ${run.tests.selected.repeats ?? '?'} per task` : 'No TEST result yet'}</small></div><div><span>Creation budget</span><strong>{run.budget?.total != null ? <>{run.budget.used}<em> / {run.budget.total}</em></> : '—'}</strong><small>{run.budget?.remaining != null ? `${run.budget.remaining} TRAIN sessions remaining` : 'Not initialized'}</small></div><div><span>Selected Harness</span><strong>{run.selected_version || '—'}</strong><small>{run.selected_version ? run.selected_version === 'v0' ? 'Initial version retained' : 'Frozen final version' : 'Not finalized'}</small></div></section>
           <section className="console-workspace" aria-label="Experiment evolution">

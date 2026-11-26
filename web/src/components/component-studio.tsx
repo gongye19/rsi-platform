@@ -7,13 +7,13 @@ import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription} from '@/components/ui/sheet';
 import ComponentTree from './component-tree';
 import RoundOutcomeChart from './round-outcome-chart';
-import EvolutionWorkspace from './evolution-workspace';
 import {harnessViews} from '@/lib/harness-views';
 import {evolutionRounds} from '@/lib/component-layout';
 import {activeAt, decisionAt, decisionLabels, type ComponentHistory} from '@/lib/component-types';
 import {componentLabels} from '@/lib/console-types';
 import './component-studio.css';
 export default function ComponentStudio({run, live, revision}: {run: string; live: boolean; revision: number}) {
+  const [view,setView] = useState<'lineage' | 'evaluation'>('lineage');
   const [data,setData] = useState<ComponentHistory | null>(null);
   const [error,setError] = useState('');
   const [selected,setSelected] = useState('');
@@ -53,6 +53,7 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   return <div className={live ? "ce-root ce-console-embedded ce-follow-live" : "ce-root ce-console-embedded"}>
     <div className="ce-experiment">
       <div className="ce-controls ce-inspection-toolbar">
+        <div className="ce-view-tabs" role="tablist" aria-label="Experiment charts">{(['lineage','evaluation'] as const).map((id,i) => <button key={id} role="tab" id={`chart-tab-${id}`} aria-selected={view === id} aria-controls={`chart-panel-${id}`} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)} onKeyDown={event => {if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {event.preventDefault();const next=i === 0 ? 'evaluation' : 'lineage';setView(next);document.getElementById(`chart-tab-${next}`)?.focus();}}}>{id === 'lineage' ? 'Lineage' : 'Evaluation'}</button>)}</div>
         <div className="ce-snapshot-control"><span>Snapshot</span><Select value={inspected?.id || ''} disabled={!views.length} onValueChange={id => {setInspectedId(id);const view=views.find(v => v.id === id);if (view) focus(view.bundle.round);}}>
           <SelectTrigger aria-label="Inspect Harness"><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
             {views.map(v => <SelectItem value={v.id} key={v.id}>{v.bundle.id === 'v0' ? 'Initial · v0' : v.bundle.id}{v.bundleIds.includes(active?.id || '') ? ' · Retained' : ''}</SelectItem>)}
@@ -68,8 +69,10 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
       </div>
       {error && <div className="ce-error" role="alert">{error}<Button variant="ghost" size="sm" onClick={() => void refresh()}>Retry</Button></div>}
       {!data ? <div className="ce-loading"><GitBranch size={22}/>{error ? 'Lineage unavailable' : 'Loading execution records…'}</div> : !ready ? <div className="ce-loading console-lineage-wait"><GitBranch size={28}/><strong>Waiting for the initial snapshot</strong><span>Lineage will appear when the worker freezes the actual starting Harness.</span></div> : <>
-        <EvolutionWorkspace left={<section className="ce-lineages"><div className="ce-result-heading"><h2 className="ce-plot-title">Component lineage <span className="ce-component-count">{data.components.length}</span></h2></div><div className="ce-tree-scroll" role="region" tabIndex={0} aria-label="Component lineage, horizontally scrollable"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={linkedRound} focusedRound={focusedRound ?? rounds.at(-1)?.round ?? null} focusRevision={focusRevision} onHoverRound={setHoveredRound} onRound={focus} onSelect={choose} followLive={live}/></div></section>} right={<section className="ce-results"><div className="ce-result-heading"><h2 className="ce-plot-title">Retained configuration results</h2></div><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}/>
-        <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>Click a version to inspect its snapshot</span></div>
+        <div className="ce-single-view" role="tabpanel" id={`chart-panel-${view}`} aria-labelledby={`chart-tab-${view}`}>
+          {view === 'lineage' ? <section className="ce-lineages"><div className="ce-result-heading"><h2 className="ce-plot-title">Component lineage <span className="ce-component-count">{data.components.length}</span></h2></div><div className="ce-tree-scroll" role="region" tabIndex={0} aria-label="Component lineage, horizontally scrollable"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={linkedRound} focusedRound={focusedRound ?? rounds.at(-1)?.round ?? null} focusRevision={focusRevision} onHoverRound={setHoveredRound} onRound={focus} onSelect={choose} followLive={live}/></div></section> : <section className="ce-results"><div className="ce-result-heading"><h2 className="ce-plot-title">Retained configuration results</h2></div><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
+        </div>
+        <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>{view === 'lineage' ? 'Click a version to inspect its snapshot' : 'TRAIN measurements for retained configurations'}</span></div>
       </>}
     </div>
     <Sheet open={panel && !!version} onOpenChange={setPanel}><SheetContent className="ce-evidence"><SheetHeader><SheetTitle>{component?.name} <code>{version?.label}</code></SheetTitle><SheetDescription>Recorded component snapshot and adoption evidence.</SheetDescription></SheetHeader>{version && data && <><div className="ce-version-meta"><span>{version.parent_id ? `Parent: ${data.versions.find(v => v.id === version.parent_id)?.label}` : 'Initial snapshot'}</span><span>Round {version.round}</span><span>{version.digest.slice(0,10)}</span></div><div className={`ce-verdict ${decision?.outcome || 'unknown'}`}><strong>{decision ? decisionLabels[decision.outcome] : version.step === 0 ? 'Initial version' : 'No adoption decision recorded'}</strong>{decision?.reason && <p>{decision.reason}</p>}{decision?.scope === 'bundle' && <small>Decision scope: complete Harness, not an independent component test.</small>}</div><div className="ce-evidence-scroll">{version.files.length ? version.files.map(file => <details key={file.path}><summary>{file.path}<ChevronDown size={12}/></summary><pre>{file.diff}</pre></details>) : <p>This component has no custom content in this snapshot.</p>}{decision?.evidence && <details><summary>Decision evidence<ChevronDown size={12}/></summary><p>{decision.evidence}</p></details>}</div></>}</SheetContent></Sheet>
