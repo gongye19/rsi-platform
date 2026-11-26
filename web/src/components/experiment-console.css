@@ -193,6 +193,7 @@
   overflow: auto;
   scrollbar-width: thin;
   scroll-padding-top: 20px;
+  overflow-anchor: none;
 }
 
 .console-page-heading {
@@ -349,11 +350,12 @@
 }
 
 .console-workspace {
-  flex: 1;
-  min-height: 600px;
+  flex: none;
+  min-height: 0;
+  height: auto;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .console-sync {
@@ -379,7 +381,7 @@
 }
 
 .experiment-console .ce-root {
-  height: 100%;
+  height: auto;
   width: 100%;
   flex: 1;
   min-height: 0;
@@ -1117,7 +1119,7 @@
   }
   .console-workspace {
     flex: none;
-    height: 480px;
+    height: auto;
   }
   .config-components {
     grid-template-columns: minmax(0, 1fr);

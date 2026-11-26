@@ -3,14 +3,14 @@
   --ce-muted: #70707b;
   --ce-rule: #e5e5e8;
   --ce-blue: #5e6ad2;
-  height: 100dvh;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
   background: #fff;
   color: var(--ce-ink);
   font: 15px/1.5 var(--font-ui);
 }
 .ce-experiment {
-  height: 100%;
+  height: auto;
   max-width: none;
   margin: auto;
   padding: 12px clamp(16px, 1.4vw, 36px);
@@ -31,7 +31,7 @@
 .ce-key-carry { width: 18px; border-top: 1.4px dashed #70707b; display: inline-block; }
 .ce-workspace-scroll { flex: 1; min-height: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
 .ce-dual { display: flex; width: 100%; height: 100%; min-width: 940px; min-height: 0; }
-.ce-lineages, .ce-results { width: 100%; height: 100%; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.ce-lineages, .ce-results { width: 100%; height: auto; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .ce-lineages { padding-right: clamp(16px, 1.4vw, 30px); }
 .ce-results { padding-left: clamp(16px, 1.4vw, 30px); container-type: inline-size; }
 .ce-split-handle { background: var(--ce-rule); margin: 0 2px; width: 3px; transition: background 150ms ease; }
@@ -39,7 +39,7 @@
 .ce-split-handle > div { width: 15px; height: 44px; border-radius: 6px; color: #70707b; background: white; border-color: var(--ce-rule); }
 .ce-plot-title { height: 34px; line-height: 30px; font-size: 15px; font-weight: 600; color: #28282f; margin: 0; flex-shrink: 0; }
 .ce-result-heading { height: 38px; flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.ce-tree-scroll, .ce-chart-scroll { flex: 1; min-height: 0; height: 0; border-top: 1px solid var(--ce-rule); }
+.ce-tree-scroll, .ce-chart-scroll { flex: none; min-height: 0; height: auto; border-top: 1px solid var(--ce-rule); }
 .ce-tree-scroll { overflow: hidden; }
 
 /* One coordinate system: names, lanes, branches and versions all pan together. */
@@ -265,11 +265,12 @@
 .ce-view-tabs > button { border: 0; padding: 4px 11px; background: transparent; border-radius: 4px; font-size: 15px; line-height: 22px; color: #73757b; }
 .ce-view-tabs > button[aria-selected="true"] { color: #34353a; background: #fff; box-shadow: 0 1px 3px #25263012; }
 .ce-snapshot-control { margin-left: 12px; }
-.ce-single-view { display: flex; flex: 1; min-height: 0; min-width: 0; width: 100%; }
+.ce-single-view { display: flex; flex: none; min-height: 0; min-width: 0; width: 100%; }
 .ce-single-view .ce-lineages,.ce-single-view .ce-results { flex: 1; min-width: 0; }
 @media(max-width:760px) { .ce-inspection-toolbar { flex-wrap: wrap; } .ce-snapshot-control { margin-left: 0; } }
 /* Each component owns a complete, equally sized lane; no detached name column. */
-.ce-single-view .ce-tree-scroll { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; background: #fafafb; }
+.ce-single-view .ce-tree-scroll { overflow: visible; background: #fafafb; }
+.ce-single-view .ce-chart-scroll { height: clamp(420px,65dvh,700px); }
 .ce-uniform-lanes { min-height: 0; }
 .ce-uniform-lanes .react-flow { background: #fafafb; }
 .ce-lane-heading { position: absolute; display: flex; align-items: center; gap: 8px; height: 24px; border: 0; border-radius: 4px; padding: 0 6px; background: #fff; font: 500 15px/24px var(--font-ui); pointer-events: auto; white-space: nowrap; cursor: pointer; }
@@ -279,9 +280,7 @@
 
 .ce-lane-round { white-space: nowrap; position: absolute; color: #7a7c84; font-size: 13px; line-height: 20px; pointer-events: none; }
 /* Round selection has stable, visible results; hovering never replaces this summary. */
-.ce-round-control { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #73757b; font-size: 14px; }
-.ce-round-control .ce-select-trigger { width: 110px; }
-.ce-round-summary { flex-shrink: 0; margin: 10px 10px 2px; padding: 12px 14px; border: 1px solid #e5e5e9; background: #fafafb; border-radius: 7px; }
+.ce-round-summary { flex-shrink: 0; min-height: 140px; margin: 10px 10px 2px; padding: 12px 14px; border: 1px solid #e5e5e9; background: #fafafb; border-radius: 7px; }
 .ce-round-summary-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .ce-round-summary-heading strong { font-size: 15px; font-weight: 550; color: #34353a; }
 .ce-round-summary-heading > span { color: #53565e; font-size: 15px; }
@@ -291,7 +290,27 @@
 .ce-round-summary-components button:hover { background: #f0f0f3; }
 .ce-round-summary-components i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .ce-round-summary-components small { font-size: 13px; color: #73757b; }
-.ce-round-summary p { margin-top: 7px; font-size: 14px; color: #73757b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ce-round-summary p { margin-top: 7px; font-size: 14px; color: #73757b; line-height: 1.7; overflow-wrap: anywhere; }
 .ce-uniform-lanes .is-other-round { opacity: .28; }
 .ce-uniform-lanes .ce-other-round { opacity: .24; }
 .ce-lane-heading[data-round-active="false"],.ce-lane-round[data-round-active="false"] { opacity: .35; }
+
+/* A full-height page for one recorded round; the main console owns vertical scroll. */
+.ce-round-pagination { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.ce-page-label { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 122px; font-variant-numeric: tabular-nums; }
+.ce-page-label strong { font-size: 15px; font-weight: 500; color: #34353a; }
+.ce-page-label small { font-size: 13px; color: #73757b; }
+.ce-round-pagination.is-bottom { align-self: stretch; justify-content: flex-end; margin: 10px 10px 0; padding-top: 12px; }
+.ce-round-canvas-scroll { width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.ce-page-stages { position: relative; height: 46px; background: #fafafb; border-bottom: 1px solid #ededf0; }
+.ce-page-stages span { position: absolute; top: 14px; color: #73757b; font-size: 14px; white-space: nowrap; }
+.ce-page-stages .is-last { transform: translateX(-100%); }
+.ce-round-page-canvas .react-flow__pane { cursor: default; }
+.ce-round-page-canvas .is-member .ce-version-label { font-weight: 550; }
+.ce-round-page-canvas .is-member .ce-node-glyph { outline: 3px solid color-mix(in srgb,var(--point-color) 16%,transparent); }
+.ce-round-page-canvas .ce-version-label small { font-weight: 400; }
+@media(max-width:1000px) {
+  .ce-inspection-toolbar { flex-wrap: wrap; }
+  .ce-snapshot-control { margin-left: 0; }
+  .ce-round-pagination.is-top { margin-left: auto; }
+}

@@ -2,7 +2,7 @@
 
 ## Direction and reference evidence
 
-English product UI; Chinese user-facing updates. The user confirmed the Linear light reference set on 2026-11-26. The latest request uses two separate full-width chart views, quiet experiment deletion and a floating rounded configuration drawer. This supersedes the earlier side-by-side visualization and flush drawer.
+English product UI; Chinese user-facing updates. The user confirmed the Linear light reference set on 2026-11-26. The latest request uses a full-height, one-round-per-page lineage view, a separate evaluation chart, quiet experiment deletion and a floating rounded configuration drawer. This supersedes the earlier side-by-side visualization and flush drawer.
 
 Approved references actually inspected:
 - [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): neutral selection, compact text records and hierarchy.
@@ -48,10 +48,10 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 - Left: 34px single-line records, experiment name and meaningful status dot only; long names ellipsize with full name/state in the tooltip. Search remains. No per-row score, benchmark, attempt metadata, extra status filter, Research workspace or decorative navigation icons.
 - New experiment has a primary button in both the left directory and main header; the empty main page has the same entry.
 - Main: compact key-result summary, actual run controls and the evolution view. Artifacts, Activity, raw JSON and their navigation links are hidden from this interface. Storage, trace collection and backend endpoints are preserved.
-- A floating right drawer, at most 640px wide, sits 12px from the edges with a 14px radius, light gray border and soft shadow. Radix `data-state` triggers a 220ms entry and 180ms exit animation; reduced-motion uses near-instant transitions. It reuses the existing Sheet and accessible Select/Input/Button controls. Header and Cancel/Start actions stay fixed; only form fields scroll. All setting values share aligned left/right edges. Advanced timeout/retry fields stay collapsed initially. Model credentials remain server-owned. No extra library added.
+- A floating right drawer, at most 720px wide, sits 12px from the edges with a 14px radius, light gray border and soft shadow. Radix `data-state` triggers a 220ms entry and 180ms exit animation; reduced-motion uses near-instant transitions. It reuses the existing Sheet and accessible Select/Input/Button controls. Header and Cancel/Start actions stay fixed; only form fields scroll. All setting values share aligned left/right edges. Advanced timeout/retry fields stay collapsed initially. Model credentials remain server-owned. No extra library added.
 - Read-only settings show benchmark, models, initial Harness, TEST choice, allowed components and primary evolution parameters; internal raw JSON is omitted.
-- Two tabs, **Lineage** and **Evaluation**, show one full-width chart at a time. Keyboard arrow keys switch tabs. Round and snapshot selection stay in shared parent state; the split divider is removed. Each component owns an equal-height card. Its colored name repeats at the start of each round inside the card so horizontal pan retains identity. Names and their branches use the same color; per-row spacing is uniform, with enough room for all branch tracks. Vertical scrolling replaces compression of the entire 16-lane chart. The 16 component colors remain consistent across names, branches, versions and configuration checkboxes. Dashes/crosses convey state independently of color.
-- Both charts retain 14px/500 headings, 11px/400 labels, 1.8px strokes and 8px normal points. Missing measurements remain empty. The evolution workspace keeps a 600px minimum height; component cards scroll vertically inside it instead of shrinking their contents.
+- Two tabs, **Lineage** and **Evaluation**, show one full-width chart at a time. Keyboard arrow keys switch tabs. Round and snapshot selection stay in shared parent state; the split divider is removed. Each component owns an equal-height card. Its colored name sits inside the card above the current round’s version chain. Names and their branches use the same color; per-row spacing is uniform, with enough room for all branch tracks. Vertical scrolling replaces compression of the entire 16-lane chart. The 16 component colors remain consistent across names, branches, versions and configuration checkboxes. Dashes/crosses convey state independently of color.
+- Both charts use 18px headings, 14px labels and consistent thin strokes. Missing measurements remain empty. The lineage workspace expands to the complete diagram height and scrolls with the main page; the evaluation chart keeps a readable fixed height.
 - Existing evidence sheets still show component snapshots and adoption decisions; the link into Artifacts is omitted. No demo, playback, fabricated progress or metrics.
 
 ## Acceptance and verification
@@ -62,7 +62,7 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 - All left records are 34px high, and settings controls share left/right edges.
 - Execution and analysis choices are independent; component and budget edits work within the drawer. Header/footer stay visible while scrolling. Automatic identity generation happens only on Start run; existing launch helper still persists before queueing.
 - Original metrics, retained version and actual backend states remain intact. No paid optimization run is started for UI validation.
-- TypeScript, lint, production build, 41 frontend tests and 38 service/settings tests pass. Browser checks cover equal-height component cards, native vertical scrolling, branch evidence, independent chart views, benchmark choices/custom descriptor input, and deletion of an agent-created disposable draft with no follow-up notification. Narrow CSS is reviewed; no device emulation claim.
+- TypeScript, lint, production build and 57 frontend tests pass. Browser checks cover equal-height component cards, main-page scrolling, round pagination and snapshots, branch evidence and independent chart views. Prior checks cover benchmark choices/custom descriptor input and deletion of an agent-created disposable draft with no follow-up notification. Narrow CSS is reviewed; no device emulation claim.
 - Latest proof: `runs/platform/directory-ui.png`, `runs/platform/console-ui.png` (lineage), `runs/platform/evaluation-ui.png` (curves), `runs/platform/configuration-ui.png`, `runs/platform/configuration-components-ui.png`.
 
 ## Latest configuration contract
@@ -73,11 +73,24 @@ Deletion shows one confirmation with Cancel/Delete, then quietly removes the row
 
 Component evidence uses the inspected configuration first when a version belongs to several bundles; an unrelated rejected bundle must not supply the verdict for an unchanged initial component.
 
-## Explicit round inspection
+## Round pages and page scrolling
 
-The Round selector and recorded round headers choose a persistent round. The lineage view shows a compact summary of proposed component edits, the retained Harness, retained tuple changes, pending/parent-retained/updated status and the recorded bundle decision reason. Component chips open the corresponding proposed snapshot. Counts describe edits and selected tuples, never individual test passes. Hover remains transient for chart linking and does not replace the summary. Selecting a round preserves vertical scroll and highlights that round’s column and branches; other rounds are subdued. Pan controls are hidden when all rounds fit. Closing candidate evidence restores focus to its trigger.
+Core flow: open an experiment → inspect the latest recorded round → Previous / Next round → select a snapshot from that round → inspect a component version. Baseline is a separate first page. Both top and bottom pagination controls expose the current round and page count. The Round dropdown and the multi-round horizontal canvas are removed.
 
-Browser checks verified Commands/candidate-01 for Round 01 and Skills/candidate-02 for Round 02, both retaining v0, as well as the correct candidate evidence. No model call or experiment launch was made.
+The main console owns vertical scrolling. All 16 component lanes grow to their natural height; there is no second vertical scroll area inside the diagram. Sidebar navigation remains fixed. One responsive, read-only React Flow canvas shows Starting Harness → Candidate → Evaluation → Retained for the current round. Existing colored component cards, version buttons and evidence sheets are reused. Narrow screens may horizontally scroll this single round without reducing text size.
+
+| State | Visible behavior |
+| --- | --- |
+| Baseline | Initial Harness and all initial components; Previous disabled |
+| Completed round | Its own starting, candidate and retained snapshots; recorded changes and adoption reason |
+| Rejected candidate | Candidate remains inspectable; retained snapshot can equal the starting Harness |
+| Unfinished round | Only recorded candidates and outcomes; no invented selected configuration |
+| Older rejected parent reused | Explicit earlier-version reference preserves the real parent edge |
+| Last recorded page | Next disabled; new live rounds become available when recorded |
+
+Snapshot choices are derived from the selected round's event interval, including its starting Harness and recorded selection. Selecting a snapshot highlights its component tuple and component headings open those versions. Paginating resets to that round's retained snapshot (latest candidate while pending). No later candidate, adoption decision or verdict appears in an earlier page. Unchanged Harnesses keep their original identity rather than acquiring a new snapshot ID merely because the round changed.
+
+Acceptance: scroll over the diagram directly to the last component and bottom pager; render only the selected round; previous/next update summary, branches and snapshot choices together; preserve main scroll position within available page bounds; keep version evidence and the separate Evaluation chart functional. Existing five focused round-page tests cover temporal boundaries, rejection, real ancestry and consistent lanes, alongside the frontend regression suite. Browser validation uses actual recorded executions without launching an experiment.
 
 ## Public presentation mode
 
@@ -93,6 +106,6 @@ The normal local/intranet build leaves this flag unset and continues to use the 
 
 The workspace uses 15px body and control text, 13–14px supporting labels, 18px chart headings and 24px page headings. Sidebar records stay compact at 38px. Configuration controls use 36px height and the floating drawer allows up to 720px width. Diagram and evaluation labels share a 14px visual scale.
 
-Changing the selected lineage round updates the summary and highlighted column without changing the user's vertical scroll position. Horizontal navigation remains available for wide histories.
+Changing the selected lineage round replaces the single-round page and its snapshots, with scroll position preserved within available bounds. Wide single-round diagrams retain native horizontal scrolling.
 
 Configuration separates 16 editable components from 5 declaration-only categories (model/provider, runtime environment, file attachments, tool outputs and diagnostics). Declaration selections are frozen into the profile and sent to discovery as recommendation permissions. They never become executable edit channels. Existing profiles default to all five; an explicit empty list disables all such recommendations. The console selects the Experimental policies channel as a whole. Its supported field allowlist is filled automatically on task creation and stays hidden in the UI; deselecting the channel submits an empty field list. The optimizer chooses specific edits inside that boundary. The separate five declaration-only categories remain individually selectable. Existing run policies are not rewritten.
