@@ -64,7 +64,7 @@ def run_record(job):
     receipt = read(local / 'result.json', {})
     try:
         profile = load_profile(job['profile'])
-        configuration = {'benchmark': profile['benchmark'], 'models': profile.get('models'), 'components': profile['components'],
+        configuration = {'benchmark': profile['benchmark'], 'dataset': profile.get('dataset'), 'dataset_selection': read(root/'dataset_selection.json') or read(ROOT/'runs/test_baselines'/identity/'dataset_selection.json') or read(ROOT/'runs/test_candidates'/identity/'dataset_selection.json') or profile.get('dataset_selection'), 'models': profile.get('models'), 'components': profile['components'],
                          'parameters': profile.get('environment', {}), 'initial_harness': profile['initial_harness'],
                          'full_evaluation': bool(receipt) or profile.get('full_evaluation', False)}
         if models: configuration['models'] = models

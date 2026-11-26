@@ -69,11 +69,11 @@ def supported_test_benchmarks() -> tuple[str, ...]:
     return tuple(_SPECS)
 
 
-def load_benchmark_split(benchmark: str) -> BenchmarkSplit:
+def load_benchmark_split(benchmark: str, *, apply_selection: bool = True) -> BenchmarkSplit:
     from .jsonl_adapter import resolve_external
     external = resolve_external(Path(__file__).resolve().parents[2], benchmark)
     if external:
-        return external.split()
+        return external.split(apply_selection=apply_selection)
     normalized = _ALIASES.get(str(benchmark).strip().lower())
     if normalized is None:
         raise ValueError(f"unsupported HarnessLens test benchmark: {benchmark}")
@@ -85,13 +85,15 @@ def load_benchmark_split(benchmark: str) -> BenchmarkSplit:
     overlap = set(train) & set(test)
     if overlap:
         raise ValueError(f"{normalized} split overlaps: {sorted(overlap)}")
-    return BenchmarkSplit(
+    result = BenchmarkSplit(
         benchmark=normalized,
         cell=str(spec["cell"]),
         train=train,
         test=test,
         local_rootless_rollout=bool(spec["local_rootless_rollout"]),
     )
+    from .selection import selected_split
+    return selected_split(result) if apply_selection else result
 
 
 def _validated_ids(value: Any, *, label: str) -> tuple[str, ...]:

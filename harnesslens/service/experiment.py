@@ -14,6 +14,11 @@ def run(profile_path, identity):
     from scripts.run_crm_experiment import execute
     run_id(identity + "-test")
     profile = load_profile(profile_path)
+    # Preserve the same frozen TRAIN/TEST selection across all three subprocesses.
+    if profile.get('dataset_selection'):
+        from harnesslens.benchmarks.selection import resolve_dataset
+        resolve_dataset(profile['benchmark'], {**profile['dataset'], 'frozen': profile['dataset_selection']},
+                        mode='train', full_evaluation=True)
     training, env = invocation({**profile, 'full_evaluation': False}, identity)
     repeats = str(env.get('HAI_TEST_ROLLOUT_REPEATS', '2'))
     if repeats not in {'1', '2'}: raise ValueError('TEST repeats must be 1 or 2')

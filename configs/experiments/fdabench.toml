@@ -6,6 +6,12 @@ readiness = "ready"
 full_evaluation = true
 # No initial_harness means an empty starting Harness.
 # Replace both model names with IDs available from your providers before running.
+# Counts are questions, not repeats. 0 uses all tasks in the selected group.
+[dataset]
+domain = "all"
+train_count = 0
+test_count = 0
+
 [models.execution]
 model = "execution/your-execution-model"
 api = "chat_completions"

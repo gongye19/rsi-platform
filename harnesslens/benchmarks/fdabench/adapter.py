@@ -259,6 +259,7 @@ class FDABenchAdapter(BusinessBenchmark):
         return [
             *Path(__file__).parent.glob("*.py"),
             self.repo_root / "configs/fdabench-runtime-index.json",
+            self.repo_root / "configs/fdabench-task-groups.json",
             self.repo_root / "harnesslens/benchmarks/crm_eval.py",
             self.repo_root / "harnesslens/harnesses/opencode_runtime.py",
             self.repo_root / "harnesslens/harnesses/native_harness_driver.py",

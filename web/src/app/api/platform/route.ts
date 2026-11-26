@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams;
   const id = query.get("run");
   if (id && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(id)) return Response.json({ error: "Invalid run ID" }, { status: 400 });
+  if (query.get("dataset") === "1") return platform("/v1/dataset?" + new URLSearchParams({benchmark:query.get("benchmark") || ""}));
   if (query.get("options") === "1") return platform("/v1/options");
   if (query.get("profiles") === "1") return platform("/v1/profiles" + (query.get("name") ? "?" + new URLSearchParams({ name: query.get("name")! }) : ""));
   if (id && query.get("events") === "1") return platform(`/v1/runs/${id}/events?after=${Number(query.get("after") || 0)}`);

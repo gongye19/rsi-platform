@@ -128,8 +128,8 @@ def doctor(adapter):
     return {
         "ready": True,
         "benchmark": "fdabench-lite-report",
-        "train": 70,
-        "test": 35,
+        "train": len(adapter.split().train),
+        "test": len(adapter.split().test),
         "databases": 16,
         "pdfs": 1418,
         "opencode": "1.18.32",

@@ -188,7 +188,7 @@ def benchmark_cell(cell: str) -> str:
     return normalized if Path(str(cell)).suffix == ".toml" else cell
 
 
-def benchmark_config(repo_root: str | Path, cell: str) -> BenchmarkConfig:
+def _base_benchmark_config(repo_root: str | Path, cell: str) -> BenchmarkConfig:
     root = Path(repo_root).resolve()
     from .jsonl_adapter import resolve_external
     external = resolve_external(root, cell)
@@ -336,3 +336,13 @@ def _validated_ids(value: object, *, label: str) -> tuple[str, ...]:
     if len(normalized) != len(set(normalized)):
         raise ValueError(f"{label} split contains duplicate task IDs")
     return normalized
+
+
+def benchmark_config(repo_root: str | Path, cell: str) -> BenchmarkConfig:
+    config=_base_benchmark_config(repo_root,cell)
+    from .selection import ENV, selected_split
+    if not os.environ.get(ENV):return config
+    from .benchmark_splits import load_benchmark_split
+    from dataclasses import replace
+    base=load_benchmark_split(cell,apply_selection=False)
+    return replace(config,train_task_ids=selected_split(base).train)

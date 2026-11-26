@@ -47,12 +47,14 @@ class JsonlAdapter(BusinessBenchmark):
         self.repo_root, self.descriptor = Path(repo_root).resolve(), Path(descriptor).resolve()
         raw = tomllib.loads(self.descriptor.read_text())
         allowed = {"schema", "id", "tasks", "train", "test", "id_field", "prompt_field", "public_fields",
-                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency", "primary_metric"}
+                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency", "primary_metric", "domain_field"}
         if set(raw) - allowed or raw.get("schema") != "harnesslens.business-benchmark.v1":
             raise ValueError("Unknown benchmark settings or schema")
         if raw.get("primary_metric", "pass_at_1") not in {"pass_at_1", "mean_reward"}:
             raise ValueError("primary_metric must be pass_at_1 or mean_reward")
         self.spec = raw
+        if "domain_field" in raw and (not isinstance(raw["domain_field"],str) or not raw["domain_field"]):
+            raise ValueError("domain_field must name a public task field")
         for key in ("tasks", "id_field", "prompt_field", "reference_field", "grader", "grader_file", "grader_function"):
             if key in raw and (not isinstance(raw[key], str) or not raw[key].strip()):
                 raise ValueError(f"Benchmark {key} must be a nonempty string")
@@ -76,6 +78,8 @@ class JsonlAdapter(BusinessBenchmark):
             raise ValueError("public_fields must explicitly include the prompt field")
         if self.reference_field in self.public_fields:
             raise ValueError("Reference answer cannot be a public field")
+        if raw.get('domain_field') and (raw['domain_field'] not in self.public_fields or raw['domain_field']==self.reference_field):
+            raise ValueError('domain_field must be explicitly public and cannot be the reference answer')
         self.grader = raw.get("grader", "exact")
         if self.grader not in {"exact", "python"}:
             raise ValueError("grader must be exact or python")
@@ -107,9 +111,11 @@ class JsonlAdapter(BusinessBenchmark):
             raise ValueError("Benchmark split references unavailable tasks")
         return tasks
 
-    def split(self):
+    def split(self, *, apply_selection=True):
         from .benchmark_splits import BenchmarkSplit
-        return BenchmarkSplit(self.cell, self.cell, tuple(self.spec["train"]), tuple(self.spec["test"]), False)
+        split = BenchmarkSplit(self.cell, self.cell, tuple(self.spec["train"]), tuple(self.spec["test"]), False)
+        from .selection import selected_split
+        return selected_split(split) if apply_selection else split
 
     def benchmark_config(self):
         from .cell_config import BenchmarkConfig

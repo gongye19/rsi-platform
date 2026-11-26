@@ -1,3 +1,6 @@
+export type DatasetSettings = {domain: string; train_count: number; test_count: number};
+export type DatasetOptions = {benchmark:string;cell:string;grouping:string;minimum_train_count:number;train_available:number;test_available:number;domains:{id:string;label:string;train_available:number;test_available:number}[]};
+export type DatasetSelection = {domain:string;train:string[];test:string[];grouping:string;train_available:number;test_available:number;source_fingerprint:string};
 export type Metrics = {mean_reward?: number; primary_metric?: string; pass_at_1?: number; trial_success_count?: number; trial_count?: number; task_count?: number};
 export type Policy = {allowed: string[]; denied: string[]; experimental_fields: string[]; proposal_only?: string[]};
 /** The console selects whole channels; supported experimental fields follow their owner. */
@@ -5,8 +8,8 @@ export function componentPolicyForRun(policy: Policy, experimentalFields: readon
   return {...policy, experimental_fields: policy.allowed.includes('experimental_policies') ? [...experimentalFields] : []};
 }
 export type Connection = {model?: string; managed_by?: string; api?: string};
-export type Settings = {benchmark?: string; models: {execution: string; analysis: string}; components: Policy; parameters: Record<string, number>; initial_harness: string; full_evaluation: boolean};
-export type Configuration = {benchmark?: string; models?: {execution?: Connection; analysis?: Connection}; components?: Policy; parameters?: Record<string, number>; initial_harness?: string; full_evaluation?: boolean};
+export type Settings = {dataset?: DatasetSettings; benchmark?: string; models: {execution: string; analysis: string}; components: Policy; parameters: Record<string, number>; initial_harness: string; full_evaluation: boolean};
+export type Configuration = {dataset?: DatasetSettings; dataset_selection?: DatasetSelection; benchmark?: string; models?: {execution?: Connection; analysis?: Connection}; components?: Policy; parameters?: Record<string, number>; initial_harness?: string; full_evaluation?: boolean};
 export type TestResult = {metrics: Metrics; repeats?: number; reused_initial?: boolean};
 export type Run = {id: string; state: string; error: string; attempt: number; read_only: number; created: number; updated: number; stage?: string; phase?: {id: string; label: string; checkpoint?: string; initial_ready: boolean}; selected_version?: string; baseline_metrics: Metrics; tests: {initial?: TestResult; selected?: TestResult}; budget: {used?: number; total?: number; remaining?: number}; configuration: Configuration; iteration_history: {iteration: number; candidate_version: string; review_decision: string; review_rationale: string; rollout_metrics?: Metrics; evaluation_mode?: string}[]};
 export type Artifact = {root: number; path: string; bytes: number};

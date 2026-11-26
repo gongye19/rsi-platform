@@ -120,3 +120,33 @@ bash /tmp/download-fdabench.sh /data/fdabench-lite-report
 运行包包含 16 个数据库、117 道公开问题与宿主侧评分资料，以及覆盖全部 1,418 份 PDF 的预处理文本索引（76,720 个文本块）。**不包含原始 PDF**；`document_search` 和 `document_read` 使用索引，与原执行工具一致。原始 PDF 仍可按前文从源站下载。
 
 将 `.env` 的 `HAI_FDABENCH_ROOT` 设置为解压目录，照常执行 `prepare` 和 `doctor`。`prepare` 自动识别 `prebuilt/documents.sqlite`，校验仓库固定的索引摘要、文档覆盖数、数据库摘要和题目／参考投影后导入，不需要重新解析 PDF，也不需要 Hugging Face 凭据。执行和分析模型、实时网页搜索仍需独立配置。
+
+## 训练／测试数量与任务 domain
+
+新实验配置抽屉的 **Dataset** 区域可选择 `Task domain`、`Training tasks`、`Test tasks`。题数指不同问题数；每题重复次数仍在 Evolution settings 中单独设置。选中的 TRAIN 子集用于首次基线、问题发现、后续候选选题与确认；TEST 子集只用于冻结后的最终评测。每轮小批量验证规则不因这里的数量而改写。
+
+FDABench-Lite 的公开题目包含 `db` 字段，没有单独的人工业务 domain 标签。本平台按数据库提供任务分组；105 道可评分题分布于 15 个数据库组。16 个原始数据库中，另一个组没有进入本次可评分划分。
+
+| 数据库组 | 原划分 TRAIN | 原划分 TEST |
+| --- | ---: | ---: |
+| bank_sales_trading | 19 | 7 |
+| genes | 8 | 2 |
+| superstore | 7 | 3 |
+| professional_basketball | 6 | 3 |
+| shooting | 6 | 3 |
+| 全部组 | 70 | 35 |
+
+可在同一个数据库组中运行进化；也可选择全部组，优化共享的 SQL、检索与报告流程。数据库分组不等同于经过人工整理的行业分类。当前正常进化流程至少需要 5 道 TRAIN；不足的组会明确提示，不能靠移动 TEST 题来补齐。
+
+TOML 配置示例：
+
+```toml
+[dataset]
+domain = "group:bank_sales_trading"
+train_count = 10
+test_count = 5
+```
+
+`domain="all"` 表示全部任务组，数量 `0` 表示该组的全部可用题。采样固定使用 seed 42，在原有 TRAIN／TEST 池内分别完成，不重新划分、不混用。界面创建实验时冻结具体 ID；工作目录的 `dataset_selection.json` 保留完整选择。配置变化或恢复时选题不一致会被拒绝。
+
+直接 CLI 同样支持 `--domain group:bank_sales_trading --train-count 10 --test-count 5`，也支持读取 `--models-config` 文件中的 `[dataset]`。服务器拉取代码后，现有下载的数据包无需重新下载。

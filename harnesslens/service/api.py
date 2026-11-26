@@ -52,6 +52,11 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                         self.json(profile_preview(path, profiles))
                     else:
                         self.json([str(p.relative_to(profiles)) for p in sorted(profiles.glob("*.toml"))])
+                elif parts == ["v1", "dataset"]:
+                    from .settings import selected_benchmark
+                    from harnesslens.benchmarks.selection import dataset_options
+                    benchmark=selected_benchmark(parse_qs(url.query).get('benchmark',[''])[0])
+                    self.json(dataset_options(benchmark))
                 elif parts == ["v1", "options"]:
                     from .settings import catalog
                     self.json(catalog(profiles))

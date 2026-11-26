@@ -49,9 +49,22 @@ def main() -> int:
     parser.add_argument("--docker-host", default=DEFAULT_DOCKER_HOST)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--repo-root", type=Path, default=repo_root())
+    parser.add_argument('--train-count',type=int,help='TRAIN task count; 0 uses the entire available pool')
+    parser.add_argument('--test-count',type=int,help='TEST task count; 0 uses the entire available pool')
+    parser.add_argument('--domain',help='Task domain ID; all or group:<name>')
     args = parser.parse_args()
     root = args.repo_root.resolve()
     load_repo_env(root)
+    from harnesslens.benchmarks.selection import configure_selection
+    dataset=None
+    if any(v is not None for v in (args.train_count,args.test_count,args.domain)):
+        dataset={'train_count':args.train_count or 0,'test_count':args.test_count or 0,'domain':args.domain or 'all'}
+    elif args.models_config:
+        import tomllib
+        dataset=tomllib.loads(args.models_config.read_text()).get('dataset')
+    configure_selection(args.benchmark,raw=dataset,mode='test_candidate',
+        run_root=None if getattr(args,'dry_run',False) else root/'runs/test_candidates'/args.run_id)
+
     from harnesslens.harnesses.business_agent import select_config
     select_config(args.agent_config)
     split = load_benchmark_split(args.benchmark)

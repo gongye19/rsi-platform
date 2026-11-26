@@ -1,5 +1,5 @@
 /** Synthetic, browser-local showcase. No HTTP calls or business data belong here. */
-import {componentLabels, type Configuration, type Options, type Preview, type Run, type Settings} from './console-types';
+import {componentLabels, type Configuration, type DatasetOptions, type Options, type Preview, type Run, type Settings} from './console-types';
 import {activeAt, type ComponentHistory} from './component-types';
 
 const STORAGE_KEY = 'rsi-platform-demo-v1';
@@ -31,10 +31,10 @@ export const demoPreview: Preview = {
   model_selection:{execution:'gpt-execution',analysis:'gpt-analysis'},
   models:{execution:{model:'gpt-execution'},analysis:{model:'gpt-analysis'}},
   components:{allowed:ids,denied:[],experimental_fields:[],proposal_only:demoOptions.proposal_only},parameters,
-  initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
+  dataset:{domain:'all',train_count:10,test_count:3},initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
 };
 type DemoStore = {runs:Run[];started:Record<string,number>;stopped:Record<string,number>};
-const metrics = (score:number) => ({pass_at_1:score,task_count:13,trial_count:13,trial_success_count:Math.round(score*13)});
+const metrics = (score:number,tasks=13) => ({pass_at_1:score,task_count:tasks,trial_count:tasks,trial_success_count:Math.round(score*tasks)});
 function configuration(settings?:Settings): Configuration {
   return settings ? {...structuredClone(settings),models:{execution:{model:settings.models.execution},analysis:{model:settings.models.analysis}}} : structuredClone(demoPreview);
 }
@@ -110,12 +110,14 @@ export function materializeDemoRun(store:DemoStore,source:Run,now=Date.now()/100
   const active=activeAt(history,step)!;
   run.attempt=Math.max(1,run.attempt);run.updated=store.started[run.id]+step*3;
   run.phase={id:done?'completed':'evolution',label:done?'Demo completed':`Simulating ${step===0?'baseline':`round ${Math.ceil(step/3)}`}`,initial_ready:true};
-  run.baseline_metrics=metrics(9/13);
+  const trainTasks=run.configuration.dataset?.train_count || 13;
+  const testTasks=run.configuration.dataset?.test_count || 13;
+  run.baseline_metrics=metrics(9/13,trainTasks);
   const total=run.budget.total || 52;
   run.budget={total,used:Math.min(total,13*(1+Math.floor(step/3))),remaining:Math.max(0,total-13*(1+Math.floor(step/3)))};
   if(done && run.state==='succeeded') {
     run.selected_version=active.id;
-    if(run.configuration.full_evaluation) run.tests={initial:{metrics:metrics(8/13),repeats:1},selected:{metrics:metrics(active.metrics.score!-(1/13)),repeats:1}};
+    if(run.configuration.full_evaluation) run.tests={initial:{metrics:metrics(8/13,testTasks),repeats:1},selected:{metrics:metrics(active.metrics.score!-(1/13),testTasks),repeats:1}};
   }
   run.iteration_history=history.decisions.map(d=>({iteration:Math.ceil(d.step/3),candidate_version:d.version_id,review_decision:d.outcome,review_rationale:d.reason,rollout_metrics:metrics(history.bundles.find(b=>b.id===d.version_id)?.metrics.score || 0),evaluation_mode:'simulated'}));
   return run;
@@ -135,6 +137,10 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
     const found=store.runs.find(r=>r.id===body.run_id);
     if(body.action==='create') {
       if(found) throw new Error('This demo experiment already exists.');
+      const selected=body.settings?.dataset;
+      if(selected){const available=demoDatasetOptions(body.settings.benchmark || 'knowledge-qa-13').domains.find(row=>row.id===selected.domain);
+        if(!available || !Number.isInteger(selected.train_count) || selected.train_count<5 || selected.train_count>available.train_available || !Number.isInteger(selected.test_count) || selected.test_count<1 || selected.test_count>available.test_available)throw new Error('Choose valid dataset counts for this domain.');}
+
       if(!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(body.run_id || '')) throw new Error('Invalid demo experiment ID.');
       store.runs.unshift(emptyRun(body.run_id,configuration(body.settings),Date.now()/1000));
     } else {
@@ -146,9 +152,18 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
     }
     writeStore(store);return clone({ok:true,run_id:body.run_id});
   }
+  if(params.get('dataset')==='1') return clone(demoDatasetOptions(params.get('benchmark') || 'knowledge-qa-13'));
   if(params.get('options')==='1') return clone(demoOptions);
   if(params.get('profiles')==='1') return clone(params.has('name')?demoPreview:['demo-agent.toml']);
   const runs=store.runs.map(r=>materializeDemoRun(store,r));
   if(params.has('run')) {const run=runs.find(r=>r.id===params.get('run'));if(!run)throw new Error('Demo experiment not found.');return clone(run);}
   return clone(runs);
+}
+
+export function demoDatasetOptions(benchmark:string):DatasetOptions {
+  const pools=benchmark==='knowledge-qa-13' ? [10,3] : benchmark==='service-operations' ? [40,20] : [70,35];
+  return {benchmark,cell:benchmark,grouping:'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
+    domains:[{id:'all',label:'All task groups',train_available:pools[0],test_available:pools[1]},
+      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},
+      {id:'group:operations',label:'Operations',train_available:pools[0]-Math.max(5,Math.floor(pools[0]*.6)),test_available:pools[1]-Math.max(1,Math.floor(pools[1]*.6))}]};
 }

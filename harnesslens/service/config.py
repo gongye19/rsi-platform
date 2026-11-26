@@ -18,7 +18,7 @@ def run_id(value):
 def load_profile(path):
     path = Path(path).resolve()
     raw = tomllib.loads(path.read_text())
-    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components", "models", "full_evaluation"} or raw.get("schema") != "harnesslens.experiment.v1":
+    if set(raw) - {"schema", "benchmark", "initial_harness", "agent_config", "env_file", "mode", "submission", "environment", "readiness", "components", "models", "full_evaluation", "dataset"} or raw.get("schema") != "harnesslens.experiment.v1":
         raise ValueError("Unsupported experiment profile")
     if "full_evaluation" in raw and type(raw["full_evaluation"]) is not bool:
         raise ValueError("full_evaluation must be boolean")
@@ -67,6 +67,11 @@ def load_profile(path):
             raise ValueError("Secrets must be in the private env_file, not the profile")
         if type(value) not in {str, int, float, bool}:
             raise ValueError("Environment settings must be scalar")
+    if 'dataset' in raw:
+        from harnesslens.benchmarks.selection import normalize_dataset, resolve_dataset, digest
+        result['dataset'] = normalize_dataset(raw['dataset'])
+        result['dataset_selection'] = resolve_dataset(benchmark,raw['dataset'],repo_root=ROOT)
+        files['dataset_selection'] = digest(result['dataset_selection'])
     # Endpoint/model changes invalidate resume; rotating credentials does not.
     if result.get("models"):
         model_env = profile_environment(result) if not result["env_file"] or Path(result["env_file"]).is_file() else dict(os.environ)
@@ -84,6 +89,12 @@ def invocation(profile, identity):
     if profile.get("readiness", "ready") != "ready":
         raise ValueError("Profile is draft: finish business/data/trace integration before starting")
     env = profile_environment(profile)
+    from harnesslens.benchmarks.selection import ENV as SELECTION_ENV, resolve_dataset
+    env.pop(SELECTION_ENV,None)
+    if profile.get('dataset_selection'):
+        frozen=resolve_dataset(profile['benchmark'],{**profile['dataset'],'frozen':profile['dataset_selection']},
+            mode=profile['mode'],full_evaluation=profile.get('full_evaluation',False))
+        env[SELECTION_ENV]=json.dumps(frozen,sort_keys=True)
     from harnesslens.core.model_config import configure_models
     receipt = configure_models(profile.get("models"), env, business=bool(profile["agent_config"]))
     env["HAI_MODEL_CONNECTIONS"] = json.dumps(receipt, sort_keys=True)

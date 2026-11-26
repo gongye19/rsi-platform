@@ -118,3 +118,9 @@ CRM 原生 OpenCode、Python、HTTP 路径另做回归。以上工程验证不�
 ## 连续评分
 
 返回 `[0,1]` 部分分的 Python grader 可在 benchmark TOML 中设置 `primary_metric = "mean_reward"`，以配对试验的平均 reward 为优化目标。默认仍为 `pass_at_1`；连续评分不改变通用的归因、确认和回退条件。FDABench 内置适配器使用同一套机制。
+
+## 可配置数据子集与 domain
+
+实验 profile 的 `[dataset]` 可设置 `domain`、`train_count`、`test_count`，独立于运行模型、组件权限和每题重复次数。所有适配器的数量选择都保持原 TRAIN／TEST 边界，并冻结具体任务 ID。
+
+JSONL 描述文件若要提供 domain 筛选，可增加 `domain_field = "domain"`，同时把 `domain` 放进 `public_fields`。每条题目应包含非空 domain 字符串。domain 不能指向参考答案字段，也不能来自私有评分信息。没有 domain 元数据的 benchmark 按整个 benchmark 作为一个任务组；框架不会凭空推断行业分类。
