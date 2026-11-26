@@ -199,10 +199,14 @@ def main():
         from harnesslens.benchmarks.fdabench.download import verify
         from harnesslens.benchmarks.fdabench.data import build_index
 
-        verify(adapter.data_root)
-        _, receipt = build_index(
-            adapter.data_root, adapter.index.parent, workers=args.workers
-        )
+        if (adapter.data_root / "prebuilt/documents.sqlite").is_file():
+            from harnesslens.benchmarks.fdabench.runtime_bundle import prepare_runtime
+            receipt = prepare_runtime(adapter.data_root, adapter.index)
+        else:
+            verify(adapter.data_root)
+            _, receipt = build_index(
+                adapter.data_root, adapter.index.parent, workers=args.workers
+            )
         adapter._resources()
         print(json.dumps({"prepared": True, **receipt}))
     elif args.action == "doctor":

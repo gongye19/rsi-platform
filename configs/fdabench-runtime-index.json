@@ -1,0 +1,19 @@
+{
+  "schema": "rsi.fdabench-runtime-index.v1",
+  "index": {
+    "input_identity": "89558bfe1e83fdaf57024ef4a43d2c1d1064be543041d3b5c663ad60c4c88cd4",
+    "index_sha256": "67e47dee353dcdce4909ddb6ef72717f60cbdad22ed0039ee478b64e74d724a3",
+    "pdf_count": 1418,
+    "chunks": 76720,
+    "retriever": "SQLite FTS5 BM25; lexical, not official OpenAI embedding/FAISS retrieval",
+    "pdftotext_version": "pdftotext version 26.04.0",
+    "empty_pdf_count": 0,
+    "indexed_pdf_count": 1418
+  },
+  "bytes": 207081472,
+  "assets_sha256": "ca756f91328d5f185a057f15de1aa07f0f946a28a9540025a3c96bc7e1236c6b",
+  "lite_revision": "0c341fce466132eeb9840379580c27b59e820ba1",
+  "corpus_revision": "9c88acf42f37a65c6aef8d06e1f6b6a1c24b7ca5",
+  "pdf_count": 1418,
+  "chunks": 76720
+}

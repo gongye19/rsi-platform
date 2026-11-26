@@ -515,3 +515,31 @@ def test_linux_command_unshares_network_and_mounts_only_scoped_gateway(tmp_path,
         assert (gateway/'12345.sock').exists() and len(str(gateway/'12345.sock'))<100
         assert tmp_path not in captured['read_only_roots']
     assert not gateway.exists()
+
+def test_runtime_bundle_import_without_raw_pdfs(assets,tmp_path):
+    from harnesslens.benchmarks.fdabench.runtime_bundle import prepare_runtime
+    from harnesslens.benchmarks.fdabench.data import sha
+    from harnesslens.core.artifacts import write_json
+    root,db,index=assets
+    fake_repo=tmp_path/'repo';(fake_repo/'configs').mkdir(parents=True)
+    (root/'prebuilt').mkdir();(root/'databases').mkdir(exist_ok=True);(root/'tasks').mkdir();(root/'evaluation').mkdir();(root/'metadata').mkdir()
+    import shutil
+    shutil.copyfile(index,root/'prebuilt/documents.sqlite');shutil.copyfile(db,root/'databases/example.sqlite')
+    task={'task_id':'t','db':'example','query':'question'};reference={'task_id':'t','ground_truth_report':'reference','rubric':{}}
+    for name,rows_ in [('tasks/tasks.jsonl',[task]),('evaluation/references.jsonl',[reference])]:
+        (root/name).write_text(''.join(json.dumps(r)+'\n' for r in rows_))
+    manifest={'databases':[{'db':'example','local_path':'databases/example.sqlite','bytes':db.stat().st_size,'sha256':sha(db)}],
+              'documents':[{'path':'reports/example.pdf','size':123,'sha256':'a'*64}]}
+    for key,items in [('public_tasks',[task]),('references',[reference])]:manifest[key+'_canonical_sha256']=hashlib.sha256(json.dumps(items,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+    write_json(fake_repo/'configs/fdabench-assets.json',manifest)
+    pin={'schema':'rsi.fdabench-runtime-index.v1','assets_sha256':sha(fake_repo/'configs/fdabench-assets.json'),'bytes':index.stat().st_size,'pdf_count':1,'chunks':1,'index':{'index_sha256':sha(index),'pdf_count':1,'indexed_pdf_count':1,'chunks':1}}
+    write_json(fake_repo/'configs/fdabench-runtime-index.json',pin)
+    write_json(root/'metadata/corpus_file_listing.json',[{'path':'reports/example.pdf','size':123,'lfs':{'oid':'a'*64}}])
+    destination=root/'cache/documents.sqlite'
+    receipt=prepare_runtime(root,destination,repo_root=fake_repo)
+    assert sha(destination)==sha(index) and receipt['indexed_pdf_count']==1
+    assert not (root/'documents').exists()
+    assert data.search(destination,'revenue')['results']
+    assert prepare_runtime(root,destination,repo_root=fake_repo)==receipt
+    (root/'prebuilt/documents.sqlite').write_bytes(b'tampered')
+    with pytest.raises(ValueError,match='checksum'):prepare_runtime(root,destination,repo_root=fake_repo)

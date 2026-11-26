@@ -104,3 +104,19 @@ uv run python scripts/prepare_fdabench.py run
 - `full_evaluation=true` 会在 TRAIN 后评测初始版本和最终选择版本；若最终仍为初始版本，复用初始 TEST 结果。
 
 仓库在开发机只做合成数据回归及静态检查。完整数据下载、Linux 原生端到端验证与大规模实验应在服务器完成。
+
+## HTTPS 加密运行包
+
+服务器无法从原数据源下载时，可使用 [加密运行包](https://github.com/gongye19/rsi-platform/releases/tag/fdabench-runtime-2026-11-26)。下载密钥单独交付，不包含在 Git 仓库和 Release 中。
+
+```bash
+git pull --ff-only
+curl -fL https://github.com/gongye19/rsi-platform/releases/download/fdabench-runtime-2026-11-26/download.sh -o /tmp/download-fdabench.sh
+bash /tmp/download-fdabench.sh /data/fdabench-lite-report
+```
+
+脚本支持断点续传，检查每个分卷的 SHA256，并在 GPG 完成完整性校验后才解压；运行时按提示粘贴单独提供的解密密钥。Linux 需安装 `curl`、`gnupg`。目标应为空目录。
+
+运行包包含 16 个数据库、117 道公开问题与宿主侧评分资料，以及覆盖全部 1,418 份 PDF 的预处理文本索引（76,720 个文本块）。**不包含原始 PDF**；`document_search` 和 `document_read` 使用索引，与原执行工具一致。原始 PDF 仍可按前文从源站下载。
+
+将 `.env` 的 `HAI_FDABENCH_ROOT` 设置为解压目录，照常执行 `prepare` 和 `doctor`。`prepare` 自动识别 `prebuilt/documents.sqlite`，校验仓库固定的索引摘要、文档覆盖数、数据库摘要和题目／参考投影后导入，不需要重新解析 PDF，也不需要 Hugging Face 凭据。执行和分析模型、实时网页搜索仍需独立配置。
