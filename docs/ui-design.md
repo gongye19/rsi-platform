@@ -161,3 +161,29 @@ and selecting actual archived candidate versions. No experiment/model is launche
 Latest proof: `runs/platform/component-comparison-ui.png` and
 `runs/platform/harness-library-ui.png`. Previous round-page screenshots are
 superseded by these views.
+
+## Lineage controls and whole-row disclosure
+
+The chart tabs occupy their own top row. Snapshot, round pagination and legend
+controls are rendered inside the Lineage tab panel on the next row and are absent
+from Evaluation. The separate proposed-component/status/Details summary is removed:
+the component itself exposes its versions, content comparison and decision evidence.
+The duplicate lineage instruction footnote is also omitted.
+
+Each component uses one native full-width disclosure button. Its name and chevron
+sit in a fixed left column, vertically aligned with the diagram. Clicking the name,
+a version label, a branch or empty space in that row toggles the same comparison;
+Enter/Space work through normal button semantics. The expanded comparison is outside
+the button, so file disclosures and text selection do not collapse the component.
+No nested interactive controls or competing click targets remain in the row.
+
+Sibling paths share the same short trunk and fork interval, regardless of their
+final endpoint distance. Both curves reach equally spaced rails early and then run
+horizontally to their version nodes. An unchanged/assessed version stays horizontal.
+The left-name column is included in responsive width calculations, preserving the
+right-edge evaluation labels and a native horizontal fallback on narrow screens.
+
+Validation: 64 frontend tests, targeted lint, TypeScript and production build pass.
+Browser checks confirm whole-row empty-space click to open/close, keyboard toggle,
+independent file disclosures, Lineage-only controls, no duplicate summary, and the
+unchanged Evaluation curve. Latest layout proof: `runs/platform/lineage-layout-ui.png`.

@@ -61,7 +61,7 @@ export function roundPageGraph(data:ComponentHistory, round:number, step:number,
   }));
   const center=36+radius;
   const laneHeight=Math.max(80,center+radius+12,center+maxReferences*22+14);
-  const graphWidth=Math.max(820,width);
+  const graphWidth=Math.max(640,width);
   const left=40,right=graphWidth-26;
   const sourceLeft=full.layout.inputX(Math.max(0,ri)),sourceRight=full.layout.testX(Math.max(0,ri));
   const x=(value:number)=>left+(value-sourceLeft)/(sourceRight-sourceLeft)*(right-left);
