@@ -1,6 +1,6 @@
 "use client";
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {ChevronDown, ExternalLink, GitBranch, MoreHorizontal, RefreshCw} from 'lucide-react';
+import {ChevronDown, ExternalLink, GitBranch, MoreHorizontal} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from '@/components/ui/select';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
@@ -58,9 +58,8 @@ export default function ComponentStudio({run, live, revision, onOpenArtifacts}: 
             {views.map(v => <SelectItem value={v.id} key={v.id}>{v.bundle.id === 'v0' ? 'Initial · v0' : v.bundle.id}{v.bundleIds.includes(active?.id || '') ? ' · Retained' : ''}</SelectItem>)}
           </SelectContent></Select></div>
         <span className="ce-inspected-round">{ready && data ? linkedRound ? `Round ${linkedRound}` : 'Baseline' : 'Awaiting snapshot'}</span>
-        <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="View options"><MoreHorizontal size={17}/></Button></PopoverTrigger>
+        <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Legend and measurement notes"><MoreHorizontal size={17}/></Button></PopoverTrigger>
           <PopoverContent className="ce-record-popover ce-view-options" align="end">
-            <Button variant="ghost" size="sm" onClick={() => void refresh()}><RefreshCw size={13}/>Refresh records</Button>
             <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-rejected">×</i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
             <p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
             <p>Metrics have independent axes. Missing values stay empty. Bundle selection does not establish individual component gains.</p>
