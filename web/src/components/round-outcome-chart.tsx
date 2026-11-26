@@ -76,7 +76,7 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
             }} />} />
           {current && <ReferenceLine x={current.round} yAxisId="score" stroke="#5e6ad2" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 5" />}
           {series.map((s) => <Line key={s.key} yAxisId={s.key} dataKey={s.key} type="bumpX"
-            stroke={s.color} strokeWidth={2.8} strokeDasharray={s.key === "tokens" ? "6 4" : undefined}
+            stroke={s.color} strokeWidth={1.8} strokeDasharray={s.key === "tokens" ? "6 4" : undefined}
             connectNulls={false} activeDot={false} isAnimationActive={false} animationDuration={650} animationEasing="ease-in-out"
             dot={({ cx, cy, payload }: { cx?: number; cy?: number; payload?: MeasurementPoint }) => {
               if (cx == null || cy == null || !payload || payload[s.key] == null) return <g key={`${s.key}-empty`} />;
@@ -90,8 +90,8 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
                 onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onRound(payload.round); } }}>
                 <title>{roundName(payload.round)} · {s.label} {format(payload[s.key]!, s.key)}</title>
                 <circle cx={cx} cy={cy} r={17} fill="transparent" />
-                <circle cx={cx} cy={cy} r={linked ? 13 : 9} fill={s.color} fillOpacity={linked ? 0.14 : 0} className="ce-point-halo" />
-                <circle cx={cx} cy={cy} r={linked ? 7.5 : 5.5} fill={s.color} stroke="white" strokeWidth={2.2} className="ce-point-dot" />
+                <circle cx={cx} cy={cy} r={linked ? 10 : 8} fill={s.color} fillOpacity={linked ? 0.14 : 0} className="ce-point-halo" />
+                <circle cx={cx} cy={cy} r={linked ? 5 : 4} fill={s.color} stroke="white" strokeWidth={1.5} className="ce-point-dot" />
               </g>;
             }} />)}
         </LineChart>

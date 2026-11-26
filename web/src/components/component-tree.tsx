@@ -43,7 +43,7 @@ const Branch = memo(function Branch(props: EdgeProps<LineageBranch>) {
   if (!data) return null;
   const [path] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.42 });
   const carried = data.kind === "held" || data.kind === "retained";
-  const color = data.rejected ? "#9aa3b2" : data.color;
+  const color = data.color;
   const style = {
     "--branch-delay": data.delay,
     stroke: color,
@@ -63,8 +63,9 @@ const Branch = memo(function Branch(props: EdgeProps<LineageBranch>) {
       <path
         d={path}
         fill="none"
-        strokeWidth={carried ? 1.4 : 1.8}
-        strokeOpacity={carried ? 0.27 : data.rejected ? 0.65 : 0.88}
+        strokeWidth={1.8}
+        vectorEffect="non-scaling-stroke"
+        strokeOpacity={carried ? 0.48 : data.rejected ? 0.6 : 0.88}
         strokeDasharray={carried ? "3 5" : undefined}
         mask={data.arrival ? `url(#${clip})` : undefined}
       />
@@ -155,6 +156,7 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
       ref={host}
       data-recorded-step={step}
       data-canvas-zoom={zoom}
+      style={{ "--ce-canvas-zoom": zoom } as CSSProperties}
       data-linked-round={selectedRound}
     >
       <ReactFlow<LineagePoint, LineageBranch>
@@ -232,7 +234,7 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
         <span className="ce-component-index-title" style={{ top: 45 * zoom }}>Component</span>
         {data.components.map((component, index) => <button key={component.id}
           className="ce-component-index-name"
-          style={{ top: layout.rows.get(component.id)!.center * zoom, color: COMPONENT_COLORS[index % COMPONENT_COLORS.length], fontSize: Math.min(13, 11.5 * zoom) }}
+          style={{ top: layout.rows.get(component.id)!.center * zoom, color: COMPONENT_COLORS[index % COMPONENT_COLORS.length], fontSize: "var(--ce-label-size)" }}
           aria-label={`Inspect ${component.name} in the selected snapshot`}
           title={component.name}
           onClick={() => onSelect(configuration?.[component.id] || component.baseline_version_id)}>{component.name}</button>)}
