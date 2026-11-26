@@ -6,11 +6,16 @@ The English platform is branded **Strata**; HarnessLens remains the underlying o
 
 The latest user preference restores the **experiment list on the left** while keeping all runtime configuration together in the main content area. No Research workspace identity, nested workspace navigation or decorative navigation icons return.
 
+The user confirmed the new light Linear reference set on 2026-11-26 after seeing full-resolution previews.
+
 References actually inspected:
 - [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): neutral surfaces, compact records and text hierarchy.
+- [Linear project detail](https://mobbin.com/screens/344cad59-d4a8-421a-9c2f-14b3c977e82d): quiet surface, compact neutral tabs and metadata hierarchy.
+- [Linear creation flow](https://mobbin.com/flows/4b89331f-e3c0-44f7-bfb8-f4d3485f3c13?tab=screens): all seven screens inspected from empty directory through creation feedback to detail. Borrow compact controls and explicit completion feedback; keep this product’s full-page editor rather than copying its modal.
+- [Linear general settings flow](https://mobbin.com/flows/76d2e1b8-d840-49ad-955f-9b371b579bc1?tab=screens): all five team-settings screens inspected. Borrow label/value alignment and section dividers, not its team features or automatic saving.
 - [MILO public demos](https://jprithwish.github.io/MILO/#demos): recorded lineage and rejected branches kept as evidence alongside results. Visualization reference only; no MILO island algorithm or playback is introduced.
 
-Direct Linear access reached its public site, not an authenticated workspace. Styling derives from the approved Mobbin screenshot, not invented computed measurements. Earlier Mercury/n8n/Langdock styling is superseded. IBM Plex Sans is bundled with its OFL license under `web/public/fonts`, with no runtime font CDN.
+Direct Linear access reached its public site, not an authenticated workspace. The login entry did not expose a workspace; styling derives from the approved Mobbin screens and flows, not invented computed measurements. Static screens do not establish hover, keyboard, error or responsive behavior; those states use the existing accessible controls and local validation. Earlier Mercury/n8n/Langdock styling is superseded. The approved redesign uses the native system sans stack consistently across the workspace, portalled controls and both charts; no runtime font CDN. Previously bundled Plex assets are retained for compatibility but are not selected by this console.
 
 ## Core flow
 
@@ -34,9 +39,9 @@ Viewing a run, switching tabs, choosing a snapshot or opening the editor never l
 ## Layout and component mapping
 
 - Left: a compact text-based experiment list with search, one status filter, New experiment, selected record and actual state/measurement. No workspace card, workflow explainer or decorative row icons. Long names wrap.
-- Main: run title and actual operational actions, summary and tabs. Run configuration has one tab containing the frozen model, component and parameter settings; duplicate Configure new run buttons are removed.
-- New experiment: a full configuration page, not a sheet or modal. Profile / Run ID / Initial Harness are together; experimental field allowlists sit with the editable components. The entire editor is one form and uses the main page scroll. Save draft and Start run share its sticky footer.
-- Overview: existing React Flow lineage and Recharts curves in resizable 50:50 panels. Double-clicking the separator resets equal widths. Both plots share typography, padding and plot boundaries.
+- Main: one rounded white work surface on a neutral gray shell. Compact title/actions and a five-column inline summary replace the large metric card. Neutral filled tabs replace accent underlines. The local choices are 48px topbar, 232px list (248px on wide displays), 20px title and 18px metric values; these are implementation dimensions, not measured Linear tokens. Primary indigo is reserved for substantive actions/focus. Run title and actual operational actions, summary and tabs. Run configuration has one tab containing the frozen model, component and parameter settings; duplicate Configure new run buttons are removed.
+- New experiment: a centered configuration column capped at 868px. Each setting has its label/help on the left and a compact value control on the right. Component selection uses a contiguous two-column registry with 16 colored dots and check state. A full configuration page, not a sheet or modal. Profile / Run ID / Initial Harness are together; experimental field allowlists sit with the editable components. The entire editor is one form and uses the main page scroll. Save draft and Start run share its sticky footer.
+- Overview: existing React Flow lineage and Recharts curves in resizable 50:50 panels. Double-clicking the separator resets equal widths. Both plots share typography, padding and plot boundaries. The workspace keeps a 600px minimum height so the 16 lanes do not overlap in shorter windows; the main surface scrolls rather than shrinking text or lane separation.
 - Component names stay fixed during horizontal pan. Each of the 16 components has one consistent color across names, nodes and ancestry; dashes and rejection crosses convey state independently of color. Text colors retain contrast against white.
 - Both visualizations use 14px/500 headings, 11px/400 data labels, 1.8px main strokes and 8px normal points. Canvas text/glyphs compensate for zoom. The active chart point is 10px.
 - Snapshot selection inspects recorded versions. The overflow control is explicitly labeled Legend and measurement notes; it contains explanations, not a second configuration surface.
@@ -50,8 +55,8 @@ Reuse the existing Button, Input, Select, Sheet (component evidence only), Popov
 - Execution and analysis selections are independent; budget and component changes update that same configuration. Save-before-start and failure recovery preserve the client-generated identity without automatic creation retries.
 - Existing run Configuration displays its frozen model connections, allowed/denied components, experimental fields, initial Harness, TEST choice and parameter labels together.
 - Historical TRAIN/TEST provenance, missing metrics, retained snapshots and bundle-scoped decisions are preserved. No initial Harness is invented before an actual initial snapshot.
-- TypeScript, lint, production build and the existing 40 frontend unit tests pass. Browser verification covers independent model changes, budget/component changes, same-form inputs, sticky footer, left-list navigation, and frozen configuration viewing. No paid model experiment is started during validation.
+- TypeScript, lint, production build and the existing 40 frontend unit tests pass. Browser verification covers independent model changes, budget/component changes, same-form inputs, sticky footer, left-list navigation, and frozen configuration viewing. Final browser checks also cover search, draft filtering, all 39 configuration controls in one form, zero configuration dialogs, scroll reset on run selection, and drag/double-click equal-width reset. At 1280px the panels both measure 505px wide, both headings are 14px/500, and the lineage uses 16 distinct component colors. No paid model experiment is started during validation.
 - The local browser has no viewport emulation; narrow CSS is reviewed in source rather than claimed as a device test. Small-height desktop windows scroll the main page.
-- Current proof: `runs/platform/directory-ui.png` (left list / run summary), `runs/platform/console-ui.png` (lineage/results), `runs/platform/configuration-ui.png` (central editor).
+- Current proof: `runs/platform/directory-ui.png` (left list / run summary), `runs/platform/console-ui.png` (lineage/results), `runs/platform/configuration-ui.png` (central editor), `runs/platform/configuration-components-ui.png` (colored component registry).
 
 A transient list-reading stall in the long-running local API process was recovered by restarting that API after confirming zero active jobs. Direct list reads then returned all four records in about 15ms. No backend source changes were required, and experiment records and the worker were retained.
