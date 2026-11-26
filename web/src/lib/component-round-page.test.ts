@@ -57,3 +57,12 @@ test('page geometry stays vertically stable and every component has the same lan
     }
   }
 });
+
+test('the diagram ends at evaluation without an extra retained column or handoff',()=>{
+  const graph=roundPageGraph(data,2,9,1100);
+  assert.deepEqual(graph.stages.map(stage=>stage.label),['Start','Candidate','Evaluation']);
+  assert(!graph.edges.some(edge=>edge.data?.kind==='retained'));
+  assert(!graph.nodes.some(node=>node.id.endsWith(':boundary:2')));
+  assert(graph.nodes.some(node=>node.data.stage==='test' && node.data.rejected));
+  assert(graph.page.snapshots.some(snapshot=>snapshot.id.startsWith('result:')));
+});

@@ -96,7 +96,7 @@ function LineageCanvas({data,step,selected,configuration,selectedRound,onSelect}
   const nodes=useMemo(()=>graph.nodes.map(node=>({...node,className:`${node.data.versionId===selected?'is-inspected':''} ${configuration?.[node.data.componentId]===node.data.versionId?'is-member':''}`})),[graph.nodes,selected,configuration]);
   const changed=new Set(graph.page.round ? roundChanges(data,graph.page.round,graph.page.step).filter(change=>change.generated.length).map(change=>change.component.id) : []);
   return <div ref={host} className="ce-round-canvas-scroll" role="region" aria-label={`Component lineage for ${selectedRound ? `round ${selectedRound}` : 'baseline'}`}>
-    <div className="ce-page-stages" style={{width:graph.width}} aria-hidden="true">{graph.stages.map((stage,index)=><span key={stage.label} style={{left:stage.x}} className={index===graph.stages.length-1 && index>0 ? 'is-last' : ''}>{stage.label}</span>)}</div>
+    <div className="ce-page-stages" style={{width:graph.width}} aria-hidden="true">{graph.stages.map(stage=><span key={stage.label} style={{left:stage.x}}>{stage.label}</span>)}</div>
     <div className="ce-flow-host ce-uniform-lanes ce-round-page-canvas" data-recorded-step={graph.page.step} data-linked-round={selectedRound} style={{width:graph.width,height:graph.height,'--ce-canvas-zoom':1} as CSSProperties}>
       <ReactFlow<LineagePoint,LineageBranch>
         id="component-lineage" nodes={nodes} edges={graph.edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}

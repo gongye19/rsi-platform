@@ -62,7 +62,7 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 - All left records are 34px high, and settings controls share left/right edges.
 - Execution and analysis choices are independent; component and budget edits work within the drawer. Header/footer stay visible while scrolling. Automatic identity generation happens only on Start run; existing launch helper still persists before queueing.
 - Original metrics, retained version and actual backend states remain intact. No paid optimization run is started for UI validation.
-- TypeScript, lint, production build and 57 frontend tests pass. Browser checks cover equal-height component cards, main-page scrolling, round pagination and snapshots, branch evidence and independent chart views. Prior checks cover benchmark choices/custom descriptor input and deletion of an agent-created disposable draft with no follow-up notification. Narrow CSS is reviewed; no device emulation claim.
+- TypeScript, lint, production build and 58 frontend tests pass. Browser checks cover equal-height component cards, main-page scrolling, round pagination and snapshots, branch evidence and independent chart views. Prior checks cover benchmark choices/custom descriptor input and deletion of an agent-created disposable draft with no follow-up notification. Narrow CSS is reviewed; no device emulation claim.
 - Latest proof: `runs/platform/directory-ui.png`, `runs/platform/console-ui.png` (lineage), `runs/platform/evaluation-ui.png` (curves), `runs/platform/configuration-ui.png`, `runs/platform/configuration-components-ui.png`.
 
 ## Latest configuration contract
@@ -77,7 +77,7 @@ Component evidence uses the inspected configuration first when a version belongs
 
 Core flow: open an experiment → inspect the latest recorded round → Previous / Next round → select a snapshot from that round → inspect a component version. Baseline is a separate first page. Both top and bottom pagination controls expose the current round and page count. The Round dropdown and the multi-round horizontal canvas are removed.
 
-The main console owns vertical scrolling. All 16 component lanes grow to their natural height; there is no second vertical scroll area inside the diagram. Sidebar navigation remains fixed. One responsive, read-only React Flow canvas shows Starting Harness → Candidate → Evaluation → Retained for the current round. Existing colored component cards, version buttons and evidence sheets are reused. Narrow screens may horizontally scroll this single round without reducing text size.
+The main console owns vertical scrolling. All 16 component lanes grow to their natural height; there is no second vertical scroll area inside the diagram. Sidebar navigation remains fixed. One responsive, read-only React Flow canvas shows Start → Candidate → Evaluation for the current round. Existing colored component cards, version buttons and evidence sheets are reused. Narrow screens may horizontally scroll this single round without reducing text size.
 
 | State | Visible behavior |
 | --- | --- |
@@ -90,7 +90,7 @@ The main console owns vertical scrolling. All 16 component lanes grow to their n
 
 Snapshot choices are derived from the selected round's event interval, including its starting Harness and recorded selection. Selecting a snapshot highlights its component tuple and component headings open those versions. Paginating resets to that round's retained snapshot (latest candidate while pending). No later candidate, adoption decision or verdict appears in an earlier page. Unchanged Harnesses keep their original identity rather than acquiring a new snapshot ID merely because the round changed.
 
-Acceptance: scroll over the diagram directly to the last component and bottom pager; render only the selected round; previous/next update summary, branches and snapshot choices together; preserve main scroll position within available page bounds; keep version evidence and the separate Evaluation chart functional. Existing five focused round-page tests cover temporal boundaries, rejection, real ancestry and consistent lanes, alongside the frontend regression suite. Browser validation uses actual recorded executions without launching an experiment.
+Acceptance: scroll over the diagram directly to the last component and bottom pager; render only the selected round; previous/next update summary, branches and snapshot choices together; preserve main scroll position within available page bounds; keep version evidence and the separate Evaluation chart functional. Six focused round-page tests cover temporal boundaries, rejection, real ancestry and consistent lanes, alongside the frontend regression suite. Browser validation uses actual recorded executions without launching an experiment.
 
 ## Public presentation mode
 
@@ -109,3 +109,13 @@ The workspace uses 15px body and control text, 13–14px supporting labels, 18px
 Changing the selected lineage round replaces the single-round page and its snapshots, with scroll position preserved within available bounds. Wide single-round diagrams retain native horizontal scrolling.
 
 Configuration separates 16 editable components from 5 declaration-only categories (model/provider, runtime environment, file attachments, tool outputs and diagnostics). Declaration selections are frozen into the profile and sent to discovery as recommendation permissions. They never become executable edit channels. Existing profiles default to all five; an explicit empty list disables all such recommendations. The console selects the Experimental policies channel as a whole. Its supported field allowlist is filled automatically on task creation and stays hidden in the UI; deselecting the channel submits an empty field list. The optimizer chooses specific edits inside that boundary. The separate five declaration-only categories remain individually selectable. Existing run policies are not rewritten.
+
+## Compact experiment header and lineage density
+
+The experiment header contains the run name/status and compact benchmark/date metadata. The only persistent metrics are TRAIN baseline, final TEST and used/total budget, on one inline strip. Trial counts and remaining budget are available in native tooltips; the final Harness is in Run settings. A duplicate New experiment action is removed from the selected-run header; the primary sidebar action remains. Active runs still show their actual execution phase and Stop/Resume controls. Repeated Evolution/Recorded results headings and duplicate round/page labels are omitted.
+
+Each round summary is one compact row: proposed component links, recorded adoption status and Details. Details opens an existing Popover with the full reason, selected Harness and change count; it does not resize the page. Baseline keeps its component count. The snapshot selector remains scoped to the current round and uses short Start/Candidate/Selected labels.
+
+The diagram ends at Evaluation. The separate Retained column, its duplicate nodes and handoff edges are removed from this projection only; retained snapshots, adoption outcomes and actual ancestry remain in the data. Component lanes shrink from approximately 128px to 88px for the current recorded run, with additional room only when branch tracks or earlier-parent references require it. Text remains 14–15px and the 16 colors stay unchanged. The page retains one outer vertical scrollbar and single-round pagination.
+
+Browser verification covers the three columns, compact metrics, per-round component changes, full reason popover, independent evaluation chart and scrolling through all components. Bottom pagination keeps the recorded scroll offset (1280px before and after). Current proof: `runs/platform/round-page-ui.png` and `runs/platform/round-page-bottom-ui.png`. No model requests or experiments are launched.

@@ -73,7 +73,7 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
     <div className="ce-experiment">
       <div className="ce-controls ce-inspection-toolbar">
         <div className="ce-view-tabs" role="tablist" aria-label="Experiment charts">{(['lineage','evaluation'] as const).map((id,i) => <button key={id} role="tab" id={`chart-tab-${id}`} aria-selected={view === id} aria-controls={`chart-panel-${id}`} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)} onKeyDown={event => {if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {event.preventDefault();const next=i === 0 ? 'evaluation' : 'lineage';setView(next);document.getElementById(`chart-tab-${next}`)?.focus();}}}>{id === 'lineage' ? 'Lineage' : 'Evaluation'}</button>)}</div>
-        <div className="ce-snapshot-control"><span>Snapshot</span><Select value={inspected?.id || ''} disabled={!page?.snapshots.length} onValueChange={setInspectedId}>
+        <div className="ce-snapshot-control"><Select value={inspected?.id || ''} disabled={!page?.snapshots.length} onValueChange={setInspectedId}>
           <SelectTrigger aria-label="Inspect round snapshot"><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
             {page?.snapshots.map(snapshot=><SelectItem value={snapshot.id} key={snapshot.id}>{snapshot.label}</SelectItem>)}
           </SelectContent></Select></div>
@@ -88,13 +88,13 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
       </div>
       {error && <div className="ce-error" role="alert">{error}<Button variant="ghost" size="sm" onClick={() => void refresh()}>Retry</Button></div>}
       {!data ? <div className="ce-loading"><GitBranch size={22}/>{error ? 'Lineage unavailable' : 'Loading execution records…'}</div> : !ready ? <div className="ce-loading console-lineage-wait"><GitBranch size={28}/><strong>Waiting for the initial snapshot</strong><span>Lineage will appear when the worker freezes the actual starting Harness.</span></div> : <>
-        {view === 'lineage' && summary && <section className="ce-round-summary" aria-label="Selected round summary" aria-live="polite">
-          <div className="ce-round-summary-heading"><strong>{summary.round ? `Round ${String(summary.round).padStart(2,'0')}` : 'Baseline'}</strong><span>{summary.status}</span><small>{summary.retained ? `Retained ${summary.retained}` : 'Awaiting selection'}{summary.round && summary.resolved ? ` · ${summary.retainedChanges} retained changes` : ''}</small></div>
-          <div className="ce-round-summary-components">{summary.proposed.length ? <><span>{summary.proposed.length} proposed {summary.proposed.length===1?'component':'components'}</span>{summary.proposed.map(change=><button key={change.component.id} style={{color:COMPONENT_COLORS[(data.components.findIndex(c=>c.id===change.component.id)) % COMPONENT_COLORS.length]}} onClick={()=>choose(change.versions.at(-1)!.id)}><i/>{change.component.name}<small>{change.versions.at(-1)!.label}</small></button>)}</> : <span>{summary.round ? 'No component edits recorded in this round.' : `${data.components.length} components in the initial snapshot.`}</span>}</div>
-          {summary.reason && <p title={summary.reason}>{summary.reason}</p>}
+        {view === 'lineage' && summary && <section className="ce-round-summary" aria-label="Selected round summary">
+          <div className="ce-round-summary-components">{summary.proposed.length ? summary.proposed.map(change=><button key={change.component.id} style={{color:COMPONENT_COLORS[(data.components.findIndex(c=>c.id===change.component.id)) % COMPONENT_COLORS.length]}} onClick={()=>choose(change.versions.at(-1)!.id)}><i/>{change.component.name}<small>{change.versions.at(-1)!.label}</small></button>) : <span>{summary.round ? 'No edits proposed' : `${data.components.length} components`}</span>}</div>
+          <span className="ce-round-outcome">{summary.status}</span>
+          {summary.round>0 && <Popover><PopoverTrigger asChild><Button variant="ghost" size="sm" aria-label="Round decision details">Details<ChevronDown size={13}/></Button></PopoverTrigger><PopoverContent className="ce-decision-details" align="end"><strong>Round {String(summary.round).padStart(2,'0')} decision</strong><p>{summary.reason || (summary.resolved ? 'No decision reason recorded.' : 'The selection decision has not been recorded yet.')}</p><small>{summary.retained ? `Selected ${summary.retained} · ${summary.retainedChanges} component changes` : 'Awaiting selection'}</small></PopoverContent></Popover>}
         </section>}
         <div className="ce-single-view" role="tabpanel" id={`chart-panel-${view}`} aria-labelledby={`chart-tab-${view}`}>
-          {view === 'lineage' ? <section className="ce-lineages"><div className="ce-result-heading"><h2 className="ce-plot-title">Component lineage <span className="ce-component-count">{data.components.length}</span></h2></div><div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><div className="ce-result-heading"><h2 className="ce-plot-title">Retained configuration results</h2></div><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
+          {view === 'lineage' ? <section className="ce-lineages"><h2 className="sr-only">Component lineage</h2><div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><h2 className="sr-only">Retained configuration results</h2><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
         </div>
         {view === 'lineage' && page && <RoundPagination pages={page.pages} current={selectedRound} onRound={focus} position="bottom"/>}
         <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>{view === 'lineage' ? 'Click a version to inspect its snapshot' : 'TRAIN measurements for retained configurations'}</span></div>
@@ -108,7 +108,7 @@ function RoundPagination({pages,current,onRound,disabled=false,position}:{pages:
   const index=pages.indexOf(current);
   return <nav className={`ce-round-pagination is-${position}`} aria-label={`${position==='top'?'Evolution':'Bottom'} round pagination`}>
     <Button variant="outline" size="icon-sm" aria-label="Previous round" disabled={disabled || index<=0} onClick={()=>onRound(pages[index-1])}><ChevronLeft size={16}/></Button>
-    <span className="ce-page-label" aria-live="polite"><strong>{current ? `Round ${String(current).padStart(2,'0')}` : 'Baseline'}</strong><small>{index+1} / {pages.length}</small></span>
+    <span className="ce-page-label" aria-live="polite"><strong>{current ? `Round ${String(current).padStart(2,'0')}` : 'Baseline'}</strong></span>
     <Button variant="outline" size="icon-sm" aria-label="Next round" disabled={disabled || index<0 || index>=pages.length-1} onClick={()=>onRound(pages[index+1])}><ChevronRight size={16}/></Button>
   </nav>;
 }

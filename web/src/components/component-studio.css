@@ -280,31 +280,31 @@
 
 .ce-lane-round { white-space: nowrap; position: absolute; color: #7a7c84; font-size: 13px; line-height: 20px; pointer-events: none; }
 /* Round selection has stable, visible results; hovering never replaces this summary. */
-.ce-round-summary { flex-shrink: 0; min-height: 140px; margin: 10px 10px 2px; padding: 12px 14px; border: 1px solid #e5e5e9; background: #fafafb; border-radius: 7px; }
-.ce-round-summary-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.ce-round-summary-heading strong { font-size: 15px; font-weight: 550; color: #34353a; }
-.ce-round-summary-heading > span { color: #53565e; font-size: 15px; }
-.ce-round-summary-heading > small { margin-left: auto; font-size: 14px; color: #73757b; }
-.ce-round-summary-components { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 14px; color: #73757b; }
-.ce-round-summary-components button { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border: 1px solid #e4e4e8; border-radius: 4px; background: #fff; font-size: 14px; }
-.ce-round-summary-components button:hover { background: #f0f0f3; }
+.ce-round-summary { display: flex; align-items: center; gap: 12px; flex-shrink: 0; min-height: 48px; margin: 0 10px 8px; padding: 8px 0; border-bottom: 1px solid #ededf0; }
+.ce-round-summary-components { display: flex; align-items: center; flex: 1; min-width: 0; flex-wrap: wrap; gap: 6px; font-size: 14px; color: #73757b; }
+.ce-round-summary-components button { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border: 0; border-radius: 4px; background: #f5f5f7; font-size: 14px; }
+.ce-round-summary-components button:hover { background: #ededf0; }
 .ce-round-summary-components i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .ce-round-summary-components small { font-size: 13px; color: #73757b; }
-.ce-round-summary p { margin-top: 7px; font-size: 14px; color: #73757b; line-height: 1.7; overflow-wrap: anywhere; }
+.ce-round-outcome { color: #73757b; font-size: 14px; white-space: nowrap; }
+.ce-round-summary > button { color: #73757b; font-size: 14px; }
+.ce-decision-details { width: min(420px,calc(100vw - 32px)); font: 14px/1.7 var(--font-ui); color: #505158; padding: 16px; }
+.ce-decision-details strong { font-weight: 550; color: #34353a; }
+.ce-decision-details p { margin: 8px 0; overflow-wrap: anywhere; }
+.ce-decision-details small { color: #73757b; font-size: 13px; }
 .ce-uniform-lanes .is-other-round { opacity: .28; }
 .ce-uniform-lanes .ce-other-round { opacity: .24; }
 .ce-lane-heading[data-round-active="false"],.ce-lane-round[data-round-active="false"] { opacity: .35; }
 
 /* A full-height page for one recorded round; the main console owns vertical scroll. */
 .ce-round-pagination { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
-.ce-page-label { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 122px; font-variant-numeric: tabular-nums; }
+.ce-page-label { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 88px; font-variant-numeric: tabular-nums; }
 .ce-page-label strong { font-size: 15px; font-weight: 500; color: #34353a; }
 .ce-page-label small { font-size: 13px; color: #73757b; }
 .ce-round-pagination.is-bottom { align-self: stretch; justify-content: flex-end; margin: 10px 10px 0; padding-top: 12px; }
 .ce-round-canvas-scroll { width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-.ce-page-stages { position: relative; height: 46px; background: #fafafb; border-bottom: 1px solid #ededf0; }
-.ce-page-stages span { position: absolute; top: 14px; color: #73757b; font-size: 14px; white-space: nowrap; }
-.ce-page-stages .is-last { transform: translateX(-100%); }
+.ce-page-stages { position: relative; height: 36px; background: #fafafb; border-bottom: 1px solid #ededf0; }
+.ce-page-stages span { position: absolute; top: 9px; color: #73757b; font-size: 14px; white-space: nowrap; }
 .ce-round-page-canvas .react-flow__pane { cursor: default; }
 .ce-round-page-canvas .is-member .ce-version-label { font-weight: 550; }
 .ce-round-page-canvas .is-member .ce-node-glyph { outline: 3px solid color-mix(in srgb,var(--point-color) 16%,transparent); }
@@ -313,4 +313,5 @@
   .ce-inspection-toolbar { flex-wrap: wrap; }
   .ce-snapshot-control { margin-left: 0; }
   .ce-round-pagination.is-top { margin-left: auto; }
+  .ce-round-summary { gap: 8px; flex-wrap: wrap; }
 }
