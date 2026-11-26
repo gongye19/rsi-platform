@@ -1,6 +1,6 @@
 "use client";
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {ChevronDown, ExternalLink, GitBranch, MoreHorizontal} from 'lucide-react';
+import {ChevronDown, GitBranch, MoreHorizontal} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from '@/components/ui/select';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
@@ -13,7 +13,7 @@ import {evolutionRounds} from '@/lib/component-layout';
 import {activeAt, decisionAt, decisionLabels, type ComponentHistory} from '@/lib/component-types';
 import {componentLabels} from '@/lib/console-types';
 import './component-studio.css';
-export default function ComponentStudio({run, live, revision, onOpenArtifacts}: {run: string; live: boolean; revision: number; onOpenArtifacts: () => void}) {
+export default function ComponentStudio({run, live, revision}: {run: string; live: boolean; revision: number}) {
   const [data,setData] = useState<ComponentHistory | null>(null);
   const [error,setError] = useState('');
   const [selected,setSelected] = useState('');
@@ -72,6 +72,6 @@ export default function ComponentStudio({run, live, revision, onOpenArtifacts}: 
         <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>Click a version to inspect its snapshot</span></div>
       </>}
     </div>
-    <Sheet open={panel && !!version} onOpenChange={setPanel}><SheetContent className="ce-evidence"><SheetHeader><SheetTitle>{component?.name} <code>{version?.label}</code></SheetTitle><SheetDescription>Recorded component snapshot and adoption evidence.</SheetDescription></SheetHeader>{version && data && <><div className="ce-version-meta"><span>{version.parent_id ? `Parent: ${data.versions.find(v => v.id === version.parent_id)?.label}` : 'Initial snapshot'}</span><span>Round {version.round}</span><span>{version.digest.slice(0,10)}</span></div><div className={`ce-verdict ${decision?.outcome || 'unknown'}`}><strong>{decision ? decisionLabels[decision.outcome] : version.step === 0 ? 'Initial version' : 'No adoption decision recorded'}</strong>{decision?.reason && <p>{decision.reason}</p>}{decision?.scope === 'bundle' && <small>Decision scope: complete Harness, not an independent component test.</small>}</div><div className="ce-evidence-scroll">{version.files.length ? version.files.map(file => <details key={file.path}><summary>{file.path}<ChevronDown size={12}/></summary><pre>{file.diff}</pre></details>) : <p>This component has no custom content in this snapshot.</p>}{decision?.evidence && <details><summary>Decision evidence<ChevronDown size={12}/></summary><p>{decision.evidence}</p></details>}</div><Button variant="outline" onClick={() => {setPanel(false);onOpenArtifacts();}}><ExternalLink size={14}/>View run traces and artifacts</Button></>}</SheetContent></Sheet>
+    <Sheet open={panel && !!version} onOpenChange={setPanel}><SheetContent className="ce-evidence"><SheetHeader><SheetTitle>{component?.name} <code>{version?.label}</code></SheetTitle><SheetDescription>Recorded component snapshot and adoption evidence.</SheetDescription></SheetHeader>{version && data && <><div className="ce-version-meta"><span>{version.parent_id ? `Parent: ${data.versions.find(v => v.id === version.parent_id)?.label}` : 'Initial snapshot'}</span><span>Round {version.round}</span><span>{version.digest.slice(0,10)}</span></div><div className={`ce-verdict ${decision?.outcome || 'unknown'}`}><strong>{decision ? decisionLabels[decision.outcome] : version.step === 0 ? 'Initial version' : 'No adoption decision recorded'}</strong>{decision?.reason && <p>{decision.reason}</p>}{decision?.scope === 'bundle' && <small>Decision scope: complete Harness, not an independent component test.</small>}</div><div className="ce-evidence-scroll">{version.files.length ? version.files.map(file => <details key={file.path}><summary>{file.path}<ChevronDown size={12}/></summary><pre>{file.diff}</pre></details>) : <p>This component has no custom content in this snapshot.</p>}{decision?.evidence && <details><summary>Decision evidence<ChevronDown size={12}/></summary><p>{decision.evidence}</p></details>}</div></>}</SheetContent></Sheet>
   </div>;
 }

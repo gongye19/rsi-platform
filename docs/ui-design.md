@@ -1,62 +1,61 @@
-# Experiment console
+# Strata experiment console
 
-## Current direction
+## Direction and reference evidence
 
-The English platform is branded **Strata**; HarnessLens remains the underlying optimization package/algorithm. User-facing updates are Chinese. Keep the approved Linear-style cool neutrals/indigo, 16 component colors and **equal-width lineage left / retained-result curves right**.
+English product UI; Chinese user-facing updates. The user confirmed the Linear light reference set on 2026-11-26. The latest request simplifies the interface and restores a **right-side configuration drawer**. This supersedes the earlier full-page editor preference.
 
-The latest user preference restores the **experiment list on the left** while keeping all runtime configuration together in the main content area. No Research workspace identity, nested workspace navigation or decorative navigation icons return.
+Approved references actually inspected:
+- [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): neutral selection, compact text records and hierarchy.
+- [Linear project detail](https://mobbin.com/screens/344cad59-d4a8-421a-9c2f-14b3c977e82d): restrained surfaces and metadata.
+- [Linear creation flow](https://mobbin.com/flows/4b89331f-e3c0-44f7-bfb8-f4d3485f3c13?tab=screens): all seven frames inspected; compact controls and completion feedback, adapted to the requested drawer.
+- [Linear general settings flow](https://mobbin.com/flows/76d2e1b8-d840-49ad-955f-9b371b579bc1?tab=screens): all five team-settings frames inspected; aligned label/value rows and grouping. No team features or automatic saving introduced.
+- [MILO public demos](https://jprithwish.github.io/MILO/#demos): lineage and rejected branches as evidence, alongside results. Visualization reference only.
 
-The user confirmed the new light Linear reference set on 2026-11-26 after seeing full-resolution previews.
-
-References actually inspected:
-- [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): neutral surfaces, compact records and text hierarchy.
-- [Linear project detail](https://mobbin.com/screens/344cad59-d4a8-421a-9c2f-14b3c977e82d): quiet surface, compact neutral tabs and metadata hierarchy.
-- [Linear creation flow](https://mobbin.com/flows/4b89331f-e3c0-44f7-bfb8-f4d3485f3c13?tab=screens): all seven screens inspected from empty directory through creation feedback to detail. Borrow compact controls and explicit completion feedback; keep this product’s full-page editor rather than copying its modal.
-- [Linear general settings flow](https://mobbin.com/flows/76d2e1b8-d840-49ad-955f-9b371b579bc1?tab=screens): all five team-settings screens inspected. Borrow label/value alignment and section dividers, not its team features or automatic saving.
-- [MILO public demos](https://jprithwish.github.io/MILO/#demos): recorded lineage and rejected branches kept as evidence alongside results. Visualization reference only; no MILO island algorithm or playback is introduced.
-
-Direct Linear access reached its public site, not an authenticated workspace. The login entry did not expose a workspace; styling derives from the approved Mobbin screens and flows, not invented computed measurements. Static screens do not establish hover, keyboard, error or responsive behavior; those states use the existing accessible controls and local validation. Earlier Mercury/n8n/Langdock styling is superseded. The approved redesign uses the native system sans stack consistently across the workspace, portalled controls and both charts; no runtime font CDN. Previously bundled Plex assets are retained for compatibility but are not selected by this console.
+Linear's actual login entry did not expose an authenticated workspace. Styling derives from approved Mobbin imagery, not invented computed measurements. Static screens do not establish keyboard, hover, failure or responsive behavior. The existing accessible controls cover those states, with local browser verification. Native system sans is used consistently without a font CDN. The platform is branded Strata; HarnessLens remains the optimization package.
 
 ## Core flow
 
-Select a real run in the left list → Overview / Configuration / Artifacts / Activity. New experiment in that same list opens a complete configuration page in the main area → choose the benchmark profile, independent execution/analysis models, component boundaries, initial Harness, evolution/timeout/retry/concurrency settings and TEST evaluation → Save draft or Start run → persist the immutable configuration before queueing that exact run → follow backend checkpoints and inspect evidence.
+Choose a recorded experiment from the compact left list → inspect key results, component lineage and retained result curves.
 
-Viewing a run, switching tabs, choosing a snapshot or opening the editor never launches an experiment. Existing run settings remain frozen; configuration changes require a new experiment.
+Click **New experiment** in the left list or main header → right-side drawer opens over the current experiment → choose benchmark profile, initial Harness, execution/analysis models, allowed components and evolution settings → **Start run** generates an ID, persists the immutable configuration, then queues that exact experiment → drawer closes and the main view follows the new run. No manual Run ID, Save draft or internal paths for generated outputs appear in the creation form.
+
+Cancel, Close or Escape dismisses the drawer without creating or launching anything. During submission, duplicate submission and drawer dismissal are disabled. The settings are retained while the drawer is open. Reopening a dismissed new-run drawer starts from the selected profile defaults.
+
+**Run settings** opens the same drawer area with frozen, read-only settings for the selected experiment. No settings are edited in the main page. Viewing results, opening either drawer or selecting a snapshot never launches an experiment.
 
 ## State contract
 
 | State | Display and actions |
 | --- | --- |
-| New | One editor with all inputs in the same form; validation and profile readiness govern Start |
-| Draft | Frozen configuration and Start; appears in the experiment list |
-| Queued/running | Actual persisted phase, live bounded refresh, Stop |
-| Stopping | Stop requested, without claiming cancellation of a remote business call |
-| Stopped/interrupted/failed | Preserved evidence and error; Resume only for service-owned runs |
-| Completed | Frozen selected version and measured TRAIN / TEST results |
-| Imported | Original metrics/repeats and model receipts, read only |
-| Connection error | Visible error, last received data preserved, refresh/recovery |
+| Empty | Main-page New experiment entry and concise setup guidance |
+| Configuring | One drawer form; readiness and validation govern Start run |
+| Submitting | Fields and actions disabled; persist before queue, never auto-retry creation |
+| Creation error | Drawer retains the configuration and shows error |
+| Uncertain creation / start error | Recover by the generated identity; show persisted run and its actual state |
+| Draft | Existing draft can still be started from its main-page action |
+| Queued / running | Actual phase, bounded updates and Stop |
+| Stopping | Stop requested, without claiming remote calls were cancelled |
+| Failed / interrupted / stopped | Evidence retained and visible failure; Resume for service-owned runs |
+| Completed / imported | Frozen selected version and original TRAIN / TEST measurements |
+| Connection error | Last records retained with a visible error and refresh |
 
 ## Layout and component mapping
 
-- Left: a compact text-based experiment list with search, one status filter, New experiment, selected record and actual state/measurement. No workspace card, workflow explainer or decorative row icons. Long names wrap.
-- Main: one rounded white work surface on a neutral gray shell. Compact title/actions and a five-column inline summary replace the large metric card. Neutral filled tabs replace accent underlines. The local choices are 48px topbar, 232px list (248px on wide displays), 20px title and 18px metric values; these are implementation dimensions, not measured Linear tokens. Primary indigo is reserved for substantive actions/focus. Run title and actual operational actions, summary and tabs. Run configuration has one tab containing the frozen model, component and parameter settings; duplicate Configure new run buttons are removed.
-- New experiment: a centered configuration column capped at 868px. Each setting has its label/help on the left and a compact value control on the right. Component selection uses a contiguous two-column registry with 16 colored dots and check state. A full configuration page, not a sheet or modal. Profile / Run ID / Initial Harness are together; experimental field allowlists sit with the editable components. The entire editor is one form and uses the main page scroll. Save draft and Start run share its sticky footer.
-- Overview: existing React Flow lineage and Recharts curves in resizable 50:50 panels. Double-clicking the separator resets equal widths. Both plots share typography, padding and plot boundaries. The workspace keeps a 600px minimum height so the 16 lanes do not overlap in shorter windows; the main surface scrolls rather than shrinking text or lane separation.
-- Component names stay fixed during horizontal pan. Each of the 16 components has one consistent color across names, nodes and ancestry; dashes and rejection crosses convey state independently of color. Text colors retain contrast against white.
-- Both visualizations use 14px/500 headings, 11px/400 data labels, 1.8px main strokes and 8px normal points. Canvas text/glyphs compensate for zoom. The active chart point is 10px.
-- Snapshot selection inspects recorded versions. The overflow control is explicitly labeled Legend and measurement notes; it contains explanations, not a second configuration surface.
+- Left: 34px single-line records, experiment name and meaningful status dot only; long names ellipsize with full name/state in the tooltip. Search remains. No per-row score, benchmark, attempt metadata, extra status filter, Research workspace or decorative navigation icons.
+- New experiment has a primary button in both the left directory and main header; the empty main page has the same entry.
+- Main: compact key-result summary, actual run controls and the evolution view. Artifacts, Activity, raw JSON and their navigation links are hidden from this interface. Storage, trace collection and backend endpoints are preserved.
+- A 640px right drawer reuses the existing Sheet and accessible Select/Input/Button controls. Header and Cancel/Start actions stay fixed; only form fields scroll. All setting values share aligned left/right edges. Advanced timeout/retry fields stay collapsed initially. Model credentials remain server-owned. No extra library added.
+- Read-only settings show benchmark, models, initial Harness, TEST choice, allowed components and primary evolution parameters; internal raw JSON is omitted.
+- The lineage/results view keeps resizable **50:50** panels, double-click reset and fixed component names during horizontal pan. The 16 component colors remain consistent across names, branches, versions and configuration checkboxes. Dashes/crosses convey state independently of color.
+- Both charts retain 14px/500 headings, 11px/400 labels, 1.8px strokes and 8px normal points. Missing measurements remain empty. The 600px minimum evolution workspace prevents lane overlap in shorter windows; the main surface scrolls.
+- Existing evidence sheets still show component snapshots and adoption decisions; the link into Artifacts is omitted. No demo, playback, fabricated progress or metrics.
 
-Reuse the existing Button, Input, Select, Sheet (component evidence only), Popover, Chart and Resizable components. No new npm dependencies. Model credentials remain server-owned. No simulated progress, demo data switcher, playback or slider is added.
+## Acceptance and verification
 
-## Acceptance and validation
-
-- Left-side list search/filter/record selection and the selected run URL work; root opens a real active/latest recorded run, or New experiment when empty.
-- New experiment opens the central editor, with all editable inputs and both submission actions in one form and no configuration dialog.
-- Execution and analysis selections are independent; budget and component changes update that same configuration. Save-before-start and failure recovery preserve the client-generated identity without automatic creation retries.
-- Existing run Configuration displays its frozen model connections, allowed/denied components, experimental fields, initial Harness, TEST choice and parameter labels together.
-- Historical TRAIN/TEST provenance, missing metrics, retained snapshots and bundle-scoped decisions are preserved. No initial Harness is invented before an actual initial snapshot.
-- TypeScript, lint, production build and the existing 40 frontend unit tests pass. Browser verification covers independent model changes, budget/component changes, same-form inputs, sticky footer, left-list navigation, and frozen configuration viewing. Final browser checks also cover search, draft filtering, all 39 configuration controls in one form, zero configuration dialogs, scroll reset on run selection, and drag/double-click equal-width reset. At 1280px the panels both measure 505px wide, both headings are 14px/500, and the lineage uses 16 distinct component colors. No paid model experiment is started during validation.
-- The local browser has no viewport emulation; narrow CSS is reviewed in source rather than claimed as a device test. Small-height desktop windows scroll the main page.
-- Current proof: `runs/platform/directory-ui.png` (left list / run summary), `runs/platform/console-ui.png` (lineage/results), `runs/platform/configuration-ui.png` (central editor), `runs/platform/configuration-components-ui.png` (colored component registry).
-
-A transient list-reading stall in the long-running local API process was recovered by restarting that API after confirming zero active jobs. Direct list reads then returned all four records in about 15ms. No backend source changes were required, and experiment records and the worker were retained.
+- Both New experiment buttons open a right drawer without changing the selected experiment or URL. Cancel/Close/Escape returns to the same view.
+- No Run ID input, Artifacts/Activity tab, Save draft action or raw configuration control appears.
+- All left records are 34px high, and settings controls share left/right edges.
+- Execution and analysis choices are independent; component and budget edits work within the drawer. Header/footer stay visible while scrolling. Automatic identity generation happens only on Start run; existing launch helper still persists before queueing.
+- Original metrics, retained version and actual backend states remain intact. No paid optimization run is started for UI validation.
+- TypeScript, lint, production build and the existing 40 unit tests pass. Browser checks cover both entry points, closing, settings, selection, drawer editing, scrolling and the 50:50 visualization. Narrow CSS is reviewed; no device emulation claim.
+- Latest proof: `runs/platform/directory-ui.png`, `runs/platform/console-ui.png`, `runs/platform/configuration-ui.png`, `runs/platform/configuration-components-ui.png`.
