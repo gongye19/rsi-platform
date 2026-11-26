@@ -1,0 +1,4 @@
+schema = "rsi.benchmark.v1"
+id = "banking"
+name = "Tau² Banking"
+adapter = "banking"

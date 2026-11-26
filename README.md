@@ -154,3 +154,7 @@ because isolated fixes lack transferable evidence.
 HarnessLens is released under the [MIT License](LICENSE). Vendored documentation
 under `assets/` retains its upstream terms; benchmark data and agent runtimes are
 not distributed here.
+
+Benchmark definitions are discovered from [`benchmarks/<id>/benchmark.toml`](benchmarks/README.md).
+Reusable initial and evolved Harnesses live in [`harnesses/`](harnesses/README.md).
+Data counts/domains follow the selected benchmark; generated Harness versions stay local.

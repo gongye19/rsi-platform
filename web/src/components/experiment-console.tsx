@@ -59,7 +59,7 @@ export default function ExperimentConsole() {
     window.history.replaceState(null,'',url);
   }
   function openConfiguration(mode: 'new' | 'saved') {configurationTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;setConfiguration(mode);}
-  function newExperiment() {openConfiguration('new');setConfigError('');if (!options) void loadChoices();}
+  function newExperiment() {openConfiguration('new');setConfigError('');void loadChoices();}
   async function deleteExperiment(id:string) {
     if (busy) return false;
     setBusy(true);setError('');setNotice('');

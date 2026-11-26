@@ -29,6 +29,12 @@ def resolve_external(repo_root, cell):
         _DESCRIPTORS[adapter.cell] = path.resolve()
         os.environ["HAI_BENCHMARK_CONFIG"] = str(path.resolve())
         return adapter
+    if re.fullmatch(r'[a-z][a-z0-9_-]*', value):
+        registered=Path(repo_root)/'benchmarks'/value/'benchmark.toml'
+        if registered.is_file() and not registered.is_symlink() and not registered.parent.is_symlink():
+            raw=tomllib.loads(registered.read_text())
+            if raw.get('schema')=='harnesslens.business-benchmark.v1' and raw.get('id')==value:
+                return resolve_external(repo_root,str(registered.resolve()))
     if value in _DESCRIPTORS and _DESCRIPTORS[value].is_file():
         adapter = JsonlAdapter(repo_root, _DESCRIPTORS[value])
         if adapter.cell != value:
@@ -47,7 +53,7 @@ class JsonlAdapter(BusinessBenchmark):
         self.repo_root, self.descriptor = Path(repo_root).resolve(), Path(descriptor).resolve()
         raw = tomllib.loads(self.descriptor.read_text())
         allowed = {"schema", "id", "tasks", "train", "test", "id_field", "prompt_field", "public_fields",
-                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency", "primary_metric", "domain_field"}
+                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency", "primary_metric", "domain_field", "name"}
         if set(raw) - allowed or raw.get("schema") != "harnesslens.business-benchmark.v1":
             raise ValueError("Unknown benchmark settings or schema")
         if raw.get("primary_metric", "pass_at_1") not in {"pass_at_1", "mean_reward"}:

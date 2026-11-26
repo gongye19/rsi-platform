@@ -92,6 +92,10 @@ class Worker:
             if profile["fingerprint"] != job["fingerprint"]:
                 raise ValueError("Experiment profile changed; create a new run")
             argv, env = invocation(profile, identity)
+            from harnesslens.harnesses.library import sync_run_harnesses
+            archive_harnesses = profile["mode"] == "train" and command_override is None
+            if archive_harnesses:
+                sync_run_harnesses(ROOT, identity, profile.get("initial_harness"))
             directory = self.store.directory / "jobs" / identity
             directory.mkdir(parents=True, exist_ok=True)
             # Private env_file contents and credentials never enter this manifest.
@@ -120,8 +124,12 @@ class Worker:
                         value = checkpoint.read_text()
                         if value != previous:
                             previous = value
+                            if archive_harnesses:
+                                sync_run_harnesses(ROOT, identity, profile.get("initial_harness"))
                             self.store.event(identity, "checkpoint", json.loads(value))
                     time.sleep(0.25)
+                if archive_harnesses:
+                    sync_run_harnesses(ROOT, identity, profile.get("initial_harness"))
                 state = "succeeded" if process.returncode == 0 else "failed"
                 self.store.update(identity, state=state, error="" if state == "succeeded" else "Experiment exited unsuccessfully; inspect its local log")
                 self.store.event(identity, state, {"returncode": process.returncode})

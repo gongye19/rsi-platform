@@ -57,7 +57,7 @@ def base_and_groups(benchmark, repo_root=ROOT):
 def dataset_options(benchmark, repo_root=ROOT):
     split,mapping,kind,_=base_and_groups(benchmark,repo_root)
     domains=[{'id':'all','label':'All task groups','train_available':len(split.train),'test_available':len(split.test)}]
-    for domain in sorted(set(mapping.values())):
+    for domain in (sorted(set(mapping.values())) if kind!='benchmark' else []):
         domains.append({'id':'group:'+domain,'label':domain.replace('_',' ').capitalize(),
                         'train_available':sum(mapping[t]==domain for t in split.train),
                         'test_available':sum(mapping[t]==domain for t in split.test)})

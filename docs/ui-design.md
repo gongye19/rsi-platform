@@ -119,3 +119,45 @@ Each round summary is one compact row: proposed component links, recorded adopti
 The diagram ends at Evaluation. The separate Retained column, its duplicate nodes and handoff edges are removed from this projection only; retained snapshots, adoption outcomes and actual ancestry remain in the data. Component lanes shrink from approximately 128px to 88px for the current recorded run, with additional room only when branch tracks or earlier-parent references require it. Text remains 14–15px and the 16 colors stay unchanged. The page retains one outer vertical scrollbar and single-round pagination.
 
 Browser verification covers the three columns, compact metrics, per-round component changes, full reason popover, independent evaluation chart and scrolling through all components. Bottom pagination keeps the recorded scroll offset (1280px before and after). Current proof: `runs/platform/round-page-ui.png` and `runs/platform/round-page-bottom-ui.png`. No model requests or experiments are launched.
+
+## Changed-first lineage and project libraries
+
+The latest user request replaces the all-component canvas with native component
+cards. Each round shows proposed/changed components first, followed by a closed
+**Unchanged components** disclosure. Baseline still exposes all initial components.
+Colors follow the original component index even after reordering. Start, Candidate
+and Evaluation occupy the available width; evaluation labels align inside the right
+edge. Visible version tracks are distributed symmetrically above/below the fork.
+No synthetic pass/fail or new version identity is introduced.
+
+Click a component heading, candidate chip or version to open its content in place.
+A changed version compares its actual parent on the left and that version on the
+right. Added/removed files have an explicit missing side. Full recorded snapshots
+are rendered as content; historical patch-only records are labelled **Recorded
+change** without claiming reconstructed full files. Shared leading/trailing lines
+remain neutral and the changed block is highlighted. Decision evidence remains
+available in an inline disclosure. There is no component evidence side drawer.
+Selecting a version also selects its round snapshot when needed; choosing another
+snapshot updates an open component to that tuple's version. The selector tooltip
+explains Start/Candidate/Selected and why Start and Selected may share an ID.
+
+Configuration integrates domain and task counts directly under Benchmark. Both
+limits and optional grouping come from the adapter. No declared domain means a
+single all-task pool and no domain selector. Builtins and custom benchmarks are
+discovered from `benchmarks/<id>/benchmark.toml`; the separate Dataset section and
+custom server-path input are removed. Runtime connection profiles remain separate.
+
+Initial Harness is a Select populated from `harnesses/`, with **Empty Harness** as
+the first choice. Local experiment starts archive an immutable initial package and
+subsequent frozen versions below `harnesses/<run-id>/`. Existing recorded runs can
+be backfilled from their actual frozen initial snapshot. Only final selections are
+marked Selected. CLI/profile paths stay compatible. These files stay ignored by
+Git; only the directory instructions and builtin benchmark registrations ship.
+
+Browser checks cover changed-first ordering, 15 unchanged components hidden by
+default, opening/closing their disclosure, inline before/after content and real
+candidate evidence, CRM without domains, FDABench with domain-dependent limits,
+and selecting actual archived candidate versions. No experiment/model is launched.
+Latest proof: `runs/platform/component-comparison-ui.png` and
+`runs/platform/harness-library-ui.png`. Previous round-page screenshots are
+superseded by these views.

@@ -62,7 +62,7 @@ export function roundPageGraph(data:ComponentHistory, round:number, step:number,
   const center=36+radius;
   const laneHeight=Math.max(80,center+radius+12,center+maxReferences*22+14);
   const graphWidth=Math.max(820,width);
-  const left=40,right=graphWidth-220;
+  const left=40,right=graphWidth-26;
   const sourceLeft=full.layout.inputX(Math.max(0,ri)),sourceRight=full.layout.testX(Math.max(0,ri));
   const x=(value:number)=>left+(value-sourceLeft)/(sourceRight-sourceLeft)*(right-left);
   const rows=new Map(data.components.map((component,index)=>[component.id,{top:8+index*(laneHeight+8),height:laneHeight,center:8+index*(laneHeight+8)+center}]));
@@ -79,6 +79,14 @@ export function roundPageGraph(data:ComponentHistory, round:number, step:number,
       data:{...node.data,round,root:start,contextName:true,arrival:false,
         caption:referenceIndex>=0 ? `Earlier · R${node.data.round}` : node.data.caption}}];
   });
+  // Each round's visible versions share the vertical space on both sides of the fork.
+  for(const component of data.components) {
+    const points=nodes.filter(node=>node.data.componentId===component.id);
+    const variants=[...new Set(points.filter(node=>!node.data.root).map(node=>node.data.versionId))]
+      .sort((a,b)=>(versions.get(a)?.step || 0)-(versions.get(b)?.step || 0) || a.localeCompare(b));
+    const offsets=new Map(variants.map((id,index)=>[id,(index-(variants.length-1)/2)*26]));
+    for(const node of points) if(!node.data.root) node.position.y=rows.get(component.id)!.center+(offsets.get(node.data.versionId)||0);
+  }
   return {nodes,edges:edges.map(edge=>({...edge,source:aliases.get(edge.source)||edge.source,target:aliases.get(edge.target)||edge.target,data:edge.data?{...edge.data,arrival:false}:edge.data})),rows,
     width:graphWidth,height:8+data.components.length*(laneHeight+8),
     stages:ri<0 ? [{label:'Initial',x:left}] : [

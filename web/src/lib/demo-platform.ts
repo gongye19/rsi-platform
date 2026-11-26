@@ -10,6 +10,7 @@ const modelRows = [
   {id:'open-model',label:'Open model · General purpose',model:'open-model',configured:true},
 ];
 export const demoOptions: Options = {
+  harnesses:[],
   benchmarks:[{id:'knowledge-qa-13',label:'Knowledge QA · 13 tasks'},{id:'service-operations',label:'Service operations'},{id:'data-analysis',label:'Data analysis'}],
   models:modelRows,components:ids.map(id=>({id,name:componentLabels[id]})),
   proposal_only:['model_provider','runtime_env','file_attachments','tool_return','diagnostic'],
@@ -162,8 +163,8 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
 
 export function demoDatasetOptions(benchmark:string):DatasetOptions {
   const pools=benchmark==='knowledge-qa-13' ? [10,3] : benchmark==='service-operations' ? [40,20] : [70,35];
-  return {benchmark,cell:benchmark,grouping:'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
+  return {benchmark,cell:benchmark,grouping:benchmark==='knowledge-qa-13'?'benchmark':'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
     domains:[{id:'all',label:'All task groups',train_available:pools[0],test_available:pools[1]},
-      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},
-      {id:'group:operations',label:'Operations',train_available:pools[0]-Math.max(5,Math.floor(pools[0]*.6)),test_available:pools[1]-Math.max(1,Math.floor(pools[1]*.6))}]};
+      ...(benchmark==='knowledge-qa-13'?[]:[      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},
+      {id:'group:operations',label:'Operations',train_available:pools[0]-Math.max(5,Math.floor(pools[0]*.6)),test_available:pools[1]-Math.max(1,Math.floor(pools[1]*.6))}])]};
 }

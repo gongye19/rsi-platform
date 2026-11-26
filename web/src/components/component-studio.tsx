@@ -4,18 +4,16 @@ import {ChevronDown, ChevronLeft, ChevronRight, GitBranch, MoreHorizontal} from 
 import {Button} from '@/components/ui/button';
 import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from '@/components/ui/select';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
-import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription} from '@/components/ui/sheet';
 import ComponentTree from './component-tree';
 import RoundOutcomeChart from './round-outcome-chart';
 import {roundPage} from '@/lib/component-round-page';
 import {roundSummary} from '@/lib/round-summary';
 import {COMPONENT_COLORS} from '@/lib/component-types';
 import {evolutionRounds} from '@/lib/component-layout';
-import {decisionAt, decisionLabels, type ComponentHistory} from '@/lib/component-types';
+import {type ComponentHistory} from '@/lib/component-types';
 import {componentLabels} from '@/lib/console-types';
 import './component-studio.css';
 export default function ComponentStudio({run, live, revision}: {run: string; live: boolean; revision: number}) {
-  const evidenceTrigger = useRef<HTMLElement | null>(null);
   const studioRoot = useRef<HTMLDivElement>(null);
   const preservedScroll = useRef<{element:HTMLElement;top:number} | null>(null);
   const [view,setView] = useState<'lineage' | 'evaluation'>('lineage');
@@ -25,7 +23,6 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const [hoveredRound,setHoveredRound] = useState<number | null>(null);
   const [focusedRound,setFocusedRound] = useState<number | null>(null);
   const [inspectedId,setInspectedId] = useState('');
-  const [panel,setPanel] = useState(false);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       let value: ComponentHistory;
@@ -54,11 +51,14 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const summary = useMemo(() => data ? roundSummary(data,selectedRound,page?.step ?? step) : null,[data,selectedRound,page?.step,step]);
   const inspected = page?.snapshots.find(snapshot=>snapshot.id===inspectedId) || page?.defaultSnapshot;
   const bundle = inspected?.bundle;
-  const version = data?.versions.find(v => v.id === selected);
-  const component = data?.components.find(c => c.id === version?.component_id);
-  const bundleId = version && bundle?.components[version.component_id] === version.id ? bundle.id : data?.bundles.findLast(b => b.step <= (page?.step ?? step) && b.components[version?.component_id || ''] === version?.id)?.id;
-  const decision = data && version ? decisionAt(data,version.id,page?.step ?? step) || data.decisions.filter(d => d.scope === 'bundle' && d.version_id === bundleId && d.step <= (page?.step ?? step)).at(-1) : undefined;
-  const choose = useCallback((id: string) => {evidenceTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;setSelected(id);setPanel(true);},[]);
+  const choose = useCallback((id:string)=>{
+    setSelected(id);
+    const version=data?.versions.find(version=>version.id===id);
+    if(version && bundle?.components[version.component_id]!==id) {
+      const snapshot=page?.snapshots.find(snapshot=>snapshot.bundle.components[version.component_id]===id);
+      if(snapshot)setInspectedId(snapshot.id);
+    }
+  },[data,bundle,page]);
   const focus = useCallback((round: number) => {
     const element=studioRoot.current?.closest<HTMLElement>('.console-main');
     if(element) preservedScroll.current={element,top:element.scrollTop};
@@ -73,15 +73,15 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
     <div className="ce-experiment">
       <div className="ce-controls ce-inspection-toolbar">
         <div className="ce-view-tabs" role="tablist" aria-label="Experiment charts">{(['lineage','evaluation'] as const).map((id,i) => <button key={id} role="tab" id={`chart-tab-${id}`} aria-selected={view === id} aria-controls={`chart-panel-${id}`} tabIndex={view === id ? 0 : -1} onClick={() => setView(id)} onKeyDown={event => {if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {event.preventDefault();const next=i === 0 ? 'evaluation' : 'lineage';setView(next);document.getElementById(`chart-tab-${next}`)?.focus();}}}>{id === 'lineage' ? 'Lineage' : 'Evaluation'}</button>)}</div>
-        <div className="ce-snapshot-control"><Select value={inspected?.id || ''} disabled={!page?.snapshots.length} onValueChange={setInspectedId}>
-          <SelectTrigger aria-label="Inspect round snapshot"><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
+        <div className="ce-snapshot-control"><Select value={inspected?.id || ''} disabled={!page?.snapshots.length} onValueChange={id=>{setInspectedId(id);const version=data?.versions.find(version=>version.id===selected);const snapshot=page?.snapshots.find(snapshot=>snapshot.id===id);if(version && snapshot)setSelected(snapshot.bundle.components[version.component_id] || '');}}>
+          <SelectTrigger aria-label="Inspect round snapshot" title="Start: starting Harness. Candidate: proposed Harness. Selected: configuration kept after evaluation."><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
             {page?.snapshots.map(snapshot=><SelectItem value={snapshot.id} key={snapshot.id}>{snapshot.label}</SelectItem>)}
           </SelectContent></Select></div>
         {page && <RoundPagination pages={page.pages} current={selectedRound} onRound={focus} disabled={!ready} position="top"/>}
         <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Legend and measurement notes"><MoreHorizontal size={17}/></Button></PopoverTrigger>
           <PopoverContent className="ce-record-popover ce-view-options" align="end">
             <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-rejected">×</i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
-            <p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
+            <p>Snapshot selects the starting, proposed or selected Harness for this round. Identical Start and Selected versions mean the parent was kept.</p><p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
             <p>Metrics have independent axes. Missing values stay empty. Bundle selection does not establish individual component gains.</p>
           </PopoverContent>
         </Popover>
@@ -100,7 +100,7 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
         <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>{view === 'lineage' ? 'Click a version to inspect its snapshot' : 'TRAIN measurements for retained configurations'}</span></div>
       </>}
     </div>
-    <Sheet open={panel && !!version} onOpenChange={setPanel}><SheetContent className="ce-evidence" onCloseAutoFocus={event=>{event.preventDefault();evidenceTrigger.current?.focus({preventScroll:true});}}><SheetHeader><SheetTitle>{component?.name} <code>{version?.label}</code></SheetTitle><SheetDescription>Recorded component snapshot and adoption evidence.</SheetDescription></SheetHeader>{version && data && <><div className="ce-version-meta"><span>{version.parent_id ? `Parent: ${data.versions.find(v => v.id === version.parent_id)?.label}` : 'Initial snapshot'}</span><span>Round {version.round}</span><span>{version.digest.slice(0,10)}</span></div><div className={`ce-verdict ${decision?.outcome || 'unknown'}`}><strong>{decision ? decisionLabels[decision.outcome] : version.step === 0 ? 'Initial version' : 'No adoption decision recorded'}</strong>{decision?.reason && <p>{decision.reason}</p>}{decision?.scope === 'bundle' && <small>Decision scope: complete Harness, not an independent component test.</small>}</div><div className="ce-evidence-scroll">{version.files.length ? version.files.map(file => <details key={file.path}><summary>{file.path}<ChevronDown size={12}/></summary><pre>{file.diff}</pre></details>) : <p>This component has no custom content in this snapshot.</p>}{decision?.evidence && <details><summary>Decision evidence<ChevronDown size={12}/></summary><p>{decision.evidence}</p></details>}</div></>}</SheetContent></Sheet>
+
   </div>;
 }
 

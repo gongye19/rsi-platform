@@ -1168,3 +1168,6 @@
 .config-declaration-options { grid-template-columns: minmax(0,1fr); }
 .config-declaration-options label { background: #fafafb; }
 .config-declarations .config-note { margin-bottom: 14px; }
+
+.config-benchmark-options { margin-bottom: 8px; padding: 0 0 4px 14px; border-left: 2px solid #ececf1; }
+.config-benchmark-options .config-field { padding-block: 10px; }

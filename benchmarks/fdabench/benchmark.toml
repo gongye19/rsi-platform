@@ -1,0 +1,4 @@
+schema = "rsi.benchmark.v1"
+id = "fdabench"
+name = "FDABench Lite · Reports"
+adapter = "fdabench"

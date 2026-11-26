@@ -1,89 +1,13 @@
-"use client";
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import {
-  ReactFlow, ReactFlowProvider, Handle, Position, ViewportPortal,
-  getBezierPath,
-  type EdgeProps, type NodeProps,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { type LineageBranch, type LineagePoint } from "@/lib/component-graph";
-import { roundPageGraph } from "@/lib/component-round-page";
-import { roundChanges } from "@/lib/component-layout";
-import { COMPONENT_COLORS, type ComponentHistory } from "@/lib/component-types";
+'use client';
+import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
+import {ChevronDown,ChevronRight} from 'lucide-react';
+import {roundPageGraph} from '@/lib/component-round-page';
+import {roundChanges} from '@/lib/component-layout';
+import {COMPONENT_COLORS,type ComponentHistory} from '@/lib/component-types';
+import ComponentComparison from './component-comparison';
 
-const VersionPoint = memo(function VersionPoint({ data }: NodeProps<LineagePoint>) {
-  const style = {
-    "--point-color": data.color,
-    "--arrival-delay": data.delay,
-  } as CSSProperties;
-  return (
-    <div className={`ce-flow-point ${data.arrival ? "is-arriving" : ""}`} style={style}>
-      <Handle type="target" position={Position.Left} isConnectable={false} />
-      <button
-        className="ce-version nodrag nopan"
-        data-version-id={data.versionId}
-        data-node-role={data.stage}
-        data-node-final={data.stage === "input" && !data.root && !data.contextName}
-        data-graph-round={data.round}
-        data-node-variant={data.rejected ? "rejected" : "normal"}
-        aria-label={`${data.componentName} ${data.label}, ${data.caption || (data.stage === "experiment" ? "Candidate" : data.stage === "input" && !data.root && !data.contextName ? "Retained version" : "Starting version")}, round ${data.round}`}
-        title="Inspect version snapshot and evidence"
-      >
-        <span className="ce-node-glyph" aria-hidden="true">{data.rejected ? "×" : ""}</span>
-        <span className="ce-version-label">{data.label}<small>{data.caption === "Unchanged" ? "" : data.caption === "Parent retained" ? "Retained" : data.caption}</small></span>
-      </button>
-      <Handle type="source" position={Position.Right} isConnectable={false} />
-    </div>
-  );
-});
-
-const Branch = memo(function Branch(props: EdgeProps<LineageBranch>) {
-  const { data, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition } = props;
-  if (!data) return null;
-  const [path] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, curvature: 0.42 });
-  const carried = data.kind === "held" || data.kind === "retained";
-  const color = data.color;
-  const style = {
-    "--branch-delay": data.delay,
-    stroke: color,
-  } as CSSProperties;
-  // A clip reveals both dashed and solid paths without changing their appearance.
-  const clip = `reveal-${props.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-  return (
-    <g
-      data-connection={data.kind}
-      data-version-edge={data.versionId}
-      data-parent={data.parentId}
-      data-graph-round={data.round}
-      className={`ce-flow-branch ${data.arrival ? "is-arriving" : ""}`}
-      style={style}
-    >
-      {data.arrival && <defs><mask id={clip} maskUnits="userSpaceOnUse" x={Math.min(sourceX, targetX) - 12} y={Math.min(sourceY, targetY) - 30} width={Math.abs(targetX - sourceX) + 24} height={Math.abs(targetY - sourceY) + 60}><path d={path} pathLength={1} className="ce-edge-reveal" fill="none" stroke="white" strokeWidth={12} /></mask></defs>}
-      <path
-        d={path}
-        fill="none"
-        strokeWidth={1.8}
-        vectorEffect="non-scaling-stroke"
-        strokeOpacity={carried ? 0.48 : data.rejected ? 0.6 : 0.88}
-        strokeDasharray={carried ? "3 5" : undefined}
-        mask={data.arrival ? `url(#${clip})` : undefined}
-      />
-    </g>
-  );
-});
-const nodeTypes = { version: VersionPoint };
-const edgeTypes = { branch: Branch };
-
-type Props = {
-  data: ComponentHistory;
-  step: number;
-  selected: string;
-  onSelect: (id: string) => void;
-  configuration?: Record<string, string>;
-  selectedRound: number;
-};
-
-function LineageCanvas({data,step,selected,configuration,selectedRound,onSelect}:Props) {
+type Props={data:ComponentHistory;step:number;selected:string;onSelect:(id:string)=>void;configuration?:Record<string,string>;selectedRound:number};
+export default function ComponentTree({data,step,selected,onSelect,configuration,selectedRound}:Props) {
   const host=useRef<HTMLDivElement>(null);
   const [width,setWidth]=useState(820);
   useEffect(()=>{
@@ -93,30 +17,40 @@ function LineageCanvas({data,step,selected,configuration,selectedRound,onSelect}
     return ()=>observer.disconnect();
   },[]);
   const graph=useMemo(()=>roundPageGraph(data,selectedRound,step,width),[data,selectedRound,step,width]);
-  const nodes=useMemo(()=>graph.nodes.map(node=>({...node,className:`${node.data.versionId===selected?'is-inspected':''} ${configuration?.[node.data.componentId]===node.data.versionId?'is-member':''}`})),[graph.nodes,selected,configuration]);
-  const changed=new Set(graph.page.round ? roundChanges(data,graph.page.round,graph.page.step).filter(change=>change.generated.length).map(change=>change.component.id) : []);
-  return <div ref={host} className="ce-round-canvas-scroll" role="region" aria-label={`Component lineage for ${selectedRound ? `round ${selectedRound}` : 'baseline'}`}>
-    <div className="ce-page-stages" style={{width:graph.width}} aria-hidden="true">{graph.stages.map(stage=><span key={stage.label} style={{left:stage.x}}>{stage.label}</span>)}</div>
-    <div className="ce-flow-host ce-uniform-lanes ce-round-page-canvas" data-recorded-step={graph.page.step} data-linked-round={selectedRound} style={{width:graph.width,height:graph.height,'--ce-canvas-zoom':1} as CSSProperties}>
-      <ReactFlow<LineagePoint,LineageBranch>
-        id="component-lineage" nodes={nodes} edges={graph.edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-        nodeOrigin={[0.5,0.5]} defaultViewport={{x:0,y:0,zoom:1}}
-        nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} edgesFocusable={false}
-        minZoom={1} maxZoom={1} zoomOnScroll={false} zoomOnPinch={false} zoomOnDoubleClick={false}
-        panOnScroll={false} panOnDrag={false} preventScrolling={false}
-        onNodeClick={(_,node)=>onSelect(node.data.versionId)}>
-        <ViewportPortal>
-          <svg className="ce-flow-backdrop" width={graph.width} height={graph.height} aria-hidden="true">{data.components.map((component,index)=>{
-            const row=graph.rows.get(component.id)!;
-            const color=COMPONENT_COLORS[index%COMPONENT_COLORS.length];
-            return <g key={component.id}><rect x={4} y={row.top} width={graph.width-8} height={row.height} rx={8} fill="#fff" stroke={changed.has(component.id)?color:'#e7e7eb'} strokeOpacity={changed.has(component.id)?.55:1}/><rect x={4} y={row.top+12} width={3} height={row.height-24} rx={1.5} fill={color} opacity={.65}/></g>;
-          })}</svg>
-          {data.components.map((component,index)=><button key={component.id} className="ce-lane-heading nopan nodrag" style={{left:18,top:graph.rows.get(component.id)!.top+10,color:COMPONENT_COLORS[index%COMPONENT_COLORS.length]}} onClick={()=>onSelect(configuration?.[component.id] || graph.page.round?.start?.components[component.id] || component.baseline_version_id)} aria-label={`Inspect ${component.name} in this round's snapshot`}><i/>{component.name}</button>)}
-        </ViewportPortal>
-      </ReactFlow>
+  const changes=graph.page.round?roundChanges(data,graph.page.round,graph.page.step):[];
+  const changed=new Set(changes.filter(change=>change.generated.length || (change.after && change.before!==change.after)).map(change=>change.component.id));
+  const byId=new Map(graph.nodes.map(node=>[node.id,node]));
+  function componentCard(component:ComponentHistory['components'][number]) {
+    const index=data.components.findIndex(row=>row.id===component.id);
+    const color=COMPONENT_COLORS[index%COMPONENT_COLORS.length];
+    const row=graph.rows.get(component.id)!;
+    const nodes=graph.nodes.filter(node=>node.data.componentId===component.id);
+    const edges=graph.edges.filter(edge=>byId.get(edge.source)?.data.componentId===component.id);
+    const change=changes.find(change=>change.component.id===component.id);
+    const fallback=change?.generated.at(-1)?.id || configuration?.[component.id] || component.baseline_version_id;
+    const open=data.versions.find(version=>version.id===selected)?.component_id===component.id;
+    const diagramHeight=row.height-30;
+    const y=(value:number)=>value-row.top-30;
+    return <article key={component.id} className={`ce-component-card ${changed.has(component.id)?'has-changes':''}`} style={{'--component-color':color} as CSSProperties}>
+      <button className="ce-component-toggle" aria-expanded={open} aria-controls={`comparison-${component.id}`} aria-label={`Compare ${component.name}`} onClick={()=>onSelect(open?'':fallback)}>{open?<ChevronDown size={15}/>:<ChevronRight size={15}/>}<i/>{component.name}</button>
+      <div className="ce-component-diagram" style={{width:graph.width,height:diagramHeight}} role="group" aria-label={`${component.name} version lineage`}>
+        <svg width={graph.width} height={diagramHeight} aria-hidden="true">{edges.map(edge=>{
+          const a=byId.get(edge.source)!,b=byId.get(edge.target)!;
+          const sourceY=y(a.position.y),targetY=y(b.position.y),middle=(a.position.x+b.position.x)/2;
+          return <path key={edge.id} data-connection={edge.data?.kind} d={`M ${a.position.x} ${sourceY} C ${middle} ${sourceY}, ${middle} ${targetY}, ${b.position.x} ${targetY}`} stroke={color} strokeWidth={1.8} fill="none" strokeOpacity={edge.data?.kind==='held'?.45:.8} strokeDasharray={edge.data?.kind==='held'?'3 5':undefined}/>;
+        })}</svg>
+        {nodes.map(node=><button key={node.id} className={`ce-version ce-card-version ${selected===node.data.versionId?'is-inspected':''} ${configuration?.[component.id]===node.data.versionId?'is-member':''}`} style={{left:node.position.x,top:y(node.position.y),'--point-color':color} as CSSProperties} data-version-id={node.data.versionId} data-graph-round={selectedRound} data-node-final={node.data.stage==='test'} data-node-variant={node.data.rejected?'rejected':'normal'} aria-label={`Inspect ${component.name} ${node.data.label}, ${node.data.caption || (node.data.stage==='experiment'?'Candidate':'Start')}`} onClick={()=>onSelect(node.data.versionId)}><span className="ce-node-glyph">{node.data.rejected?'×':''}</span><span className="ce-version-label">{node.data.label}<small>{node.data.caption==='Unchanged'?'':node.data.caption==='Parent retained'?'Retained':node.data.caption}</small></span></button>)}
+      </div>
+      {open && <div id={`comparison-${component.id}`}><ComponentComparison key={selected} data={data} versionId={selected} step={graph.page.step}/></div>}
+    </article>;
+  }
+  const primary=data.components.filter(component=>!selectedRound || changed.has(component.id));
+  const unchanged=data.components.filter(component=>selectedRound && !changed.has(component.id));
+  return <div ref={host} className="ce-round-canvas-scroll" role="region" aria-label={`Component lineage for ${selectedRound?`round ${selectedRound}`:'baseline'}`}>
+    <div className="ce-page-stages" style={{width:graph.width}} aria-hidden="true">{graph.stages.map((stage,index)=><span key={stage.label} style={{left:stage.x,transform:index===graph.stages.length-1 && index>0?'translateX(-100%)':undefined}}>{stage.label}</span>)}</div>
+    <div className="ce-component-cards" style={{minWidth:graph.width}} data-linked-round={selectedRound}>
+      {primary.length?primary.map(componentCard):<p className="ce-no-changes">No component edits recorded in this round.</p>}
+      {unchanged.length>0 && <details className="ce-unchanged-components" key={`unchanged-${selectedRound}`}><summary>Unchanged components <span>{unchanged.length}</span></summary>{unchanged.map(componentCard)}</details>}
     </div>
   </div>;
-}
-export default function ComponentTree(props:Props) {
-  return <ReactFlowProvider key={props.data.id}><LineageCanvas {...props}/></ReactFlowProvider>;
 }

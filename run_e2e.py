@@ -74,6 +74,9 @@ def main() -> int:
     task_models(args.models_config, business=bool(args.agent_config or os.environ.get("HAI_AGENT_CONFIG")),
                 run_root=root / "runs/train" / args.run_id)
     configure_cell_runtime(root, args.cell)
+    from harnesslens.harnesses.library import sync_run_harnesses
+    if args.harness == "opencode":
+        sync_run_harnesses(root, args.run_id, args.initial_harness)
     result = IterationController(
         repo_root=root,
         run_id=args.run_id,
@@ -84,6 +87,8 @@ def main() -> int:
         analysis_source_run=args.analysis_source_run,
         initial_harness=args.initial_harness,
     ).run(baseline_event=args.baseline_event)
+    if args.harness == "opencode":
+        sync_run_harnesses(root, args.run_id, args.initial_harness)
     print(json.dumps({
         "selected_version": result.selected_version,
         "submission": result.submission_path,

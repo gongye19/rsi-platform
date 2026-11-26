@@ -53,7 +53,7 @@ test('page geometry stays vertically stable and every component has the same lan
     for(const node of graph.nodes) {
       const row=graph.rows.get(node.data.componentId)!;
       assert(node.position.y>row.top+32 && node.position.y<row.top+row.height-8);
-      assert(node.position.x>=40 && node.position.x<=graph.width-44);
+      assert(node.position.x>=40 && node.position.x<=graph.width-26);
     }
   }
 });

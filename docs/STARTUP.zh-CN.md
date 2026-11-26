@@ -107,3 +107,15 @@ harnesses/business-agent/
 独立评测初版：`run_test_baseline.py --initial-harness ...`；不提供时评测空初版。评测最终版本：`run_test_candidate.py --patch-json .../submission/final.json`，加载所选快照，无需再指定初版。
 
 部署和 Linux/HTTP 测试数据的边界见 [INTRANET.zh-CN.md](INTRANET.zh-CN.md)。本机已有完整实验记录，可从实验管理页查看 TRAIN/TEST、候选采用结果和原始证据；查看不会重新运行。
+
+## 界面中的 Benchmark 和 Harness 目录
+
+当前界面从项目根目录自动发现，不再要求用户手填服务器路径：
+
+- `benchmarks/<id>/benchmark.toml`：注册入口；自有 JSONL 数据固定为 `data/tasks.jsonl`，可选 `scorer.py` 和 `references/`。目录名和 manifest 的 `id` 一致。已有原生适配器也有注册入口，原数据路径保持兼容。
+- `harnesses/<name>/project/`：放业务初始 `AGENTS.md`、`.opencode/skills/` 等；可选并列 `home/`。也可放导出的 `package.json`。不选时使用 Empty Harness。
+- 启动后自动生成 `harnesses/<run-id>/library.json` 和 `versions/<version>/harness-<sha256>.json`。初始和候选分别保留；最终采用的版本标记 Selected，可直接作为下一轮实验的初始 Harness。业务原目录不会被覆盖。
+
+训练／测试数量直接在 Benchmark 下方设置，最大值来自它自己的固定划分。提供 `domain_field` 的数据才出现 domain 选择；未提供时全部数据视为一个 domain。FDABench 使用其公开的数据库分组。这里的 TEST 是最终保留集，不会作为训练验证题混入进化。每轮内部验证仍沿用原算法。
+
+添加目录后重新打开 New experiment 即可刷新列表。详细文件规范见 [`benchmarks/README.md`](../benchmarks/README.md) 和 [`harnesses/README.md`](../harnesses/README.md)。数据、业务 Harness 和自动生成的版本均默认不上传 GitHub；服务器上自行复制或下载数据后即可使用。

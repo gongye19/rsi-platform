@@ -1,0 +1,4 @@
+schema = "rsi.benchmark.v1"
+id = "crm"
+name = "CRM Arena Pro"
+adapter = "crm"

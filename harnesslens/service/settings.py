@@ -54,10 +54,8 @@ def connections(profiles):
 
 
 def benchmark_choices():
-    from harnesslens.benchmarks.cell_config import SUPPORTED_CELLS
-    labels = {'fdabench':'FDABench Lite · Reports (105 tasks)', 'crm':'CRM Arena Pro','retail':'Tau² Retail','banking':'Tau² Banking',
-              'bird':'BIRD Mini-Dev','terminal-bench':'Terminal-Bench'}
-    return [{'id': name, 'label': labels.get(name,name)} for name in SUPPORTED_CELLS]
+    from .library import benchmark_entries
+    return [{'id': row['id'], 'label': row['label']} for row in benchmark_entries()]
 
 
 def selected_benchmark(value):
@@ -65,6 +63,9 @@ def selected_benchmark(value):
     if not isinstance(value,str) or not value.strip():
         raise ValueError('Select a benchmark')
     value=value.strip()
+    from .library import benchmark_entries
+    match=next((row for row in benchmark_entries() if row['id']==value),None)
+    if match: value=match['source']
     if value.lower() in _ALIASES:
         return value.lower()
     path=Path(value).expanduser().resolve()
@@ -109,7 +110,8 @@ def catalog(profiles, *, discover=True):
             choices.append({'id': item['id'] + ':' + model, 'connection_id': item['id'], 'model': model,
                             'api': item['config']['api'], 'configured': bool(item['key']),
                             'label': model + ' · ' + ('Responses' if item['config']['api'] == 'responses' else 'Chat Completions')})
-    return {'models': choices, 'benchmarks': benchmark_choices(), 'components': [{'id': key, 'name': value} for key, value in COMPONENTS],
+    from .library import harness_entries
+    return {'models': choices, 'benchmarks': benchmark_choices(), 'harnesses': harness_entries(), 'components': [{'id': key, 'name': value} for key, value in COMPONENTS],
             'proposal_only': sorted(PROPOSAL_ONLY), 'experimental_fields': sorted(EXPERIMENTAL_FIELDS),
             'parameters': [{'key': k, 'label': v[0], 'default': v[1], 'min': v[2], 'max': v[3]} for k, v in PARAMETERS.items()]}
 
@@ -128,12 +130,14 @@ def profile_preview(path, profiles):
         selected[role] = match['id'] + ':' + row['model'] if match else ''
     from harnesslens.benchmarks.cell_config import _ALIASES
     normalized = _ALIASES.get(profile['benchmark'].lower())
-    benchmark_selection = next((row['id'] for row in benchmark_choices() if normalized and _ALIASES.get(row['id']) == normalized), profile['benchmark'])
+    from .library import benchmark_entries, harness_entries
+    benchmark_selection = next((row['id'] for row in benchmark_entries() if row['source']==profile['benchmark'] or normalized and _ALIASES.get(row['source'])==normalized),profile['benchmark'])
+    harness_selection = next((row['id'] for row in harness_entries() if row['path']==profile['initial_harness']), '')
     return {'name': Path(path).name, 'benchmark': profile['benchmark'], 'benchmark_selection': benchmark_selection, 'mode': profile['mode'],
             'readiness': profile.get('readiness', 'ready'), 'models': profile.get('models', {}),
             'dataset': profile.get('dataset',{'domain':'all','train_count':0,'test_count':0}),
             'dataset_selection': profile.get('dataset_selection'),
-            'model_selection': selected, 'components': profile['components'], 'initial_harness': profile['initial_harness'],
+            'initial_harness_selection': harness_selection, 'model_selection': selected, 'components': profile['components'], 'initial_harness': profile['initial_harness'],
             'business_agent': bool(profile['agent_config']), 'full_evaluation': profile.get('full_evaluation', True),
             'parameters': {k: int(profile.get('environment', {}).get(k, v[1])) for k, v in PARAMETERS.items()}}
 
@@ -209,7 +213,8 @@ def snapshot_profile(source, settings, directory, profiles):
         raw['environment']['HAI_FDABENCH_TIMEOUT_S'] = parameters['HAI_CRM_TIMEOUT_S']
     if 'initial_harness' in settings:
         if not isinstance(settings['initial_harness'], str): raise ValueError('initial_harness must be a path')
-        raw['initial_harness'] = str(Path(settings['initial_harness']).expanduser().resolve()) if settings['initial_harness'] else ''
+        from .library import selected_harness
+        raw['initial_harness'] = selected_harness(settings['initial_harness'])
     if 'full_evaluation' in settings:
         if type(settings['full_evaluation']) is not bool: raise ValueError('full_evaluation must be boolean')
         raw['full_evaluation'] = settings['full_evaluation']
