@@ -19,8 +19,8 @@ Linux 必须允许 bubblewrap 创建所需的命名空间；公司策略若禁�
 在 Linux 有公司 Python/npm 镜像源或允许访问依赖源时：
 
 ```bash
-git clone <本项目私有仓库地址> harnesslens
-cd harnesslens
+git clone https://github.com/gongye19/rsi-platform.git
+cd rsi-platform
 bash scripts/setup_linux.sh
 # 填写本机 .env，权限保留 600；不要从个人电脑复制生产凭据。
 cd web
@@ -45,6 +45,8 @@ bash scripts/setup_linux.sh --offline /path/to/offline/linux-x86_64
 `SHA256SUMS.json` 记录离线包各文件摘要，OpenCode 安装时再次验证固定 SHA256。安装依赖使用 `--no-index --require-hashes`，不访问公网。离线包不包含 uv/Python/系统包/Node/Bun，需通过公司软件源提前安装。
 
 前端完全离线交付需在**相同 Linux 架构和兼容 glibc 的联网预备机**完成 `bun install --frozen-lockfile && bun run build`，再携带 `web/node_modules/` 和 `web/.next/`；不要复制 macOS 的 node_modules/.next 到 Linux。也可在公司 npm 镜像上重新构建。源代码中无外部字体/CDN运行依赖。
+
+更大的 FDABench 报告实验及服务器数据下载命令见 [FDABench 指南](FDABENCH.zh-CN.md)。
 
 ## 准备 13 题
 

@@ -38,7 +38,7 @@ def history(identity):
     current = {key: key + "_baseline" for key, _ in COMPONENTS}
     baseline = read(root / "baseline/bootstrap_event.json", {}).get("metrics", {})
     baseline_metrics = {k: v for k, v in baseline.items() if type(v) in {int, float}}
-    if "pass_at_1" in baseline_metrics: baseline_metrics["score"] = baseline_metrics["pass_at_1"]
+    if "pass_at_1" in baseline_metrics: baseline_metrics["score"] = baseline_metrics.get(baseline.get("primary_metric", "pass_at_1"), baseline_metrics["pass_at_1"])
     bundles.append({"id": "v0", "label": "H0", "step": 0, "round": 0, "components": dict(current),
                     "execution": {"status": "baseline"}, "metrics": baseline_metrics})
     steps.append({"index": 0, "round": 0, "label": "Initial version", "kind": "baseline", "bundle_id": "v0", "active_bundle_id": "v0"})
@@ -72,9 +72,12 @@ def history(identity):
     for record in sorted((root / "rollout").glob("*.json")):
         payload = read(record, {})
         if payload.get("harness_version") and "preflight" not in record.stem:
-            metrics[payload["harness_version"]] = {key: value for key, value in payload.get("metrics", {}).items() if type(value) in {int, float}}
+            raw = payload.get("metrics", {})
+            metrics[payload["harness_version"]] = {key: value for key, value in raw.items() if type(value) in {int, float}}
+            if raw.get("primary_metric") in raw:
+                metrics[payload["harness_version"]]["score"] = raw[raw["primary_metric"]]
     for values in metrics.values():
-        if "pass_at_1" in values: values["score"] = values["pass_at_1"]
+        if "pass_at_1" in values: values.setdefault("score", values["pass_at_1"])
     decisions = []
     for index, path in enumerate(snapshots, 1):
         snapshot = path.parents[2]

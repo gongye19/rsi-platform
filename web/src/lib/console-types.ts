@@ -1,4 +1,4 @@
-export type Metrics = {pass_at_1?: number; trial_success_count?: number; trial_count?: number; task_count?: number};
+export type Metrics = {mean_reward?: number; primary_metric?: string; pass_at_1?: number; trial_success_count?: number; trial_count?: number; task_count?: number};
 export type Policy = {allowed: string[]; denied: string[]; experimental_fields: string[]; proposal_only?: string[]};
 /** The console selects whole channels; supported experimental fields follow their owner. */
 export function componentPolicyForRun(policy: Policy, experimentalFields: readonly string[]): Policy {
@@ -22,8 +22,8 @@ export const componentLabels: Record<string, string> = {
   context_management: 'Context management', custom_tools: 'Custom tools', plugin_tool_system: 'Plugin logic', mcp_servers: 'MCP integration', experimental_policies: 'Experimental policies',
   model_provider: 'Model / provider', runtime_env: 'Runtime environment', file_attachments: 'File attachments', tool_return: 'Tool outputs', diagnostic: 'Diagnostics',
 };
-export function metric(m?: Metrics) {return m?.pass_at_1 == null ? '—' : `${(m.pass_at_1 * 100).toFixed(1)}%`;}
-export function counts(m?: Metrics) {return m?.trial_count == null ? 'No measurements' : `${m.trial_success_count ?? '?'} / ${m.trial_count} trials`;}
+export function metric(m?: Metrics) {const score = m?.primary_metric === 'mean_reward' ? m.mean_reward : m?.pass_at_1; return score == null ? '—' : `${(score * 100).toFixed(1)}%`;}
+export function counts(m?: Metrics) {return m?.trial_count == null ? 'No measurements' : m.primary_metric === 'mean_reward' ? `Mean score · ${m.trial_count} trials` : `${m.trial_success_count ?? '?'} / ${m.trial_count} trials`;}
 export class PlatformError extends Error {constructor(message: string, public status: number) {super(message);this.name='PlatformError';}}
 export async function platformRead<T>(query = '', init?: RequestInit): Promise<T> {
   if (process.env.NEXT_PUBLIC_RSI_DEMO === '1') {

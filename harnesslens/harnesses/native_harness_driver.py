@@ -199,6 +199,7 @@ def summarize_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     pass_at_1 = successes / trials if trials else 0.0
     return {
         "task_count": tasks,
+        "mean_reward": sum(float(v) for r in records for v in r.get("rewards", [])) / trials if trials else 0.0,
         "trial_count": trials,
         "trial_success_count": successes,
         "trial_success_rate": pass_at_1,

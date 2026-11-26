@@ -55,7 +55,7 @@ def connections(profiles):
 
 def benchmark_choices():
     from harnesslens.benchmarks.cell_config import SUPPORTED_CELLS
-    labels = {'crm':'CRM Arena Pro','retail':'Tau² Retail','banking':'Tau² Banking',
+    labels = {'fdabench':'FDABench Lite · Reports (105 tasks)', 'crm':'CRM Arena Pro','retail':'Tau² Retail','banking':'Tau² Banking',
               'bird':'BIRD Mini-Dev','terminal-bench':'Terminal-Bench'}
     return [{'id': name, 'label': labels.get(name,name)} for name in SUPPORTED_CELLS]
 
@@ -202,6 +202,9 @@ def snapshot_profile(source, settings, directory, profiles):
     # The generic rollout cap must also bound the CRM adapter's own cap.
     if 'HAI_MAX_ROLLOUT_CONCURRENCY' in parameters:
         raw['environment']['HAI_CRM_MAX_CONCURRENCY'] = parameters['HAI_MAX_ROLLOUT_CONCURRENCY']
+        raw['environment']['HAI_FDABENCH_MAX_CONCURRENCY'] = parameters['HAI_MAX_ROLLOUT_CONCURRENCY']
+    if 'HAI_CRM_TIMEOUT_S' in parameters:
+        raw['environment']['HAI_FDABENCH_TIMEOUT_S'] = parameters['HAI_CRM_TIMEOUT_S']
     if 'initial_harness' in settings:
         if not isinstance(settings['initial_harness'], str): raise ValueError('initial_harness must be a path')
         raw['initial_harness'] = str(Path(settings['initial_harness']).expanduser().resolve()) if settings['initial_harness'] else ''

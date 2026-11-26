@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.benchmarks.cell_config import benchmark_config
+
 import json
 import os
 from dataclasses import dataclass
@@ -122,6 +124,7 @@ class BlindTestRolloutService(TrainRolloutService):
         self.remaining_budget -= charged
         metrics = {
             **_summarize(records),
+            "primary_metric": benchmark_config(self.repo_root, self.cell).primary_metric,
             "requested_trial_count": requested,
             "infrastructure_failure_count": infrastructure,
             "charged_trial_count": charged,

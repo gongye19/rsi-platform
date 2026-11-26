@@ -13,7 +13,8 @@ import json
 
 
 def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
 def runtime_sources():
@@ -183,5 +184,8 @@ class CrmAdapter(BusinessBenchmark):
 def benchmark_adapter(repo_root, cell):
     if str(cell) in {"crm", "crmarenapro", "dab-crmarenapro"}:
         return CrmAdapter(repo_root)
+    if str(cell) in {"fdabench", "fdabench-lite-report"}:
+        from .fdabench.adapter import FDABenchAdapter
+        return FDABenchAdapter(repo_root)
     from .jsonl_adapter import resolve_external
     return resolve_external(repo_root, cell)

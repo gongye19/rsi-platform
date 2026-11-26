@@ -41,7 +41,7 @@ MIN_STANDARD_ROLLOUT_TASKS = 5
 MIN_RESIDUAL_ROLLOUT_TASKS = 2
 DEFAULT_EXPLORATION_ROLLOUT_TASKS = 6
 ITERATION_RETRY_BUFFER_CREATIONS = 3
-PROMOTION_METRICS = frozenset({"pass_at_1", "pass_at_2"})
+PROMOTION_METRICS = frozenset({"pass_at_1", "pass_at_2", "mean_reward"})
 GLOBAL_INSTRUCTION_CHANNELS = frozenset(
     {
         "developer_instructions",
@@ -252,6 +252,7 @@ behavior hypotheses with the smallest valid experiments. Continue, scale up, or 
 only after it shows attributable positive evidence; otherwise stop that line and move to the next
 promising problem. Do not spend iterations merely to balance candidate types, and reserve enough
 budget to evaluate alternatives before committing to refinement.
+For mean_reward, partial score gains count only with attributable behavioral improvement; pass counts represent perfect answers.
 The supplied `promotion_metric` is the experiment objective; prioritize candidates whose direct
 evidence can improve that metric rather than a different repeat-derived score.
 
@@ -1020,14 +1021,14 @@ class MainAgentModule:
         budget: CreationBudget,
         harness: str = "opencode",
         cell: str = "retail",
-        promotion_metric: str = "pass_at_1",
+        promotion_metric: str | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.run_root = Path(run_root).resolve()
         self.budget = budget
         self.harness = harness
-        self.promotion_metric = normalize_promotion_metric(promotion_metric)
         self.config = benchmark_config(self.repo_root, cell)
+        self.promotion_metric = normalize_promotion_metric(promotion_metric or self.config.primary_metric)
         self.root = self.run_root / "main_agent"
         self.root.mkdir(parents=True, exist_ok=True)
 
@@ -2725,6 +2726,16 @@ def canonicalize_final_decision(
     return output
 
 
+def outcome_improved(summary: Mapping[str, Any]) -> bool:
+    if summary.get("primary_metric") == "mean_reward":
+        import math
+        values = [summary.get(k + "_mean_reward") for k in ("reference", "candidate")]
+        if any(type(v) not in (int,float) or not math.isfinite(v) or not 0 <= v <= 1 for v in values):
+            raise ValueError("Continuous evidence requires paired mean rewards")
+        return values[1] > values[0]
+    return int(summary.get("candidate_pass_count") or 0) > int(summary.get("reference_pass_count") or 0)
+
+
 def _attributable_positive_task_ids(
     adjustment: Mapping[str, Any],
 ) -> set[str]:
@@ -2735,9 +2746,7 @@ def _attributable_positive_task_ids(
         if str(item.get("relation") or "") != "attributed":
             continue
         summary = item.get("outcome_summary")
-        if isinstance(summary, Mapping) and int(
-            summary.get("candidate_pass_count") or 0
-        ) <= int(summary.get("reference_pass_count") or 0):
+        if isinstance(summary, Mapping) and not outcome_improved(summary):
             continue
         result.add(str(item["task_id"]))
     return result
@@ -2756,9 +2765,7 @@ def uncertain_recovery_task_ids(
         if str(item.get("relation") or "") != "possibly_related":
             continue
         summary = item.get("outcome_summary") or {}
-        if int(summary.get("candidate_pass_count") or 0) <= int(
-            summary.get("reference_pass_count") or 0
-        ):
+        if not outcome_improved(summary):
             continue
         result.add(str(item.get("task_id") or ""))
     return {item for item in result if item}

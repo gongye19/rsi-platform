@@ -363,7 +363,7 @@ def collect_opencode_usage(stdout: str) -> dict[str, int] | None:
     return usage if found else None
 
 
-def _start_proxy(*, run_root: Path, call_id: str, role: str = "analysis") -> tuple[subprocess.Popen[str], int]:
+def _start_proxy(*, run_root: Path, call_id: str, role: str = "analysis", connection_override=None) -> tuple[subprocess.Popen[str], int]:
     script = (
         Path(__file__).resolve().parents[1]
         / "infrastructure"
@@ -371,6 +371,8 @@ def _start_proxy(*, run_root: Path, call_id: str, role: str = "analysis") -> tup
     )
     from harnesslens.core.model_config import proxy_environment
     proxy_env = proxy_environment(role)
+    if connection_override is not None:
+        proxy_env.update(DEEPSEEK_API_KEY=connection_override["api_key"], DEEPSEEK_BASE_URL=connection_override["base_url"], HAI_PROXY_API=connection_override["api"], HAI_PROXY_MODEL=connection_override["model"].split("/", 1)[-1])
     if not script.is_file():
         raise RuntimeError("OpenCode trace proxy prerequisites are unavailable")
     seed = int.from_bytes(

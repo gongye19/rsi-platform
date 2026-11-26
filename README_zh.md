@@ -146,3 +146,7 @@ scripts/run_tests.sh
 HarnessLens 使用 [MIT License](LICENSE)。`assets/` 下 vendored 的文档沿用上游条款；
 OpenCode插件/工具的离线JavaScript依赖包保留各包许可证，来源与固定版本见 `configs/opencode-plugin-runtime.json`。
 benchmark 数据和OpenCode主程序不随Git仓库分发。
+
+## FDABench-Lite 报告实验
+
+已加入 105 道可评分报告题（70 TRAIN / 35 TEST）、16 个只读数据库和完整 PDF 检索工具。服务器下载数据、预检和启动命令见 [FDABench 指南](docs/FDABENCH.zh-CN.md)。

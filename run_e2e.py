@@ -33,8 +33,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--promotion-metric",
-        choices=("pass_at_1", "pass_at_2"),
-        default="pass_at_1",
+        choices=("pass_at_1", "pass_at_2", "mean_reward"),
+        default=None,
         help="Primary paired metric that a candidate must strictly improve.",
     )
     parser.add_argument(

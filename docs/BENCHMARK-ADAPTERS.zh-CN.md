@@ -114,3 +114,7 @@ JSONL 入口适用于已有 Python/HTTP Agent 的单轮问答任务。数据库�
 独立命令行基线/候选入口、跨进程配置解析、缓存零新增请求和指纹变化拒绝复用。
 它不启动 CRM 服务，也不向业务输入暴露参考答案或 grader。
 CRM 原生 OpenCode、Python、HTTP 路径另做回归。以上工程验证不代表真实解题收益，也没有启动付费进化实验。
+
+## 连续评分
+
+返回 `[0,1]` 部分分的 Python grader 可在 benchmark TOML 中设置 `primary_metric = "mean_reward"`，以配对试验的平均 reward 为优化目标。默认仍为 `pass_at_1`；连续评分不改变通用的归因、确认和回退条件。FDABench 内置适配器使用同一套机制。

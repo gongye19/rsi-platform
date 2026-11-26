@@ -23,6 +23,7 @@ class BenchmarkSplit:
 
 
 _SPECS: Mapping[str, Mapping[str, Any]] = {
+    "fdabench-lite-report": {"cell":"fdabench", "config":"fdabench_split.json", "local_rootless_rollout":False},
     "dab-crmarenapro": {"cell": "crmarenapro", "config": "crmarenapro_split.json", "local_rootless_rollout": False},
     "retail": {
         "cell": "retail",
@@ -47,6 +48,7 @@ _SPECS: Mapping[str, Mapping[str, Any]] = {
 }
 
 _ALIASES = {
+    "fdabench":"fdabench-lite-report", "fdabench-lite-report":"fdabench-lite-report",
     "crm": "dab-crmarenapro", "crmarenapro": "dab-crmarenapro", "dab-crmarenapro": "dab-crmarenapro",
     "retail": "retail",
     "tau2-retail": "retail",

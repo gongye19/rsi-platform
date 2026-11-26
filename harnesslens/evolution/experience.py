@@ -321,6 +321,7 @@ class ExperienceModule:
             "baseline_by_task": {},
             "candidate_by_task": {},
             "outcomes": {},
+            "rewards": {},
             "reference_versions": {},
             "reference_rollout_output": reference_path,
             "evaluation_contract": dict(task_input["evaluation_contract"]),
@@ -343,6 +344,7 @@ class ExperienceModule:
                 baseline_refs.append(ref)
                 packet = _visible_trial_packet(path, evidence_id=ref)
                 baseline_trials.append(packet)
+                index["rewards"][ref] = float(packet["reward"])
                 index["outcomes"][ref] = (
                     "pass" if float(packet["reward"] or 0.0) >= 1.0 else "fail"
                 )
@@ -353,6 +355,7 @@ class ExperienceModule:
                 candidate_refs.append(ref)
                 packet = _visible_trial_packet(path, evidence_id=ref)
                 candidate_trials.append(packet)
+                index["rewards"][ref] = float(packet["reward"])
                 index["outcomes"][ref] = (
                     "pass" if float(packet["reward"] or 0.0) >= 1.0 else "fail"
                 )
@@ -1460,6 +1463,7 @@ def validate_comparison(
                 baseline_by_task=baseline_by_task,
                 candidate_by_task=candidate_by_task,
                 outcomes=index.get("outcomes") or {},
+                rewards=(index.get("rewards") or {}) if (index.get("evaluation_contract") or {}).get("primary_metric") == "mean_reward" else None,
             )
             if not isinstance(outcome_summary, Mapping) or dict(
                 outcome_summary
@@ -1536,6 +1540,7 @@ def canonicalize_comparison(
                 baseline_by_task=baseline_by_task,
                 candidate_by_task=candidate_by_task,
                 outcomes=index.get("outcomes") or {},
+                rewards=(index.get("rewards") or {}) if (index.get("evaluation_contract") or {}).get("primary_metric") == "mean_reward" else None,
             )
             if outcome_summary is None:
                 item.pop("outcome_summary", None)
@@ -1709,14 +1714,24 @@ def _comparison_outcome_summary(
     baseline_by_task: Mapping[str, Sequence[str]],
     candidate_by_task: Mapping[str, Sequence[str]],
     outcomes: Mapping[str, Any],
-) -> dict[str, int] | None:
+    rewards: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
     baseline = [str(outcomes.get(ref) or "") for ref in baseline_by_task[task]]
     candidate = [str(outcomes.get(ref) or "") for ref in candidate_by_task[task]]
     if set([*baseline, *candidate]) - {"pass", "fail"}:
         return None
-    return {
+    result = {
         "reference_pass_count": sum(item == "pass" for item in baseline),
         "reference_trial_count": len(baseline),
         "candidate_pass_count": sum(item == "pass" for item in candidate),
         "candidate_trial_count": len(candidate),
     }
+    if rewards is not None:
+        import math
+        for side, refs in (("reference", baseline_by_task[task]), ("candidate", candidate_by_task[task])):
+            values = [rewards.get(ref) for ref in refs]
+            if not values or any(type(v) not in (int,float) or not math.isfinite(v) or not 0 <= v <= 1 for v in values):
+                raise ValueError("Continuous comparison requires valid rewards for every reference")
+            result[side + "_mean_reward"] = sum(values) / len(values)
+        result["primary_metric"] = "mean_reward"
+    return result

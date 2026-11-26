@@ -100,6 +100,9 @@ def benchmark_task_explorer_input(
     else:
         raise ValueError(f"unsupported benchmark kind: {config.kind}")
     payload["evaluation_contract"] = evaluation_contract(config.outcome_authority)
+    payload["evaluation_contract"]["primary_metric"] = config.primary_metric
+    if config.primary_metric == "mean_reward":
+        payload["evaluation_contract"]["score_interpretation"] = "Continuous reward [0,1]; compare paired mean rewards. Pass counts measure only perfect answers. Partial score gains require attributable behavioral evidence."
     # Native tool surfaces come from retained TRAIN requests, not assumptions
     # about a benchmark's name or the CLI used inside its tools.
     observed = {}

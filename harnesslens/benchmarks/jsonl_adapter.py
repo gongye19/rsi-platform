@@ -47,9 +47,11 @@ class JsonlAdapter(BusinessBenchmark):
         self.repo_root, self.descriptor = Path(repo_root).resolve(), Path(descriptor).resolve()
         raw = tomllib.loads(self.descriptor.read_text())
         allowed = {"schema", "id", "tasks", "train", "test", "id_field", "prompt_field", "public_fields",
-                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency"}
+                   "reference_field", "grader", "grader_file", "grader_function", "grader_timeout", "max_concurrency", "primary_metric"}
         if set(raw) - allowed or raw.get("schema") != "harnesslens.business-benchmark.v1":
             raise ValueError("Unknown benchmark settings or schema")
+        if raw.get("primary_metric", "pass_at_1") not in {"pass_at_1", "mean_reward"}:
+            raise ValueError("primary_metric must be pass_at_1 or mean_reward")
         self.spec = raw
         for key in ("tasks", "id_field", "prompt_field", "reference_field", "grader", "grader_file", "grader_function"):
             if key in raw and (not isinstance(raw[key], str) or not raw[key].strip()):
@@ -113,7 +115,8 @@ class JsonlAdapter(BusinessBenchmark):
         from .cell_config import BenchmarkConfig
         files = (str(self.descriptor), str(self.tasks_path), *((str(self.grader_path),) if self.grader_path else ()))
         return BenchmarkConfig(self.cell, self.cell, "business_extension", tuple(self.spec["train"]), False,
-                               "authoritative", domain_files=files)
+                               "behavioral" if self.spec.get("primary_metric") == "mean_reward" else "authoritative", domain_files=files,
+                               primary_metric=self.spec.get("primary_metric", "pass_at_1"))
 
     def public_task(self, task_id):
         raw = self._tasks()[task_id]

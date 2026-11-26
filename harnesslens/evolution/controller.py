@@ -81,7 +81,7 @@ class IterationController:
         harness: str = "opencode",
         cell: str = "retail",
         incumbent_submissions: tuple[str | Path, ...] = (),
-        promotion_metric: str = "pass_at_1",
+        promotion_metric: str | None = None,
         analysis_source_run: str | Path | None = None,
         initial_harness: str | Path | None = None,
     ):
@@ -92,8 +92,8 @@ class IterationController:
         self.initial_harness = initial_harness
         if initial_harness is not None and incumbent_submissions:
             raise ValueError("Choose either initial Harness or incumbent submission")
-        self.promotion_metric = normalize_promotion_metric(promotion_metric)
         self.config = benchmark_config(self.repo_root, cell)
+        self.promotion_metric = normalize_promotion_metric(promotion_metric or self.config.primary_metric)
         self.analysis_source_run = (
             _resolve_analysis_source_run(self.repo_root, analysis_source_run)
             if analysis_source_run is not None
@@ -870,10 +870,20 @@ def reference_metrics_from_comparison_index(path: str | Path) -> dict[str, float
         pass_at_1_trials += len(ordered)
         pass_at_2 += int("pass" in ordered[:2])
     task_count = len(by_task)
-    return {
+    result = {
         "pass_at_1": pass_at_1_successes / pass_at_1_trials,
         "pass_at_2": pass_at_2 / task_count,
     }
+
+    if (index.get("evaluation_contract") or {}).get("primary_metric") == "mean_reward":
+        import math
+        raw = index.get("rewards") or {}
+        scores = [raw.get(str(ref)) for refs in by_task.values() for ref in refs]
+        if any(type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 1 for v in scores):
+            raise ValueError("comparison reference rewards are incomplete or invalid")
+        result["mean_reward"] = sum(scores) / len(scores)
+    return result
+
 
 
 def select_confirmation_task_ids(

@@ -49,6 +49,7 @@ class BenchmarkConfig:
     local_rootless_rollout: bool
     outcome_authority: str
     domain_files: tuple[str, ...] = ()
+    primary_metric: str = "pass_at_1"
 
     def runtime_files(self) -> tuple[str, ...]:
         common = (
@@ -63,6 +64,10 @@ class BenchmarkConfig:
             "harnesslens/harnesses/native_candidate_runtime.py",
             "harnesslens/harnesses/harness_workspace.py",
         )
+        if self.kind == "fdabench":
+            from .fdabench.adapter import FDABenchAdapter
+            root = Path(__file__).resolve().parents[2]
+            return tuple(str(p.relative_to(root)) for p in FDABenchAdapter(root).source_files()) + self.domain_files
         if self.kind == "business_extension":
             from .adapters import runtime_sources
             return (*common, *runtime_sources(), *self.domain_files)
@@ -112,7 +117,7 @@ class BenchmarkConfig:
         raise ValueError(f"unsupported benchmark kind: {self.kind}")
 
     def task_source_files(self) -> tuple[str, ...]:
-        if self.kind == "business_extension":
+        if self.kind in {"business_extension", "fdabench"}:
             return self.domain_files
         if self.kind == "crm":
             return self.domain_files
@@ -128,6 +133,7 @@ class BenchmarkConfig:
 
 
 _ALIASES = {
+    "fdabench": "fdabench", "fdabench-lite-report": "fdabench",
     "crm": "crmarenapro", "crmarenapro": "crmarenapro", "dab-crmarenapro": "crmarenapro",
     "retail": "retail",
     "tau2-retail": "retail",
@@ -145,7 +151,7 @@ _ALIASES = {
 }
 
 
-SUPPORTED_CELLS = ("retail", "banking", "terminal-bench", "bird", "crm")
+SUPPORTED_CELLS = ("retail", "banking", "terminal-bench", "bird", "crm", "fdabench")
 
 
 def supported_cell_help() -> str:
@@ -189,6 +195,9 @@ def benchmark_config(repo_root: str | Path, cell: str) -> BenchmarkConfig:
     if external:
         return external.benchmark_config()
     normalized = normalize_benchmark_cell(cell)
+    if normalized == "fdabench":
+        split = _load_split(root, "fdabench_split.json")
+        return BenchmarkConfig("fdabench-lite-report", "fdabench", "fdabench", tuple(split["train"]), False, "behavioral", domain_files=("configs/fdabench_split.json", "configs/fdabench-assets.json"), primary_metric="mean_reward")
     if normalized == "crmarenapro":
         split = _load_split(root, "crmarenapro_split.json")
         return BenchmarkConfig(benchmark="dab-crmarenapro", cell="crmarenapro", kind="crm",

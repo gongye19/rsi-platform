@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from harnesslens.benchmarks.cell_config import benchmark_config
+
 import json
 import os
 import shutil
@@ -391,6 +393,7 @@ class TrainRolloutService:
         self.remaining_budget -= charged
         metrics = {
             **_summarize(records),
+            "primary_metric": benchmark_config(self.repo_root, self.cell).primary_metric,
             "requested_trial_count": requested,
             "infrastructure_failure_count": infrastructure,
             "charged_trial_count": charged,
@@ -509,6 +512,7 @@ class TrainRolloutService:
         self.remaining_budget -= requested
         metrics = {
             **_summarize(records),
+            "primary_metric": benchmark_config(self.repo_root, self.cell).primary_metric,
             "requested_trial_count": requested,
             "infrastructure_failure_count": 0,
             "charged_trial_count": requested,
@@ -1224,6 +1228,7 @@ def _summarize(records: list[TrainRolloutRecord]) -> dict[str, Any]:
     pass_at_1 = successes / trials if trials else 0.0
     return {
         "task_count": tasks,
+        "mean_reward": sum(float(v) for r in records for v in r.rewards) / trials if trials else 0.0,
         "trial_count": trials,
         "trial_success_count": successes,
         "trial_success_rate": pass_at_1,

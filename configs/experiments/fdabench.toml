@@ -1,0 +1,42 @@
+schema = "harnesslens.experiment.v1"
+benchmark = "fdabench"
+mode = "train"
+env_file = "../../.env"
+readiness = "ready"
+full_evaluation = true
+# No initial_harness means an empty starting Harness.
+# Replace both model names with IDs available from your providers before running.
+[models.execution]
+model = "execution/your-execution-model"
+api = "chat_completions"
+base_url_env = "HAI_EXECUTION_BASE_URL"
+api_key_env = "HAI_EXECUTION_API_KEY"
+
+[models.analysis]
+model = "analysis/your-analysis-model"
+api = "responses"
+base_url_env = "HAI_ANALYSIS_BASE_URL"
+api_key_env = "HAI_ANALYSIS_API_KEY"
+
+[components]
+allowed = ["*"]
+denied = []
+experimental_fields = ["batch_tool", "primary_tools", "continue_loop_on_deny", "mcp_timeout", "disable_paste_summary"]
+
+[environment]
+# The 70-task TRAIN baseline already costs 140 solver executions at two repeats.
+# A candidate screen and paired confirmation consume additional executions.
+HAI_TOTAL_CREATION_BUDGET = 800
+HAI_TRAIN_ROLLOUT_REPEATS = 2
+HAI_TEST_ROLLOUT_REPEATS = 2
+HAI_MAX_ROLLOUT_CONCURRENCY = 8
+HAI_FDABENCH_MAX_CONCURRENCY = 8
+HAI_MAX_ANALYSIS_CONCURRENCY = 4
+HAI_PROVIDER_MAX_CONCURRENCY = 8
+HAI_FDABENCH_TIMEOUT_S = 900
+HAI_INTELLIGENT_TIMEOUT_S = 1200
+HAI_PROVIDER_HTTP_TIMEOUT_S = 180
+HAI_PROVIDER_REQUEST_BUDGET_S = 420
+HAI_PROVIDER_SLOT_TIMEOUT_S = 120
+HAI_PROVIDER_RETRY_ATTEMPTS = 4
+HAI_INTELLIGENT_CONTEXT_LIMIT = 200000
