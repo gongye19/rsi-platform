@@ -184,15 +184,36 @@ horizontally to their version nodes. An unchanged/assessed version stays horizon
 The left-name column is included in responsive width calculations, preserving the
 right-edge evaluation marks and a native horizontal fallback on narrow screens.
 
-Evaluation endpoints use a circled check for the recorded selected version and a
-circled cross for a version not retained. An unresolved evaluation uses an empty
+Evaluation endpoints use a green circled check for the recorded selected version
+and a red circled cross for a version not retained. Retained paths are solid;
+rejected paths are dashed, including the candidate's incoming branch. Component
+colors still identify the tracks. An unresolved evaluation uses an empty
 circle. A passing component check alone never implies adoption. Version identity
 and outcome remain in hover tooltips and accessible descriptions; detailed evidence
 is available inside the component comparison. Endpoint labels and status captions
 are not repeated on the diagram. The source and candidate labels remain visible.
 
-Validation: 67 frontend tests, targeted lint, TypeScript and production build pass.
+Validation: frontend tests, targeted lint, TypeScript and production build pass.
 Browser checks confirm whole-row empty-space click to open/close, keyboard toggle,
 independent file disclosures, Lineage-only controls, no Snapshot dropdown or name
-decorations, icon-only endpoints, no duplicate summary, and the unchanged Evaluation
-curve. Latest layout proof: `runs/platform/lineage-layout-ui.png`.
+decorations, icon-only endpoints, no duplicate summary, and outcome line styles.
+Latest layout proof: `runs/platform/lineage-layout-ui.png`.
+
+## Held-out evaluation instead of training-subset curves
+
+The console's Evaluation tab now reads `Run.tests.initial` and
+`Run.tests.selected`, not per-iteration TRAIN bundle metrics. It shows only TEST
+Baseline and Final. Missing scores remain absent, with a waiting state if neither
+exists. A retained v0 explicitly reuses its initial TEST result. The summary also
+uses TEST baseline so its two scores are comparable. Intermediate TRAIN trials
+remain available through the Lineage component comparisons; they do not become
+TEST points. No additional model calls or evaluation jobs are introduced.
+
+Current orchestration in `harnesslens/service/experiment.py` executes TRAIN first
+(including its full selected TRAIN baseline and candidate-subset iterations), then
+freezes the final submission, evaluates initial v0 on the selected TEST split, and
+evaluates a different selected version if applicable. Initial TEST is computed
+after training in this implementation, without feeding its results into selection.
+There is no outer loop that repeatedly evaluates TEST after each candidate. A
+train-only profile has no fabricated TEST curve. Latest evaluation proof:
+`runs/platform/test-evaluation-ui.png`.

@@ -118,4 +118,6 @@ harnesses/business-agent/
 
 训练／测试数量直接在 Benchmark 下方设置，最大值来自它自己的固定划分。提供 `domain_field` 的数据才出现 domain 选择；未提供时全部数据视为一个 domain。FDABench 使用其公开的数据库分组。这里的 TEST 是最终保留集，不会作为训练验证题混入进化。每轮内部验证仍沿用原算法。
 
+开启完整评测后，实际顺序是：选定 TRAIN 全量 baseline → 多轮 TRAIN 子集修改、配对验证与必要的确认 → 冻结最终版本 → 初版 TEST baseline → 最终版本 TEST。初版 TEST 当前在训练结束后补测，不参与优化决策；若最终仍选择初版，就复用它的 TEST 成绩。Evaluation 只显示这两份 TEST 成绩，中间候选轮次放在 Lineage，不作为 TEST 曲线点。一次实验没有额外的“每个候选都跑 TEST”的外层循环。
+
 添加目录后重新打开 New experiment 即可刷新列表。详细文件规范见 [`benchmarks/README.md`](../benchmarks/README.md) 和 [`harnesses/README.md`](../harnesses/README.md)。数据、业务 Harness 和自动生成的版本均默认不上传 GitHub；服务器上自行复制或下载数据后即可使用。

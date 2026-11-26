@@ -354,7 +354,27 @@
 @media(max-width:760px) { .ce-lineage-toolbar { flex-wrap: wrap; } }
 
 .ce-outcome-glyph { display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin: -1.5px; border: 1.4px solid currentColor; border-radius: 50%; background: #fff; }
+.ce-outcome-glyph.is-retained { color: #258354; background: #f1faf5; }
+.ce-outcome-glyph.is-rejected { color: #cf4444; background: #fff5f5; }
 .ce-outcome-glyph.is-pending { width: 11px; height: 11px; margin: 1.5px; opacity: .6; }
 .ce-key-outcome { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; border: 1px solid currentColor; border-radius: 50%; font-style: normal; }
+.ce-key-outcome.is-retained { color: #258354; }
+.ce-key-outcome.is-rejected { color: #cf4444; }
 .ce-lineage-toolbar .ce-round-pagination.is-top { margin-left: 0; }
 .ce-lineage-toolbar > button { margin-left: auto; }
+.ce-test-chart { display: flex; flex-direction: column; padding: 12px 4px; }
+.ce-test-heading { padding: 2px 12px 12px; color: #73757b; font-size: 14px; }
+.ce-test-scores { display: flex; justify-content: space-between; gap: 24px; padding: 8px 38px 2px 90px; font-size: 14px; color: #73757b; }
+.ce-test-scores > span { display: flex; gap: 12px; align-items: center; }
+.ce-test-scores strong { color: #34353a; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ce-test-note { margin: 12px 12px 0; color: #73757b; font-size: 13px; }
+.ce-test-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 320px; gap: 10px; color: #73757b; font-size: 14px; }
+.ce-test-empty strong { color: #34353a; font-weight: 500; }
+.ce-test-chart { display: flex; flex-direction: column; }
+.ce-test-heading { padding: 18px 12px 8px; font-size: 15px; font-weight: 500; }
+.ce-test-scores { display: flex; justify-content: space-between; padding: 12px 30px 10px 76px; gap: 24px; font-size: 14px; color: #73757b; }
+.ce-test-scores > span { display: flex; gap: 12px; align-items: center; }
+.ce-test-scores strong { color: #34343a; font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ce-test-note { padding: 0 12px 12px; margin: 0; color: #73757b; font-size: 13px; }
+.ce-test-empty { padding: 64px 24px; display: flex; flex-direction: column; gap: 10px; text-align: center; color: #73757b; font-size: 15px; }
+.ce-test-empty strong { font-weight: 500; color: #34343a; }

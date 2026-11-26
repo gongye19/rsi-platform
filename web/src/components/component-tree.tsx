@@ -41,7 +41,9 @@ export default function ComponentTree({data,step,selected,onSelect,selectedRound
           <svg width={graph.width} height={diagramHeight}>{edges.map(edge=>{
             const a=byId.get(edge.source)!,b=byId.get(edge.target)!;
             const nearest=Math.min(...edges.filter(other=>other.source===edge.source).map(other=>byId.get(other.target)!.position.x));
-            return <path key={edge.id} data-connection={edge.data?.kind} data-parent={edge.data?.parentId} d={lineageBranchPath({x:a.position.x,y:y(a.position.y)},{x:b.position.x,y:y(b.position.y)},nearest)} stroke={color} strokeWidth={1.8} fill="none" strokeOpacity={edge.data?.kind==='held'?.45:.8} strokeDasharray={edge.data?.kind==='held'?'3 5':undefined}/>;
+            const endpoint=nodes.find(node=>node.data.stage==='test' && node.data.versionId===b.data.versionId);
+            const outcome=endpoint?lineageOutcome(endpoint.data,graph.page.round,graph.page.step):null;
+            return <path key={edge.id} data-connection={edge.data?.kind} data-parent={edge.data?.parentId} data-outcome={outcome?.kind} d={lineageBranchPath({x:a.position.x,y:y(a.position.y)},{x:b.position.x,y:y(b.position.y)},nearest)} stroke={color} strokeWidth={1.8} fill="none" strokeOpacity={outcome?.kind==='rejected'?.6:.8} strokeDasharray={outcome?.kind==='rejected'?'4 5':undefined}/>;
           })}</svg>
           {nodes.map(node=>{
             const outcome=lineageOutcome(node.data,graph.page.round,graph.page.step);

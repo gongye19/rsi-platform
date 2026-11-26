@@ -4,19 +4,18 @@ import {Check, X, ChevronLeft, ChevronRight, GitBranch, MoreHorizontal} from 'lu
 import {Button} from '@/components/ui/button';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import ComponentTree from './component-tree';
-import RoundOutcomeChart from './round-outcome-chart';
+import TestEvaluationChart from './test-evaluation-chart';
 import {evolutionRounds} from '@/lib/component-layout';
 import {type ComponentHistory} from '@/lib/component-types';
-import {componentLabels} from '@/lib/console-types';
+import {componentLabels,type Run} from '@/lib/console-types';
 import './component-studio.css';
-export default function ComponentStudio({run, live, revision}: {run: string; live: boolean; revision: number}) {
+export default function ComponentStudio({run, live, revision,tests,selectedVersion}: {run: string; live: boolean; revision: number;tests:Run['tests'];selectedVersion?:string}) {
   const studioRoot = useRef<HTMLDivElement>(null);
   const preservedScroll = useRef<{element:HTMLElement;top:number} | null>(null);
   const [view,setView] = useState<'lineage' | 'evaluation'>('lineage');
   const [data,setData] = useState<ComponentHistory | null>(null);
   const [error,setError] = useState('');
   const [selected,setSelected] = useState('');
-  const [hoveredRound,setHoveredRound] = useState<number | null>(null);
   const [focusedRound,setFocusedRound] = useState<number | null>(null);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -41,12 +40,11 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const step = Math.max(0,(data?.steps.length || 1)-1);
   const rounds = useMemo(() => data ? evolutionRounds(data).filter(round=>round.firstStep<=step) : [],[data,step]);
   const selectedRound = focusedRound === 0 || rounds.some(round=>round.round===focusedRound) ? focusedRound! : rounds.at(-1)?.round ?? 0;
-  const linkedRound = hoveredRound ?? selectedRound;
   const choose = useCallback((id:string)=>setSelected(id),[]);
   const focus = useCallback((round: number) => {
     const element=studioRoot.current?.closest<HTMLElement>('.console-main');
     if(element) preservedScroll.current={element,top:element.scrollTop};
-    setFocusedRound(round);setSelected('');setHoveredRound(null);
+    setFocusedRound(round);setSelected('');
   },[]);
   useLayoutEffect(()=>{
     const saved=preservedScroll.current;
@@ -67,16 +65,14 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
               <RoundPagination pages={[0,...rounds.map(round=>round.round)]} current={selectedRound} onRound={focus} disabled={!ready} position="top"/>
         <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Legend and measurement notes"><MoreHorizontal size={17}/></Button></PopoverTrigger>
           <PopoverContent className="ce-record-popover ce-view-options" align="end">
-            <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-outcome"><Check size={10}/></i>Retained in Harness</span><span><i className="ce-key-outcome"><X size={10}/></i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
-            <p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
-            <p>Metrics have independent axes. Missing values stay empty. Bundle selection does not establish individual component gains.</p>
+            <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-outcome is-retained"><Check size={10}/></i>Retained in Harness · solid</span><span><i className="ce-key-outcome is-rejected"><X size={10}/></i>Not retained · dashed</span></div>
+            <p>Lineage records TRAIN optimization attempts. Held-out TEST results appear in Evaluation.</p>
           </PopoverContent>
         </Popover>
             </div>
-            <div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><h2 className="sr-only">Retained configuration results</h2><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
+            <div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><h2 className="sr-only">Held-out TEST results</h2><TestEvaluationChart tests={tests} selectedVersion={selectedVersion}/></section>}
         </div>
         {view === 'lineage' && <RoundPagination pages={[0,...rounds.map(round=>round.round)]} current={selectedRound} onRound={focus} position="bottom"/>}
-        {view === 'evaluation' && <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>TRAIN measurements for retained configurations</span></div>}
       </>}
     </div>
 

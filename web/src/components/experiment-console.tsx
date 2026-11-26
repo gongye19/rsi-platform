@@ -101,12 +101,12 @@ export default function ExperimentConsole() {
         {(!connected || error) && <div className="console-alert console-main-alert" role="alert">{!connected && <WifiOff size={14}/>}<span>{error || connectionError || 'Connection interrupted. Showing the last received records.'}</span></div>}{notice && <div className="console-notice" role="status"><Check size={14}/><span>{notice}</span></div>}
         {run ? <>
           <section className="console-metrics" aria-label="Experiment summary">
-            <div title={counts(run.baseline_metrics)}><span>TRAIN baseline</span><strong>{metric(run.baseline_metrics)}</strong></div>
+            <div title={counts(run.tests?.initial?.metrics)}><span>TEST baseline</span><strong>{metric(run.tests?.initial?.metrics)}</strong></div>
             <div title={run.tests?.selected ? `${counts(run.tests.selected.metrics)} · ${run.tests.selected.repeats ?? '?'} per task` : 'No TEST result yet'}><span>Final TEST</span><strong>{metric(run.tests?.selected?.metrics)}</strong></div>
             <div title={run.budget?.remaining != null ? `${run.budget.remaining} TRAIN sessions remaining` : 'Not initialized'}><span>Budget</span><strong>{run.budget?.total != null ? <>{run.budget.used}<em> / {run.budget.total}</em></> : '—'}</strong></div>
           </section>
           <section className="console-workspace" aria-label="Experiment evolution">
-            <ComponentStudio key={run.id} run={run.id} live={activeStates.has(run.state) && connected} revision={revision}/>
+            <ComponentStudio key={run.id} run={run.id} live={activeStates.has(run.state) && connected} revision={revision} tests={run.tests} selectedVersion={run.selected_version}/>
           </section>
           {run.state === 'failed' && <p className="console-bottom-note">{run.read_only ? 'Imported run ended with an error.' : run.error || 'The run stopped with an error.'} Review the failure before resuming.</p>}
         </> : loading ? <div className="console-empty"><Loader2 className="animate-spin"/>Loading experiments…</div> : <div className="console-empty"><FlaskConical size={28}/><h2>{selected ? 'Experiment not found' : 'Start your first experiment'}</h2><p>Choose models, components and an evolution budget to begin.</p><Button onClick={newExperiment}>New experiment</Button></div>}
