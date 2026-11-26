@@ -1,12 +1,10 @@
 "use client";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {ChevronLeft, ChevronRight, GitBranch, MoreHorizontal} from 'lucide-react';
+import {Check, X, ChevronLeft, ChevronRight, GitBranch, MoreHorizontal} from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from '@/components/ui/select';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import ComponentTree from './component-tree';
 import RoundOutcomeChart from './round-outcome-chart';
-import {roundPage} from '@/lib/component-round-page';
 import {evolutionRounds} from '@/lib/component-layout';
 import {type ComponentHistory} from '@/lib/component-types';
 import {componentLabels} from '@/lib/console-types';
@@ -20,7 +18,6 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const [selected,setSelected] = useState('');
   const [hoveredRound,setHoveredRound] = useState<number | null>(null);
   const [focusedRound,setFocusedRound] = useState<number | null>(null);
-  const [inspectedId,setInspectedId] = useState('');
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       let value: ComponentHistory;
@@ -45,21 +42,11 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const rounds = useMemo(() => data ? evolutionRounds(data).filter(round=>round.firstStep<=step) : [],[data,step]);
   const selectedRound = focusedRound === 0 || rounds.some(round=>round.round===focusedRound) ? focusedRound! : rounds.at(-1)?.round ?? 0;
   const linkedRound = hoveredRound ?? selectedRound;
-  const page = useMemo(()=>data ? roundPage(data,selectedRound,step) : null,[data,selectedRound,step]);
-  const inspected = page?.snapshots.find(snapshot=>snapshot.id===inspectedId) || page?.defaultSnapshot;
-  const bundle = inspected?.bundle;
-  const choose = useCallback((id:string)=>{
-    setSelected(id);
-    const version=data?.versions.find(version=>version.id===id);
-    if(version && bundle?.components[version.component_id]!==id) {
-      const snapshot=page?.snapshots.find(snapshot=>snapshot.bundle.components[version.component_id]===id);
-      if(snapshot)setInspectedId(snapshot.id);
-    }
-  },[data,bundle,page]);
+  const choose = useCallback((id:string)=>setSelected(id),[]);
   const focus = useCallback((round: number) => {
     const element=studioRoot.current?.closest<HTMLElement>('.console-main');
     if(element) preservedScroll.current={element,top:element.scrollTop};
-    setFocusedRound(round);setInspectedId('');setSelected('');setHoveredRound(null);
+    setFocusedRound(round);setSelected('');setHoveredRound(null);
   },[]);
   useLayoutEffect(()=>{
     const saved=preservedScroll.current;
@@ -77,22 +64,18 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
           {view === 'lineage' ? <section className="ce-lineages">
             <h2 className="sr-only">Component lineage</h2>
             <div className="ce-lineage-toolbar">
-        <div className="ce-snapshot-control"><Select value={inspected?.id || ''} disabled={!page?.snapshots.length} onValueChange={id=>{setInspectedId(id);const version=data?.versions.find(version=>version.id===selected);const snapshot=page?.snapshots.find(snapshot=>snapshot.id===id);if(version && snapshot)setSelected(snapshot.bundle.components[version.component_id] || '');}}>
-          <SelectTrigger aria-label="Inspect round snapshot" title="Start: starting Harness. Candidate: proposed Harness. Selected: configuration kept after evaluation."><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
-            {page?.snapshots.map(snapshot=><SelectItem value={snapshot.id} key={snapshot.id}>{snapshot.label}</SelectItem>)}
-          </SelectContent></Select></div>
-        {page && <RoundPagination pages={page.pages} current={selectedRound} onRound={focus} disabled={!ready} position="top"/>}
+              <RoundPagination pages={[0,...rounds.map(round=>round.round)]} current={selectedRound} onRound={focus} disabled={!ready} position="top"/>
         <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Legend and measurement notes"><MoreHorizontal size={17}/></Button></PopoverTrigger>
           <PopoverContent className="ce-record-popover ce-view-options" align="end">
-            <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-rejected">×</i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
-            <p>Snapshot selects the starting, proposed or selected Harness for this round. Identical Start and Selected versions mean the parent was kept.</p><p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
+            <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-outcome"><Check size={10}/></i>Retained in Harness</span><span><i className="ce-key-outcome"><X size={10}/></i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
+            <p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
             <p>Metrics have independent axes. Missing values stay empty. Bundle selection does not establish individual component gains.</p>
           </PopoverContent>
         </Popover>
             </div>
-            <div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><h2 className="sr-only">Retained configuration results</h2><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
+            <div className="ce-tree-scroll"><ComponentTree data={data} step={step} selected={selected} selectedRound={selectedRound} onSelect={choose}/></div></section> : <section className="ce-results"><h2 className="sr-only">Retained configuration results</h2><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}
         </div>
-        {view === 'lineage' && page && <RoundPagination pages={page.pages} current={selectedRound} onRound={focus} position="bottom"/>}
+        {view === 'lineage' && <RoundPagination pages={[0,...rounds.map(round=>round.round)]} current={selectedRound} onRound={focus} position="bottom"/>}
         {view === 'evaluation' && <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>TRAIN measurements for retained configurations</span></div>}
       </>}
     </div>

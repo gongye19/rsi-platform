@@ -137,9 +137,9 @@ are rendered as content; historical patch-only records are labelled **Recorded
 change** without claiming reconstructed full files. Shared leading/trailing lines
 remain neutral and the changed block is highlighted. Decision evidence remains
 available in an inline disclosure. There is no component evidence side drawer.
-Selecting a version also selects its round snapshot when needed; choosing another
-snapshot updates an open component to that tuple's version. The selector tooltip
-explains Start/Candidate/Selected and why Start and Selected may share an ID.
+Round pagination supplies the recorded round context. The redundant Snapshot
+selector is removed; component rows directly open the proposed version against
+its actual parent (or the current version for an unchanged component).
 
 Configuration integrates domain and task counts directly under Benchmark. Both
 limits and optional grouping come from the adapter. No declared domain means a
@@ -164,14 +164,15 @@ superseded by these views.
 
 ## Lineage controls and whole-row disclosure
 
-The chart tabs occupy their own top row. Snapshot, round pagination and legend
+The chart tabs occupy their own top row. Round pagination and legend
 controls are rendered inside the Lineage tab panel on the next row and are absent
 from Evaluation. The separate proposed-component/status/Details summary is removed:
 the component itself exposes its versions, content comparison and decision evidence.
 The duplicate lineage instruction footnote is also omitted.
 
-Each component uses one native full-width disclosure button. Its name and chevron
-sit in a fixed left column, vertically aligned with the diagram. Clicking the name,
+Each component uses one native full-width disclosure button. Its name sits in a
+fixed left column, vertically aligned with the diagram. Hover highlights the row;
+there is no permanent left stripe, disclosure chevron or decorative dot. Clicking the name,
 a version label, a branch or empty space in that row toggles the same comparison;
 Enter/Space work through normal button semantics. The expanded comparison is outside
 the button, so file disclosures and text selection do not collapse the component.
@@ -181,9 +182,17 @@ Sibling paths share the same short trunk and fork interval, regardless of their
 final endpoint distance. Both curves reach equally spaced rails early and then run
 horizontally to their version nodes. An unchanged/assessed version stays horizontal.
 The left-name column is included in responsive width calculations, preserving the
-right-edge evaluation labels and a native horizontal fallback on narrow screens.
+right-edge evaluation marks and a native horizontal fallback on narrow screens.
 
-Validation: 64 frontend tests, targeted lint, TypeScript and production build pass.
+Evaluation endpoints use a circled check for the recorded selected version and a
+circled cross for a version not retained. An unresolved evaluation uses an empty
+circle. A passing component check alone never implies adoption. Version identity
+and outcome remain in hover tooltips and accessible descriptions; detailed evidence
+is available inside the component comparison. Endpoint labels and status captions
+are not repeated on the diagram. The source and candidate labels remain visible.
+
+Validation: 67 frontend tests, targeted lint, TypeScript and production build pass.
 Browser checks confirm whole-row empty-space click to open/close, keyboard toggle,
-independent file disclosures, Lineage-only controls, no duplicate summary, and the
-unchanged Evaluation curve. Latest layout proof: `runs/platform/lineage-layout-ui.png`.
+independent file disclosures, Lineage-only controls, no Snapshot dropdown or name
+decorations, icon-only endpoints, no duplicate summary, and the unchanged Evaluation
+curve. Latest layout proof: `runs/platform/lineage-layout-ui.png`.
