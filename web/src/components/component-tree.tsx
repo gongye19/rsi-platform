@@ -24,6 +24,7 @@ const VersionPoint = memo(function VersionPoint({ data }: NodeProps<LineagePoint
         className="ce-version nodrag nopan"
         data-version-id={data.versionId}
         data-node-role={data.stage}
+        data-node-final={data.stage === "input" && !data.root && !data.contextName}
         data-graph-round={data.round}
         data-node-variant={data.rejected ? "rejected" : "normal"}
         aria-label={`${data.componentName} ${data.label}, ${data.caption || (data.stage === "experiment" ? "Candidate" : "Starting version")}, round ${data.round}`}
