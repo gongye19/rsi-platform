@@ -72,3 +72,9 @@ Benchmark is an independent selector populated from existing adapters (CRM, TauÂ
 Deletion shows one confirmation with Cancel/Delete, then quietly removes the row. No success banner or Undo button. Existing recoverable storage semantics remain server-side. Browser validation uses a disposable draft, never a business experiment.
 
 Component evidence uses the inspected configuration first when a version belongs to several bundles; an unrelated rejected bundle must not supply the verdict for an unchanged initial component.
+
+## Explicit round inspection
+
+The Round selector and recorded round headers choose a persistent round. The lineage view shows a compact summary of proposed component edits, the retained Harness, retained tuple changes, pending/parent-retained/updated status and the recorded bundle decision reason. Component chips open the corresponding proposed snapshot. Counts describe edits and selected tuples, never individual test passes. Hover remains transient for chart linking and does not replace the summary. Selecting a round scrolls to its first proposed component and highlights that roundâ€™s column and branches; other rounds are subdued. Pan controls are hidden when all rounds fit. Closing candidate evidence restores focus to its trigger.
+
+Browser checks verified Commands/candidate-01 for Round 01 and Skills/candidate-02 for Round 02, both retaining v0, as well as the correct candidate evidence. No model call or experiment launch was made.

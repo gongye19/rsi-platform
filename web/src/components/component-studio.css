@@ -278,3 +278,20 @@
 .ce-uniform-lanes .ce-version-label { background: #fff; padding-inline: 3px; }
 
 .ce-lane-round { position: absolute; color: #7a7c84; font-size: 10px; line-height: 20px; pointer-events: none; }
+/* Round selection has stable, visible results; hovering never replaces this summary. */
+.ce-round-control { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #73757b; font-size: 11px; }
+.ce-round-control .ce-select-trigger { width: 110px; }
+.ce-round-summary { flex-shrink: 0; margin: 10px 10px 2px; padding: 12px 14px; border: 1px solid #e5e5e9; background: #fafafb; border-radius: 7px; }
+.ce-round-summary-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ce-round-summary-heading strong { font-size: 12px; font-weight: 550; color: #34353a; }
+.ce-round-summary-heading > span { color: #53565e; font-size: 12px; }
+.ce-round-summary-heading > small { margin-left: auto; font-size: 11px; color: #73757b; }
+.ce-round-summary-components { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; font-size: 11px; color: #73757b; }
+.ce-round-summary-components button { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border: 1px solid #e4e4e8; border-radius: 4px; background: #fff; font-size: 11px; }
+.ce-round-summary-components button:hover { background: #f0f0f3; }
+.ce-round-summary-components i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.ce-round-summary-components small { font-size: 10px; color: #73757b; }
+.ce-round-summary p { margin-top: 7px; font-size: 11px; color: #73757b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ce-uniform-lanes .is-other-round { opacity: .28; }
+.ce-uniform-lanes .ce-other-round { opacity: .24; }
+.ce-lane-heading[data-round-active="false"],.ce-lane-round[data-round-active="false"] { opacity: .35; }

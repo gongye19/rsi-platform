@@ -102,6 +102,9 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
   const maxPan = Math.max(0, layout.width * zoom - size.width);
   const lastAutoRound = useRef<string | null>(null);
   const syncedScroll = useRef<number | null>(null);
+  const lastVerticalFocus = useRef('');
+  const focusedIndex = layout.rounds.findIndex(round=>round.round===selectedRound);
+  const changedComponents = new Set(focusedIndex>=0 ? roundChanges(data,layout.rounds[focusedIndex],step).filter(change=>change.generated.length).map(change=>change.component.id) : []);
 
   useEffect(() => {
     if (!host.current) return;
@@ -132,12 +135,22 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
       void flow.setViewport({ x: -Math.min(maxPan, Math.max(x, end - size.width)), y: 0, zoom }, { duration: 500 });
   }, [initialized, focusedRound, focusRevision, data.steps, layout, flow, step, followLive, maxPan, size.width, zoom, labelWidth]);
 
+  useEffect(() => {
+    if (!initialized) return;
+    const key=`${focusedRound}:${focusRevision}`;
+    if (lastVerticalFocus.current===key) return;
+    lastVerticalFocus.current=key;
+    const round=layout.rounds.find(row=>row.round===focusedRound);
+    const changed=round && roundChanges(data,round,step).find(change=>change.generated.length);
+    host.current?.closest('.ce-tree-scroll')?.scrollTo({top:changed?Math.max(0,layout.rows.get(changed.component.id)!.top-8):0,behavior:focusRevision?'smooth':'auto'});
+  },[initialized,focusedRound,focusRevision,data,step,layout]);
+
   const nodes = useMemo(() => graph.nodes.map((node) => ({
     ...node,
-    className: `${node.data.versionId === selected ? "is-inspected" : ""} ${configuration?.[node.data.componentId] === node.data.versionId ? "is-member" : ""}`,
-  })), [graph.nodes, selected, configuration]);
+    className: `${focusedIndex>=0 && (node.position.x<layout.inputX(focusedIndex)-1 || node.position.x>layout.resultX(focusedIndex)+1) ? "is-other-round" : "is-round-focus"} ${node.data.versionId === selected ? "is-inspected" : ""} ${configuration?.[node.data.componentId] === node.data.versionId ? "is-member" : ""}`,
+  })), [graph.nodes, selected, configuration,focusedIndex,layout]);
   const edges = useMemo(() => graph.edges.map((edge) => ({
-    ...edge, className: edge.data?.round === selectedRound ? "ce-linked-branch" : "",
+    ...edge, className: edge.data?.round === selectedRound ? "ce-linked-branch" : "ce-other-round",
   })), [graph.edges, selectedRound]);
   const onViewportChange = (next: Viewport) => {
     const clamped = { x: Math.max(-maxPan, Math.min(0, next.x)), y: 0, zoom };
@@ -204,10 +217,10 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
           <svg className="ce-flow-backdrop" width={Math.max(layout.width, size.width / zoom)} height={layout.height} aria-hidden="true">
             {data.components.map((component,index) => {
               const row=layout.rows.get(component.id)!;
-              return <g key={component.id}><rect x={4} y={row.top} width={Math.max(layout.width,size.width)-8} height={row.height} rx={8} fill="#fff" stroke="#e7e7eb"/><rect x={4} y={row.top+12} width={3} height={row.height-24} rx={1.5} fill={COMPONENT_COLORS[index % COMPONENT_COLORS.length]} opacity={.65}/></g>;
+              return <g key={component.id}><rect x={4} y={row.top} width={Math.max(layout.width,size.width)-8} height={row.height} rx={8} fill="#fff" stroke={changedComponents.has(component.id)?COMPONENT_COLORS[index % COMPONENT_COLORS.length]:"#e7e7eb"} strokeOpacity={changedComponents.has(component.id)?.55:1}/>{focusedIndex>=0 && <rect x={layout.inputX(focusedIndex)-18} y={row.top+1} width={layout.resultX(focusedIndex)-layout.inputX(focusedIndex)+36} height={row.height-2} rx={7} fill="#5e6ad2" fillOpacity={.055}/>}<rect x={4} y={row.top+12} width={3} height={row.height-24} rx={1.5} fill={COMPONENT_COLORS[index % COMPONENT_COLORS.length]} opacity={.65}/></g>;
             })}
           </svg>
-          {data.components.flatMap((component,index) => (layout.rounds.length ? layout.rounds : [{round:0}]).map((round,ri) => <button key={`${component.id}:${round.round}`} className="ce-lane-heading nopan nodrag" style={{left:layout.inputX(ri)-22,top:layout.rows.get(component.id)!.top+8,color:COMPONENT_COLORS[index % COMPONENT_COLORS.length]}} onClick={() => onSelect(configuration?.[component.id] || component.baseline_version_id)} aria-label={`Inspect ${component.name} in the selected snapshot, round ${round.round}`}><i/>{component.name}</button>))}
+          {data.components.flatMap((component,index) => (layout.rounds.length ? layout.rounds : [{round:0}]).map((round,ri) => <button key={`${component.id}:${round.round}`} className="ce-lane-heading nopan nodrag" data-round-active={round.round===selectedRound} style={{left:layout.inputX(ri)-22,top:layout.rows.get(component.id)!.top+8,color:COMPONENT_COLORS[index % COMPONENT_COLORS.length]}} onClick={() => onSelect(configuration?.[component.id] || component.baseline_version_id)} aria-label={`Inspect ${component.name} in the selected snapshot, round ${round.round}`}><i/>{component.name}</button>))}
           {data.components.flatMap(component => layout.rounds.map((round,index) => <span key={`${component.id}:${round.round}`} className="ce-lane-round" aria-hidden="true" style={{left:layout.candidateX(index)+65,top:layout.rows.get(component.id)!.top+9}}>Round {String(round.round).padStart(2,'0')}</span>))}
           {layout.rounds.map((r, i) => {
             const visible = r.firstStep <= step;
@@ -224,11 +237,11 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
           <span className="ce-final-label" style={{ left: layout.resultX(Math.max(0, layout.rounds.length - 1)) - 20 }} title="Selected configuration">Selected</span>
         </ViewportPortal>
       </ReactFlow>
-      <div className="ce-canvas-tools" style={{ left: 8, top: 8, bottom: 'auto' }}>
+      {maxPan > 1 && <div className="ce-canvas-tools" style={{ left: 8, top: 8, bottom: 'auto' }}>
         <button aria-label="Pan left" disabled={viewport.x >= -1} onClick={() => moveTo(viewport.x + size.width * 0.7)}><ArrowLeft size={13} /></button>
         <button aria-label="Go to lineage start" onClick={() => moveTo(0)}><ScanLine size={14} /></button>
         <button aria-label="Pan right" disabled={viewport.x <= -maxPan + 1} onClick={() => moveTo(viewport.x - size.width * 0.7)}><ArrowRight size={13} /></button>
-      </div>
+      </div>}
       <div ref={scroll} className="ce-canvas-scroll" onScroll={(e) => {
         const x = -e.currentTarget.scrollLeft;
         if (syncedScroll.current != null && Math.abs(e.currentTarget.scrollLeft - syncedScroll.current) < 1) {
