@@ -22,6 +22,10 @@ export function metric(m?: Metrics) {return m?.pass_at_1 == null ? '—' : `${(m
 export function counts(m?: Metrics) {return m?.trial_count == null ? 'No measurements' : `${m.trial_success_count ?? '?'} / ${m.trial_count} trials`;}
 export class PlatformError extends Error {constructor(message: string, public status: number) {super(message);this.name='PlatformError';}}
 export async function platformRead<T>(query = '', init?: RequestInit): Promise<T> {
+  if (process.env.NEXT_PUBLIC_RSI_DEMO === '1') {
+    const {demoRequest} = await import('./demo-platform');
+    return demoRequest<T>(query,init);
+  }
   const response = await fetch('/api/platform' + query, {cache: 'no-store', ...init});
   const data = await response.json();
   if (!response.ok) throw new PlatformError(data.error || 'The request failed. Please try again.',response.status);

@@ -1238,3 +1238,5 @@
 @keyframes strata-overlay-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes strata-overlay-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .console-config-sheet[data-state],.console-config-overlay[data-state] { animation-duration: .01ms; } }
+
+.console-demo-label { font-size: 11px; font-weight: 500; color: #665fa8; background: #efedf8; border: 1px solid #e2dff1; border-radius: 5px; padding: 3px 7px; white-space: nowrap; }

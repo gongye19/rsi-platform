@@ -27,9 +27,15 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const [panel,setPanel] = useState(false);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch('/api/evolution?' + new URLSearchParams({run}),{cache:'no-store',signal});
-      const value = await response.json();
-      if (!response.ok) throw new Error(value.error || 'Unable to load component lineage.');
+      let value: ComponentHistory;
+      if (process.env.NEXT_PUBLIC_RSI_DEMO === '1') {
+        const {demoHistory} = await import('@/lib/demo-platform');
+        value = demoHistory(run);
+      } else {
+        const response = await fetch('/api/evolution?' + new URLSearchParams({run}),{cache:'no-store',signal});
+        value = await response.json();
+        if (!response.ok) throw new Error((value as unknown as {error:string}).error || 'Unable to load component lineage.');
+      }
       if (signal?.aborted) return;
       setData({...value,components:value.components.map((c: ComponentHistory['components'][number]) => ({...c,name:componentLabels[c.id] || c.id}))}); setError('');
     } catch(e) {if (!signal?.aborted) setError((e as Error).message);}

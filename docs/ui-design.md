@@ -1,4 +1,4 @@
-# Strata experiment console
+# RSI Platform experiment console
 
 ## Direction and reference evidence
 
@@ -12,7 +12,7 @@ Approved references actually inspected:
 - [Linear Help drawer](https://mobbin.com/flows/e0451091-e059-45c7-848d-1c5f796585a3?tab=screens): both entry/open frames inspected at full resolution and explicitly approved this round. Borrow inset edges, rounded surface and shallow shadow. Animation timing is a local implementation choice, not established by static screenshots.
 - [MILO public demos](https://jprithwish.github.io/MILO/#demos): lineage and rejected branches as evidence, alongside results. Visualization reference only.
 
-Linear's actual login entry did not expose an authenticated workspace. Styling derives from approved Mobbin imagery, not invented computed measurements. Static screens do not establish keyboard, hover, failure or responsive behavior. The existing accessible controls cover those states, with local browser verification. Native system sans is used consistently without a font CDN. The platform is branded Strata; HarnessLens remains the optimization package.
+Linear's actual login entry did not expose an authenticated workspace. Styling derives from approved Mobbin imagery, not invented computed measurements. Static screens do not establish keyboard, hover, failure or responsive behavior. The existing accessible controls cover those states, with local browser verification. Native system sans is used consistently without a font CDN. The platform is branded RSI Platform; HarnessLens remains the optimization package.
 
 ## Core flow
 
@@ -78,3 +78,13 @@ Component evidence uses the inspected configuration first when a version belongs
 The Round selector and recorded round headers choose a persistent round. The lineage view shows a compact summary of proposed component edits, the retained Harness, retained tuple changes, pending/parent-retained/updated status and the recorded bundle decision reason. Component chips open the corresponding proposed snapshot. Counts describe edits and selected tuples, never individual test passes. Hover remains transient for chart linking and does not replace the summary. Selecting a round scrolls to its first proposed component and highlights that round’s column and branches; other rounds are subdued. Pan controls are hidden when all rounds fit. Closing candidate evidence restores focus to its trigger.
 
 Browser checks verified Commands/candidate-01 for Round 01 and Skills/candidate-02 for Round 02, both retaining v0, as well as the correct candidate evidence. No model call or experiment launch was made.
+
+## Public presentation mode
+
+Product branding is **RSI Platform**. Production demo: <https://rsi-platform-demo.vercel.app/experiments>.
+
+The dedicated Vercel project `rsi-platform-demo` builds only the frontend with `NEXT_PUBLIC_RSI_DEMO=1`. It has no experiment service URL, service token, model credentials, private benchmark files or real experiment records. This flag replaces console reads/actions and lineage reads with a browser-local adapter; the server proxy also refuses upstream calls in demo mode. Source uploads exclude local environment files, examples, tests, logs and the Python backend.
+
+The sample history is synthetic: 16 components, three rounds, two retained updates, one rejected candidate, and illustrative score/time/token measurements. New runs simulate progress in about 30 seconds under the default budget. Configuration, creation and deletion are local to each browser; visitors do not share records. Other benchmark choices demonstrate configuration with the same illustrative 13-task evaluation pattern. No dataset, filesystem or model is actually accessed. The visible Demo badge and simulation messages distinguish this mode from real execution.
+
+The normal local/intranet build leaves this flag unset and continues to use the authenticated experiment service. Demo mode is opt-in and does not change actual stored experiments.

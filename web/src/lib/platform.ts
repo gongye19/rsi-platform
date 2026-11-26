@@ -1,4 +1,5 @@
 export async function platform(path: string, init?: RequestInit) {
+  if (process.env.NEXT_PUBLIC_RSI_DEMO === '1') return Response.json({error:'The public demo has no backend connection.'},{status:503});
   const base = process.env.HARNESSLENS_API_URL || "http://127.0.0.1:8765";
   const token = process.env.HAI_SERVICE_TOKEN;
   if (!token) return Response.json({ error: "Configure the platform connection and service token." }, { status: 503 });
