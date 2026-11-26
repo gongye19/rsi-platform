@@ -30,10 +30,10 @@ def data(tmp_path, monkeypatch):
     return root
 
 
-def test_crm_split_reuses_exact_10_train_3_test_protocol():
+def test_crm_split_uses_fixed_8_train_5_test_protocol():
     split = load_benchmark_split("crm")
-    assert split.train == TASK_IDS[:10]
-    assert split.test == TASK_IDS[10:]
+    assert split.train == TASK_IDS[:8]
+    assert split.test == TASK_IDS[8:]
     assert benchmark_config(ROOT, "crm").train_task_ids == split.train
     assert benchmark_config(ROOT, "dab-crmarenapro").outcome_authority == "authoritative"
 
@@ -46,7 +46,7 @@ def test_public_task_exploration_hides_test_questions_and_grading(data):
     assert "Public question 1" in text
     assert "Public question 11" not in text
     assert "private-answer" not in text
-    assert len(payload["tasks"]) == 10
+    assert len(payload["tasks"]) == 8
     assert payload["evaluation_contract"]["outcome_authority"] == "authoritative"
 
 

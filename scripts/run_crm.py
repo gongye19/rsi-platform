@@ -60,7 +60,9 @@ def main():
                 raise RuntimeError(f"CRM isolation probe unexpectedly succeeded: {name}")
             probes[name] = "denied"
     write_json(root / "preflight.json", probes)
-    print(json.dumps({"preflight": probes, "tasks": 13, "train": 10, "test": 3}, ensure_ascii=False), flush=True)
+    from harnesslens.benchmarks.benchmark_splits import load_benchmark_split
+    split = load_benchmark_split("crm")
+    print(json.dumps({"preflight": probes, "tasks": len(split.train) + len(split.test), "train": len(split.train), "test": len(split.test)}, ensure_ascii=False), flush=True)
     if not args.smoke:
         return 0
     from harnesslens.core.model_config import task_models

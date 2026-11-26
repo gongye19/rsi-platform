@@ -32,7 +32,7 @@ export const demoPreview: Preview = {
   model_selection:{execution:'gpt-execution',analysis:'gpt-analysis'},
   models:{execution:{model:'gpt-execution'},analysis:{model:'gpt-analysis'}},
   components:{allowed:ids,denied:[],experimental_fields:[],proposal_only:demoOptions.proposal_only},parameters,
-  dataset:{domain:'all',train_count:10,test_count:3},initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
+  dataset:{domain:'all',train_count:8,test_count:5},initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
 };
 type DemoStore = {runs:Run[];started:Record<string,number>;stopped:Record<string,number>};
 const metrics = (score:number,tasks=13) => ({pass_at_1:score,task_count:tasks,trial_count:tasks,trial_success_count:Math.round(score*tasks)});
@@ -163,7 +163,7 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
 
 export function demoDatasetOptions(benchmark:string):DatasetOptions {
   const crm=benchmark==='crm' || benchmark==='knowledge-qa-13';
-  const pools=crm ? [10,3] : benchmark==='service-operations' ? [40,20] : [70,35];
+  const pools=crm ? [8,5] : benchmark==='service-operations' ? [40,20] : [70,35];
   return {benchmark,cell:benchmark,grouping:crm?'benchmark':'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
     domains:[{id:'all',label:'All task groups',train_available:pools[0],test_available:pools[1]},
       ...(crm?[]:[      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},

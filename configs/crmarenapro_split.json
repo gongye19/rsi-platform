@@ -8,11 +8,11 @@
     "crmarenapro/query5",
     "crmarenapro/query6",
     "crmarenapro/query7",
-    "crmarenapro/query8",
-    "crmarenapro/query9",
-    "crmarenapro/query10"
+    "crmarenapro/query8"
   ],
   "test": [
+    "crmarenapro/query9",
+    "crmarenapro/query10",
     "crmarenapro/query11",
     "crmarenapro/query12",
     "crmarenapro/query13"
