@@ -131,7 +131,7 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
     const end = (layout.resultX(index) + 32) * zoom;
     const current = flow.getViewport();
     if (x + current.x < 0 || end + current.x > size.width)
-      void flow.setViewport({ x: -Math.min(maxPan, x), y: 0, zoom }, { duration: 500 });
+      void flow.setViewport({ x: -Math.min(maxPan, Math.max(x, end - size.width)), y: 0, zoom }, { duration: 500 });
   }, [initialized, focusedRound, focusRevision, data.steps, layout, flow, step, followLive, maxPan, size.width, zoom, labelWidth]);
 
   const nodes = useMemo(() => graph.nodes.map((node) => ({
@@ -206,18 +206,18 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
           <svg className="ce-flow-backdrop" width={Math.max(layout.width, size.width / zoom)} height={layout.height} aria-hidden="true">
             {data.components.map((c, i) => {
               const row = layout.rows.get(c.id)!;
-              return <rect key={c.id} x={0} y={row.top - 3} width={Math.max(layout.width, size.width / zoom) - 4} height={row.height + 6} rx={9} fill={i % 2 ? "#faf9f7" : "#ffffff"} opacity={1} />;
+              return <rect key={c.id} x={0} y={row.top - 3} width={Math.max(layout.width, size.width / zoom) - 4} height={row.height + 6} rx={9} fill={i % 2 ? "#fafafb" : "#ffffff"} opacity={1} />;
             })}
             {layout.rounds.map((r, i) => <g key={r.round}>
-              {selectedRound === r.round && r.firstStep <= step && <rect data-round-frame={r.round} x={layout.inputX(i) - 20} y={4} width={layout.resultX(i) - layout.inputX(i) + 42} height={layout.height - 8} rx={8} fill="#65558f" fillOpacity={0.035} stroke="#b6a6c5" strokeOpacity={0.65} />}
-              <line x1={layout.phaseBounds(i).test.x} x2={layout.phaseBounds(i).test.x} y1={76} y2={layout.height - 8} stroke="#d8d1da" strokeDasharray="2 5" opacity={0.55} />
+              {selectedRound === r.round && r.firstStep <= step && <rect data-round-frame={r.round} x={layout.inputX(i) - 20} y={4} width={layout.resultX(i) - layout.inputX(i) + 42} height={layout.height - 8} rx={8} fill="#5e6ad2" fillOpacity={0.035} stroke="#b7bcf0" strokeOpacity={0.65} />}
+              <line x1={layout.phaseBounds(i).test.x} x2={layout.phaseBounds(i).test.x} y1={76} y2={layout.height - 8} stroke="#e5e5e8" strokeDasharray="2 5" opacity={0.55} />
             </g>)}
           </svg>
           {layout.rounds.map((r, i) => {
             const visible = r.firstStep <= step;
             const count = visible ? roundChanges(data, r, step).filter((c) => c.generated.length).length : 0;
             return <div key={r.round} className={`ce-flow-round ${visible ? "" : "is-future"}`} style={{ left: layout.inputX(i) - 18, width: layout.resultX(i) - layout.inputX(i) + 36 }}>
-              <button className="nopan nodrag" disabled={!visible} aria-pressed={selectedRound === r.round} onClick={() => { onRound(r.round); moveTo(i === 0 ? 0 : -(layout.inputX(i) * zoom - labelWidth - 10)); }} onMouseEnter={() => visible && onHoverRound(r.round)} onMouseLeave={() => onHoverRound(null)} onFocus={() => visible && onHoverRound(r.round)} onBlur={() => onHoverRound(null)} aria-label={`Inspect round ${r.round}`}>
+              <button className="nopan nodrag" disabled={!visible} aria-pressed={selectedRound === r.round} onClick={() => onRound(r.round)} onMouseEnter={() => visible && onHoverRound(r.round)} onMouseLeave={() => onHoverRound(null)} onFocus={() => visible && onHoverRound(r.round)} onBlur={() => onHoverRound(null)} aria-label={`Inspect round ${r.round}`}>
                 <span>Round {String(r.round).padStart(2, "0")}</span><small>{visible ? `${count} updated` : "Pending"}</small>
               </button>
               <span className="ce-phase-label" style={{ left: 18 }}>{i ? "Parent" : "Baseline"}</span>

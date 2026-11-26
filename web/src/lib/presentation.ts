@@ -3,10 +3,6 @@ export function lineageZoom(width: number, height: number, naturalHeight: number
   return Math.round(Math.max(1, Math.min(1.7, (height - 38) / naturalHeight, width / 560)) * 1000) / 1000;
 }
 
-export function preferredLineagePercent(width: number) {
-  return width < 1500 ? 60 : width < 2400 ? 58 : 56;
-}
-
 /** Local, padded axes distribute measurements through the plot instead of against its ceiling.
  * No values are changed, and finite zero measurements remain genuine measurements.
  */

@@ -7,7 +7,7 @@ import { measurementDomain } from "@/lib/presentation";
 import type { ComponentHistory } from "@/lib/component-types";
 
 const series = [
-  { key: "score", label: "Score", unit: "", color: "#65558f" },
+  { key: "score", label: "Score", unit: "", color: "#5e6ad2" },
   { key: "seconds", label: "Time", unit: " s", color: "#488c82" },
   { key: "tokens", label: "Tokens", unit: " tokens", color: "#ad8552" },
 ] as const;
@@ -74,7 +74,7 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
               const s = series.find((s) => s.key === key)!;
               return <div className="ce-score-tooltip"><span className={available[s.key] ? "" : "is-unmeasured"} style={{ color: available[s.key] ? s.color : undefined }}>{s.label}</span><strong>{format(Number(v), key)}</strong></div>;
             }} />} />
-          {current && <ReferenceLine x={current.round} yAxisId="score" stroke="#65558f" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 5" />}
+          {current && <ReferenceLine x={current.round} yAxisId="score" stroke="#5e6ad2" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 5" />}
           {series.map((s) => <Line key={s.key} yAxisId={s.key} dataKey={s.key} type="bumpX"
             stroke={s.color} strokeWidth={2.8} strokeDasharray={s.key === "tokens" ? "6 4" : undefined}
             connectNulls={false} activeDot={false} isAnimationActive={false} animationDuration={650} animationEasing="ease-in-out"

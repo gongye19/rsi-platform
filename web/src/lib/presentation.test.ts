@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { lineageZoom, measurementDomain, preferredLineagePercent } from "./presentation";
+import { lineageZoom, measurementDomain } from "./presentation";
 
 test("local axes contain every observation with symmetric room and never turn missing values into zero", () => {
   for (const values of [[203.51, 212.4], [21000, 25000], [62, 82], [-3, 1]]) {
@@ -26,9 +26,4 @@ test("lineage scales up across displays while preserving the available vertical 
   assert(large * 560 <= 1260 - 38 + 1);
   assert.equal(lineageZoom(700, 300, 560), 1);
   assert(lineageZoom(4000, 3000, 560) <= 1.7);
-});
-test("automatic split reserves more room for lineage on laptops and balances wider displays", () => {
-  assert.equal(preferredLineagePercent(1280), 60);
-  assert.equal(preferredLineagePercent(1920), 58);
-  assert.equal(preferredLineagePercent(3440), 56);
 });

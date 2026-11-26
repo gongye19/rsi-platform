@@ -60,7 +60,7 @@ export function componentGraph(data: ComponentHistory, step: number, height?: nu
         draggable: false, selectable: false, focusable: false,
         data: {
           versionId, componentId: component.id, componentName: component.name,
-          label: byId.get(versionId)!.label, color: byId.get(versionId)!.parent_id ? "#65558f" : color, round, stage, caption,
+          label: byId.get(versionId)!.label, color: byId.get(versionId)!.parent_id ? "#5e6ad2" : color, round, stage, caption,
           rejected, root, arrival, delay,
           contextName: stage === "input" && !root && round !== layout.rounds.at(-1)?.round,
         },
@@ -72,7 +72,7 @@ export function componentGraph(data: ComponentHistory, step: number, height?: nu
       rejected = false, parentId?: string,
     ) => edges.push({
       id, source, target, type: "branch", selectable: false, focusable: false,
-      data: { color: byId.get(versionId)?.parent_id ? "#65558f" : color, kind, versionId, round, arrival, delay, rejected, parentId },
+      data: { color: byId.get(versionId)?.parent_id ? "#5e6ad2" : color, kind, versionId, round, arrival, delay, rejected, parentId },
     });
 
     const base = layout.positions.get(component.baseline_version_id)!;
