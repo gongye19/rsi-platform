@@ -782,29 +782,7 @@
   margin-bottom: 12px;
 }
 
-.config-experimental {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin: 18px 0 0;
-  padding: 14px;
-  border: 1px solid #e5e5e8;
-  border-radius: 5px;
-  font-size: 14px;
-  color: #73757b;
-}
-
-.config-experimental legend {
-  padding-inline: 5px;
-}
-
-.config-experimental label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.config-experimental input, .config-test input {
+.config-test input {
   accent-color: #686de0;
 }
 
