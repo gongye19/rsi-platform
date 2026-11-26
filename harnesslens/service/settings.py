@@ -53,6 +53,30 @@ def connections(profiles):
     return result
 
 
+def benchmark_choices():
+    from harnesslens.benchmarks.cell_config import SUPPORTED_CELLS
+    labels = {'crm':'CRM Arena Pro','retail':'Tau² Retail','banking':'Tau² Banking',
+              'bird':'BIRD Mini-Dev','terminal-bench':'Terminal-Bench'}
+    return [{'id': name, 'label': labels.get(name,name)} for name in SUPPORTED_CELLS]
+
+
+def selected_benchmark(value):
+    from harnesslens.benchmarks.cell_config import _ALIASES
+    if not isinstance(value,str) or not value.strip():
+        raise ValueError('Select a benchmark')
+    value=value.strip()
+    if value.lower() in _ALIASES:
+        return value.lower()
+    path=Path(value).expanduser().resolve()
+    if path.suffix != '.toml' or not path.is_file():
+        raise ValueError('Custom benchmark must be an existing TOML descriptor')
+    from harnesslens.benchmarks.jsonl_adapter import JsonlAdapter
+    from .config import ROOT
+    adapter=JsonlAdapter(ROOT,path)
+    adapter._tasks()  # Validate tasks and split without running the scorer.
+    return str(path)
+
+
 def catalog(profiles, *, discover=True):
     choices = []
     for item in connections(profiles).values():
@@ -85,7 +109,7 @@ def catalog(profiles, *, discover=True):
             choices.append({'id': item['id'] + ':' + model, 'connection_id': item['id'], 'model': model,
                             'api': item['config']['api'], 'configured': bool(item['key']),
                             'label': model + ' · ' + ('Responses' if item['config']['api'] == 'responses' else 'Chat Completions')})
-    return {'models': choices, 'components': [{'id': key, 'name': value} for key, value in COMPONENTS],
+    return {'models': choices, 'benchmarks': benchmark_choices(), 'components': [{'id': key, 'name': value} for key, value in COMPONENTS],
             'proposal_only': sorted(PROPOSAL_ONLY), 'experimental_fields': sorted(EXPERIMENTAL_FIELDS),
             'parameters': [{'key': k, 'label': v[0], 'default': v[1], 'min': v[2], 'max': v[3]} for k, v in PARAMETERS.items()]}
 
@@ -102,7 +126,10 @@ def profile_preview(path, profiles):
         base = clean_base_url(row.get('base_url') or env.get(row.get('base_url_env'), ''))
         match = next((c for c in available.values() if c['base'] == base and c['config']['api'] == row['api'] and c['config']['api_key_env'] == row['api_key_env']), None)
         selected[role] = match['id'] + ':' + row['model'] if match else ''
-    return {'name': Path(path).name, 'benchmark': profile['benchmark'], 'mode': profile['mode'],
+    from harnesslens.benchmarks.cell_config import _ALIASES
+    normalized = _ALIASES.get(profile['benchmark'].lower())
+    benchmark_selection = next((row['id'] for row in benchmark_choices() if normalized and _ALIASES.get(row['id']) == normalized), profile['benchmark'])
+    return {'name': Path(path).name, 'benchmark': profile['benchmark'], 'benchmark_selection': benchmark_selection, 'mode': profile['mode'],
             'readiness': profile.get('readiness', 'ready'), 'models': profile.get('models', {}),
             'model_selection': selected, 'components': profile['components'], 'initial_harness': profile['initial_harness'],
             'business_agent': bool(profile['agent_config']), 'full_evaluation': profile.get('full_evaluation', True),
@@ -129,12 +156,14 @@ def dump_toml(data):
 
 
 def snapshot_profile(source, settings, directory, profiles):
-    if not isinstance(settings, dict) or set(settings) - {'models', 'components', 'parameters', 'initial_harness', 'full_evaluation'}:
+    if not isinstance(settings, dict) or set(settings) - {'models', 'components', 'parameters', 'initial_harness', 'full_evaluation', 'benchmark'}:
         raise ValueError('Unknown task settings')
     loaded = load_profile(source)
     raw = tomllib.loads(Path(source).read_text())
     for key in ('benchmark', 'initial_harness', 'agent_config', 'env_file', 'submission'):
         raw[key] = loaded[key]
+    if 'benchmark' in settings:
+        raw['benchmark'] = selected_benchmark(settings['benchmark'])
     if 'models' in settings:
         selected = settings['models']
         if not isinstance(selected, dict) or set(selected) != {'execution', 'analysis'}:

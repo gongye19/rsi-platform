@@ -268,3 +268,13 @@
 .ce-single-view { display: flex; flex: 1; min-height: 0; min-width: 0; width: 100%; }
 .ce-single-view .ce-lineages,.ce-single-view .ce-results { flex: 1; min-width: 0; }
 @media(max-width:760px) { .ce-inspection-toolbar { flex-wrap: wrap; } .ce-snapshot-control { margin-left: 0; } }
+/* Each component owns a complete, equally sized lane; no detached name column. */
+.ce-single-view .ce-tree-scroll { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; background: #fafafb; }
+.ce-uniform-lanes { min-height: 0; }
+.ce-uniform-lanes .react-flow { background: #fafafb; }
+.ce-lane-heading { position: absolute; display: flex; align-items: center; gap: 8px; height: 22px; border: 0; border-radius: 4px; padding: 0 6px; background: #fff; font: 500 12px/22px var(--font-ui); pointer-events: auto; white-space: nowrap; cursor: pointer; }
+.ce-lane-heading i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ce-lane-heading:hover { background: #f1f1f4; }
+.ce-uniform-lanes .ce-version-label { background: #fff; padding-inline: 3px; }
+
+.ce-lane-round { position: absolute; color: #7a7c84; font-size: 10px; line-height: 20px; pointer-events: none; }

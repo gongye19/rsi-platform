@@ -27,7 +27,7 @@ function ExperimentRow({run,selected,busy,onSelect,onDelete}: {run:Run;selected:
       <i className={`experiment-state-dot state-${run.state}`} aria-label={stateLabels[run.state] || run.state}/><strong>{run.id}</strong>
     </button>
     <Popover open={open} onOpenChange={value => {if (!busy) setOpen(value);}}><PopoverTrigger asChild><Button variant="ghost" size="icon-xs" className="experiment-delete-trigger" aria-label={`Delete ${run.id}`} title={active ? 'Stop the experiment before deleting it' : 'Delete experiment'} disabled={busy || active}><Trash2 size={13}/></Button></PopoverTrigger>
-      <PopoverContent side="right" align="start" className="experiment-delete-confirm"><h3>Delete experiment?</h3><p>Remove <strong>{run.id}</strong> from the list. You can undo this.</p><div><Button variant="outline" size="sm" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button variant="destructive" size="sm" disabled={busy} onClick={async () => {if (await onDelete(run.id)) setOpen(false);}}>Delete experiment</Button></div></PopoverContent>
+      <PopoverContent side="right" align="start" className="experiment-delete-confirm"><h3>Delete experiment?</h3><p>Are you sure you want to delete this experiment?</p><div><Button variant="outline" size="sm" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button variant="destructive" size="sm" disabled={busy} onClick={async () => {if (await onDelete(run.id)) setOpen(false);}}>Delete</Button></div></PopoverContent>
     </Popover>
   </div>;
 }

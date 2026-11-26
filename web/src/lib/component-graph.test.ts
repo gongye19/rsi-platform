@@ -55,3 +55,18 @@ test("playback consumes presentation time continuously and preserves boundaries 
   assert(Math.abs(position - 1.5) < 0.00001);
   assert.equal(advanceReplay(data, 0, 999999), data.steps.length);
 });
+
+test("uniform component lanes keep branches inside equal-height named cards", () => {
+  const graph = componentGraph(data, 9, 300, true, true);
+  const rows = [...graph.layout.rows.values()];
+  assert.equal(new Set(rows.map(row => row.height)).size, 1);
+  for (let i=1;i<rows.length;i++) assert.equal(rows[i].top-rows[i-1].top, rows[0].height+8);
+  for (const node of graph.nodes) {
+    const row = graph.layout.rows.get(node.data.componentId)!;
+    assert(node.position.y >= row.top+28);
+    assert(node.position.y < row.top+row.height);
+  }
+  assert(graph.layout.height > 300, "small viewports scroll instead of compressing card contents");
+  const original = componentGraph(data,9);
+  assert.deepEqual(graph.edges.map(edge=>[edge.id,edge.source,edge.target]), original.edges.map(edge=>[edge.id,edge.source,edge.target]));
+});

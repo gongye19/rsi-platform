@@ -45,7 +45,7 @@ export default function ComponentStudio({run, live, revision}: {run: string; liv
   const bundle = inspected?.bundleIds.includes(active?.id || '') ? active : inspected?.bundle;
   const version = data?.versions.find(v => v.id === selected);
   const component = data?.components.find(c => c.id === version?.component_id);
-  const bundleId = data?.bundles.findLast(b => b.components[version?.component_id || ''] === version?.id)?.id;
+  const bundleId = version && bundle?.components[version.component_id] === version.id ? bundle.id : data?.bundles.findLast(b => b.components[version?.component_id || ''] === version?.id)?.id;
   const decision = data && version ? decisionAt(data,version.id,step) || data.decisions.filter(d => d.scope === 'bundle' && d.version_id === bundleId && d.step <= step).at(-1) : undefined;
   const choose = useCallback((id: string) => {setSelected(id);setPanel(true);},[]);
   const focus = useCallback((round: number) => {setFocusedRound(round);setFocusRevision(v => v+1);setHoveredRound(null);},[]);

@@ -115,7 +115,7 @@ export function experimentResults(
 }
 
 /** X is generation depth, not version number or creation order. Y tracks are local to a round. */
-export function componentLayout(data: ComponentHistory, heightBudget?: number, fillHeight = false) {
+export function componentLayout(data: ComponentHistory, heightBudget?: number, fillHeight = false, uniformLanes = false) {
   const positions = new Map<string, { x: number; y: number }>();
   const rows = new Map<string, { center: number; top: number; height: number }>();
   const testRows = new Map<string, number>();
@@ -139,7 +139,7 @@ export function componentLayout(data: ComponentHistory, heightBudget?: number, f
   const roundWidths = rounds.map((r) => 390 + 72 * Math.max(
     0, ...data.versions.filter((v) => v.round === r.round).map((v) => depths.get(v.id)!),
   ));
-  const starts = [150];
+  const starts = [uniformLanes ? 40 : 150];
   for (const span of roundWidths) starts.push(starts.at(-1)! + span);
   const inputX = (index: number) => starts[index] ?? starts.at(-1)!;
   const resultX = (index: number) => inputX(index) + (roundWidths[index] ?? 390);
@@ -160,7 +160,7 @@ export function componentLayout(data: ComponentHistory, heightBudget?: number, f
         // Reserve the centre for an unchanged/rolled-back version when needed.
         const half = Math.floor(generated.length / 2);
         const lane = held ? (i < half ? i - half : i - half + 1) : i - (generated.length - 1) / 2;
-        const offset = lane * 28;
+        const offset = lane * (uniformLanes ? 20 : 28);
         local.set(`${ri}:${v.id}`, offset);
         radius = Math.max(radius, Math.abs(offset) + 12);
       });
@@ -177,8 +177,25 @@ export function componentLayout(data: ComponentHistory, heightBudget?: number, f
     for (const [key, offset] of local) testRows.set(key, center + offset);
     top += radius * 2 + 8;
   }
+  if (uniformLanes) {
+    const radius = Math.max(24, ...[...rows.values()].map(row => row.height / 2));
+    const laneHeight = radius * 2 + 24;
+    data.components.forEach((component,index) => {
+      const row = rows.get(component.id)!;
+      const nextTop = 90 + index * (laneHeight + 8);
+      const nextCenter = nextTop + 24 + radius;
+      const offset = nextCenter - row.center;
+      row.top = nextTop; row.center = nextCenter; row.height = laneHeight;
+      for (const version of data.versions.filter(v => v.component_id === component.id)) {
+        const position = positions.get(version.id);
+        if (position) position.y += offset;
+        rounds.forEach((_,ri) => {const key=`${ri}:${version.id}`;if (testRows.has(key)) testRows.set(key,testRows.get(key)! + offset);});
+      }
+    });
+    top = 90 + data.components.length * (laneHeight + 8);
+  }
   const naturalHeight = top + 18;
-  const height = heightBudget == null ? naturalHeight : fillHeight ? Math.max(160, heightBudget) : Math.min(naturalHeight, Math.max(160, heightBudget));
+  const height = uniformLanes || heightBudget == null ? naturalHeight : fillHeight ? Math.max(160, heightBudget) : Math.min(naturalHeight, Math.max(160, heightBudget));
   if (height !== naturalHeight) {
     const anchor = 90, safeBottom = 18;
     const ratio = (height - anchor - safeBottom) / (naturalHeight - anchor - safeBottom);

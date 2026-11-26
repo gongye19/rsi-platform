@@ -38,8 +38,8 @@ export type LineageBranch = Edge<BranchData, "branch">;
 /** Project recorded occurrences onto React Flow. Node identity is not a V-number.
  * Boundaries are shared by adjacent rounds; assessment references keep their IDs.
  */
-export function componentGraph(data: ComponentHistory, step: number, height?: number, fillHeight = false) {
-  const layout = componentLayout(data, height, fillHeight);
+export function componentGraph(data: ComponentHistory, step: number, height?: number, fillHeight = false, uniformLanes = false) {
+  const layout = componentLayout(data, height, fillHeight, uniformLanes);
   const nodes: LineagePoint[] = [];
   const edges: LineageBranch[] = [];
   const byId = new Map(data.versions.map((v) => [v.id, v]));

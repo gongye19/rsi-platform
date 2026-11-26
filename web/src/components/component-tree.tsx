@@ -2,14 +2,13 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   ReactFlow, ReactFlowProvider, Handle, Position, ViewportPortal,
-  PanOnScrollMode, getBezierPath, useReactFlow,
+  getBezierPath, useReactFlow,
   type EdgeProps, type NodeProps, type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ArrowLeft, ArrowRight, ScanLine } from "lucide-react";
 import { componentGraph, type LineageBranch, type LineagePoint } from "@/lib/component-graph";
-import { componentLayout, roundChanges } from "@/lib/component-layout";
-import { lineageZoom } from "@/lib/presentation";
+import { roundChanges } from "@/lib/component-layout";
 import { COMPONENT_COLORS, type ComponentHistory } from "@/lib/component-types";
 
 const VersionPoint = memo(function VersionPoint({ data }: NodeProps<LineagePoint>) {
@@ -96,12 +95,10 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
   const [initialized, setInitialized] = useState(false);
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
   const flow = useReactFlow<LineagePoint, LineageBranch>();
-  const naturalHeight = useMemo(() => componentLayout(data).height, [data]);
-  const zoom = lineageZoom(size.width, size.height, naturalHeight);
-  const graph = useMemo(() => componentGraph(data, step, (size.height - 34) / zoom, true), [data, step, size.height, zoom]);
+  const zoom = 1;
+  const graph = useMemo(() => componentGraph(data, step, undefined, false, true), [data, step]);
   const { layout } = graph;
-  const compact = data.components.length > 10;
-  const labelWidth = Math.round(Math.min(190, 144 * zoom));
+  const labelWidth = 0;
   const maxPan = Math.max(0, layout.width * zoom - size.width);
   const lastAutoRound = useRef<string | null>(null);
   const syncedScroll = useRef<number | null>(null);
@@ -152,11 +149,11 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
   };
   return (
     <div
-      className={`ce-flow-host ${compact ? "is-compact" : ""}`}
+      className="ce-flow-host ce-uniform-lanes"
       ref={host}
       data-recorded-step={step}
       data-canvas-zoom={zoom}
-      style={{ "--ce-canvas-zoom": zoom } as CSSProperties}
+      style={{ "--ce-canvas-zoom": zoom, height: layout.height + 34 } as CSSProperties}
       data-linked-round={selectedRound}
     >
       <ReactFlow<LineagePoint, LineageBranch>
@@ -179,10 +176,9 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
         zoomOnScroll={false}
         zoomOnPinch={false}
         zoomOnDoubleClick={false}
-        panOnScroll
-        panOnScrollMode={PanOnScrollMode.Horizontal}
+        panOnScroll={false}
         panOnDrag
-        preventScrolling
+        preventScrolling={false}
         onNodeClick={(_, node) => onSelect(node.data.versionId)}
         onNodeMouseEnter={(_, node) => onHoverRound(node.data.round)}
         onNodeMouseLeave={() => onHoverRound(null)}
@@ -206,15 +202,13 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
       >
         <ViewportPortal>
           <svg className="ce-flow-backdrop" width={Math.max(layout.width, size.width / zoom)} height={layout.height} aria-hidden="true">
-            {data.components.map((c, i) => {
-              const row = layout.rows.get(c.id)!;
-              return <rect key={c.id} x={0} y={row.top - 3} width={Math.max(layout.width, size.width / zoom) - 4} height={row.height + 6} rx={9} fill={i % 2 ? "#fafafb" : "#ffffff"} opacity={1} />;
+            {data.components.map((component,index) => {
+              const row=layout.rows.get(component.id)!;
+              return <g key={component.id}><rect x={4} y={row.top} width={Math.max(layout.width,size.width)-8} height={row.height} rx={8} fill="#fff" stroke="#e7e7eb"/><rect x={4} y={row.top+12} width={3} height={row.height-24} rx={1.5} fill={COMPONENT_COLORS[index % COMPONENT_COLORS.length]} opacity={.65}/></g>;
             })}
-            {layout.rounds.map((r, i) => <g key={r.round}>
-              {selectedRound === r.round && r.firstStep <= step && <rect data-round-frame={r.round} x={layout.inputX(i) - 20} y={4} width={layout.resultX(i) - layout.inputX(i) + 42} height={layout.height - 8} rx={8} fill="#5e6ad2" fillOpacity={0.035} stroke="#b7bcf0" strokeOpacity={0.65} />}
-              <line x1={layout.phaseBounds(i).test.x} x2={layout.phaseBounds(i).test.x} y1={76} y2={layout.height - 8} stroke="#e5e5e8" strokeDasharray="2 5" opacity={0.55} />
-            </g>)}
           </svg>
+          {data.components.flatMap((component,index) => (layout.rounds.length ? layout.rounds : [{round:0}]).map((round,ri) => <button key={`${component.id}:${round.round}`} className="ce-lane-heading nopan nodrag" style={{left:layout.inputX(ri)-22,top:layout.rows.get(component.id)!.top+8,color:COMPONENT_COLORS[index % COMPONENT_COLORS.length]}} onClick={() => onSelect(configuration?.[component.id] || component.baseline_version_id)} aria-label={`Inspect ${component.name} in the selected snapshot, round ${round.round}`}><i/>{component.name}</button>))}
+          {data.components.flatMap(component => layout.rounds.map((round,index) => <span key={`${component.id}:${round.round}`} className="ce-lane-round" aria-hidden="true" style={{left:layout.candidateX(index)+65,top:layout.rows.get(component.id)!.top+9}}>Round {String(round.round).padStart(2,'0')}</span>))}
           {layout.rounds.map((r, i) => {
             const visible = r.firstStep <= step;
             const count = visible ? roundChanges(data, r, step).filter((c) => c.generated.length).length : 0;
@@ -230,16 +224,7 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
           <span className="ce-final-label" style={{ left: layout.resultX(Math.max(0, layout.rounds.length - 1)) - 20 }} title="Selected configuration">Selected</span>
         </ViewportPortal>
       </ReactFlow>
-      <div className="ce-component-index" style={{ width: labelWidth }} aria-label="Component names">
-        <span className="ce-component-index-title" style={{ top: 45 * zoom }}>Component</span>
-        {data.components.map((component, index) => <button key={component.id}
-          className="ce-component-index-name"
-          style={{ top: layout.rows.get(component.id)!.center * zoom, color: COMPONENT_COLORS[index % COMPONENT_COLORS.length], fontSize: "var(--ce-label-size)" }}
-          aria-label={`Inspect ${component.name} in the selected snapshot`}
-          title={component.name}
-          onClick={() => onSelect(configuration?.[component.id] || component.baseline_version_id)}>{component.name}</button>)}
-      </div>
-      <div className="ce-canvas-tools" style={{ left: labelWidth + 8 }}>
+      <div className="ce-canvas-tools" style={{ left: 8, top: 8, bottom: 'auto' }}>
         <button aria-label="Pan left" disabled={viewport.x >= -1} onClick={() => moveTo(viewport.x + size.width * 0.7)}><ArrowLeft size={13} /></button>
         <button aria-label="Go to lineage start" onClick={() => moveTo(0)}><ScanLine size={14} /></button>
         <button aria-label="Pan right" disabled={viewport.x <= -maxPan + 1} onClick={() => moveTo(viewport.x - size.width * 0.7)}><ArrowRight size={13} /></button>

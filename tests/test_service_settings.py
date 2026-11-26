@@ -182,3 +182,36 @@ def test_live_preflight_rejection_preserves_actual_nonempty_parent(tmp_path, mon
     assert result['steps'][-1]['active_bundle_id']=='champion'
     assert result['decisions'][-1]['outcome']=='not_retained'
     assert result['decisions'][-1]['scope']=='bundle'
+
+
+def test_benchmark_can_be_selected_independently_of_runtime_profile(tmp_path, profile):
+    original = profile.read_bytes()
+    available = {row['id'] for row in catalog(tmp_path, discover=False)['benchmarks']}
+    assert {'crm', 'retail', 'banking', 'bird', 'terminal-bench'} <= available
+    saved = snapshot_profile(profile, {'benchmark': 'retail'}, tmp_path/'selected', tmp_path)
+    loaded = load_profile(saved)
+    assert loaded['benchmark'] == 'retail'
+    assert profile.read_bytes() == original
+    argv, _ = invocation(loaded, 'benchmark-check')
+    assert argv[argv.index('--cell')+1] == 'retail'
+
+
+def test_custom_benchmark_descriptor_is_validated_and_frozen(tmp_path, profile):
+    tasks = tmp_path/'tasks.jsonl'
+    tasks.write_text('\n'.join(json.dumps({'id':str(i),'question':'Question','answer':'Answer'}) for i in range(2)))
+    descriptor = tmp_path/'benchmark.toml'
+    descriptor.write_text('schema="harnesslens.business-benchmark.v1"\nid="customqa"\ntasks="tasks.jsonl"\ntrain=["0"]\ntest=["1"]\n')
+    saved = snapshot_profile(profile, {'benchmark': str(descriptor)}, tmp_path/'custom', tmp_path)
+    loaded = load_profile(saved)
+    assert loaded['benchmark'] == str(descriptor)
+    assert '--cell' in invocation(loaded,'custom-check')[0]
+    descriptor.write_text(descriptor.read_text().replace('train=["0"]','train=["missing"]'))
+    with pytest.raises(ValueError,match='unavailable'):
+        snapshot_profile(profile, {'benchmark': str(descriptor)}, tmp_path/'invalid-custom', tmp_path)
+
+
+@pytest.mark.parametrize('benchmark',[None, '', 'unknown-benchmark', '/missing/benchmark.toml'])
+def test_invalid_benchmark_rejected_before_run_is_created(tmp_path, profile, benchmark):
+    store = Store(tmp_path/'state')
+    with pytest.raises(ValueError): store.create('invalid-benchmark',profile,{'benchmark':benchmark},tmp_path)
+    assert not store.list()

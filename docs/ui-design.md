@@ -2,7 +2,7 @@
 
 ## Direction and reference evidence
 
-English product UI; Chinese user-facing updates. The user confirmed the Linear light reference set on 2026-11-26. The latest request uses two separate full-width chart views, deletable experiment records and a floating rounded configuration drawer. This supersedes the earlier side-by-side visualization and flush drawer.
+English product UI; Chinese user-facing updates. The user confirmed the Linear light reference set on 2026-11-26. The latest request uses two separate full-width chart views, quiet experiment deletion and a floating rounded configuration drawer. This supersedes the earlier side-by-side visualization and flush drawer.
 
 Approved references actually inspected:
 - [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): neutral selection, compact text records and hierarchy.
@@ -18,9 +18,9 @@ Linear's actual login entry did not expose an authenticated workspace. Styling d
 
 Choose a recorded experiment from the compact left list → inspect key results → switch between **Lineage** and **Evaluation**, each using the full content width.
 
-Click **New experiment** in the left list or main header → right-side drawer opens over the current experiment → choose benchmark profile, initial Harness, execution/analysis models, allowed components and evolution settings → **Start run** generates an ID, persists the immutable configuration, then queues that exact experiment → drawer closes and the main view follows the new run. No manual Run ID, Save draft or internal paths for generated outputs appear in the creation form.
+Click **New experiment** in the left list or main header → right-side drawer opens over the current experiment → choose a benchmark independently of the runtime profile, initial Harness, execution/analysis models, allowed components and evolution settings → **Start run** generates an ID, persists the immutable configuration, then queues that exact experiment → drawer closes and the main view follows the new run. No manual Run ID, Save draft or internal paths for generated outputs appear in the creation form.
 
-Each inactive experiment has a trash button with a compact confirmation. Deletion removes the record from the directory and offers **Undo**; files and evaluation evidence are retained. Active queued/running/stopping experiments must be stopped first. A persisted tombstone prevents imported CLI runs from reappearing on refresh. Restore never queues execution.
+Each inactive experiment has a trash button with a compact confirmation. Deletion quietly removes the record from the directory after a Cancel/Delete confirmation. Files and evaluation evidence are retained server-side; no success notification or Undo is displayed. Active queued/running/stopping experiments must be stopped first. A persisted tombstone prevents imported CLI runs from reappearing on refresh. Restore never queues execution.
 
 Cancel, Close or Escape dismisses the drawer without creating or launching anything. During submission, duplicate submission and drawer dismissal are disabled. The settings are retained while the drawer is open. Reopening a dismissed new-run drawer starts from the selected profile defaults.
 
@@ -40,7 +40,7 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 | Stopping | Stop requested, without claiming remote calls were cancelled |
 | Failed / interrupted / stopped | Evidence retained and visible failure; Resume for service-owned runs |
 | Completed / imported | Frozen selected version and original TRAIN / TEST measurements |
-| Deleted | Hidden from the directory, Undo restores the same record and evidence |
+| Deleted | Hidden from the directory; no success notification or Undo is shown |
 | Connection error | Last records retained with a visible error and refresh |
 
 ## Layout and component mapping
@@ -50,8 +50,8 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 - Main: compact key-result summary, actual run controls and the evolution view. Artifacts, Activity, raw JSON and their navigation links are hidden from this interface. Storage, trace collection and backend endpoints are preserved.
 - A floating right drawer, at most 640px wide, sits 12px from the edges with a 14px radius, light gray border and soft shadow. Radix `data-state` triggers a 220ms entry and 180ms exit animation; reduced-motion uses near-instant transitions. It reuses the existing Sheet and accessible Select/Input/Button controls. Header and Cancel/Start actions stay fixed; only form fields scroll. All setting values share aligned left/right edges. Advanced timeout/retry fields stay collapsed initially. Model credentials remain server-owned. No extra library added.
 - Read-only settings show benchmark, models, initial Harness, TEST choice, allowed components and primary evolution parameters; internal raw JSON is omitted.
-- Two tabs, **Lineage** and **Evaluation**, show one full-width chart at a time. Keyboard arrow keys switch tabs. Round and snapshot selection stay in shared parent state; the split divider is removed. Component names remain fixed during horizontal pan. The 16 component colors remain consistent across names, branches, versions and configuration checkboxes. Dashes/crosses convey state independently of color.
-- Both charts retain 14px/500 headings, 11px/400 labels, 1.8px strokes and 8px normal points. Missing measurements remain empty. The 600px minimum evolution workspace prevents lane overlap in shorter windows; the main surface scrolls.
+- Two tabs, **Lineage** and **Evaluation**, show one full-width chart at a time. Keyboard arrow keys switch tabs. Round and snapshot selection stay in shared parent state; the split divider is removed. Each component owns an equal-height card. Its colored name repeats at the start of each round inside the card so horizontal pan retains identity. Names and their branches use the same color; per-row spacing is uniform, with enough room for all branch tracks. Vertical scrolling replaces compression of the entire 16-lane chart. The 16 component colors remain consistent across names, branches, versions and configuration checkboxes. Dashes/crosses convey state independently of color.
+- Both charts retain 14px/500 headings, 11px/400 labels, 1.8px strokes and 8px normal points. Missing measurements remain empty. The evolution workspace keeps a 600px minimum height; component cards scroll vertically inside it instead of shrinking their contents.
 - Existing evidence sheets still show component snapshots and adoption decisions; the link into Artifacts is omitted. No demo, playback, fabricated progress or metrics.
 
 ## Acceptance and verification
@@ -62,5 +62,13 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 - All left records are 34px high, and settings controls share left/right edges.
 - Execution and analysis choices are independent; component and budget edits work within the drawer. Header/footer stay visible while scrolling. Automatic identity generation happens only on Start run; existing launch helper still persists before queueing.
 - Original metrics, retained version and actual backend states remain intact. No paid optimization run is started for UI validation.
-- TypeScript, lint, production build, 40 frontend unit tests and 32 service/settings tests pass. Browser deletion/Undo was verified using an agent-created disposable draft, which was then removed; original experiment records were retained. Browser checks cover both entry points, closing, settings, selection, drawer editing, scrolling, independent chart views and recoverable deletion with a disposable draft. All original experiment records were retained. Narrow CSS is reviewed; no device emulation claim.
+- TypeScript, lint, production build, 41 frontend tests and 38 service/settings tests pass. Browser checks cover equal-height component cards, native vertical scrolling, branch evidence, independent chart views, benchmark choices/custom descriptor input, and deletion of an agent-created disposable draft with no follow-up notification. Narrow CSS is reviewed; no device emulation claim.
 - Latest proof: `runs/platform/directory-ui.png`, `runs/platform/console-ui.png` (lineage), `runs/platform/evaluation-ui.png` (curves), `runs/platform/configuration-ui.png`, `runs/platform/configuration-components-ui.png`.
+
+## Latest configuration contract
+
+Benchmark is an independent selector populated from existing adapters (CRM, Tau² Retail/Banking, BIRD and Terminal-Bench), plus Custom benchmark with a server-side TOML descriptor path. Runtime profile selects the agent connection/environment. The selected benchmark is validated and saved into the immutable experiment snapshot; it does not silently fall back to CRM. Adapter selection does not assert that each dataset/runtime is installed. Custom task files and splits are validated before the snapshot is saved, without invoking a model or scorer.
+
+Deletion shows one confirmation with Cancel/Delete, then quietly removes the row. No success banner or Undo button. Existing recoverable storage semantics remain server-side. Browser validation uses a disposable draft, never a business experiment.
+
+Component evidence uses the inspected configuration first when a version belongs to several bundles; an unrelated rejected bundle must not supply the verdict for an unchanged initial component.
