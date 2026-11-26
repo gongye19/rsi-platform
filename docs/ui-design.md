@@ -88,3 +88,11 @@ The dedicated Vercel project `rsi-platform-demo` builds only the frontend with `
 The sample history is synthetic: 16 components, three rounds, two retained updates, one rejected candidate, and illustrative score/time/token measurements. New runs simulate progress in about 30 seconds under the default budget. Configuration, creation and deletion are local to each browser; visitors do not share records. Other benchmark choices demonstrate configuration with the same illustrative 13-task evaluation pattern. No dataset, filesystem or model is actually accessed. The visible Demo badge and simulation messages distinguish this mode from real execution.
 
 The normal local/intranet build leaves this flag unset and continues to use the authenticated experiment service. Demo mode is opt-in and does not change actual stored experiments.
+
+## Presentation readability and component boundaries
+
+The workspace uses 15px body and control text, 13–14px supporting labels, 18px chart headings and 24px page headings. Sidebar records stay compact at 38px. Configuration controls use 36px height and the floating drawer allows up to 720px width. Diagram and evaluation labels share a 14px visual scale.
+
+Changing the selected lineage round updates the summary and highlighted column without changing the user's vertical scroll position. Horizontal navigation remains available for wide histories.
+
+Configuration separates 16 editable components from 5 declaration-only categories (model/provider, runtime environment, file attachments, tool outputs and diagnostics). Declaration selections are frozen into the profile and sent to discovery as recommendation permissions. They never become executable edit channels. Existing profiles default to all five; an explicit empty list disables all such recommendations. Experimental policy fields remain a separate subsetting of the editable Experimental policies component; the demo exposes all five fields supported by the pinned runtime.

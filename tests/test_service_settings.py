@@ -215,3 +215,14 @@ def test_invalid_benchmark_rejected_before_run_is_created(tmp_path, profile, ben
     store = Store(tmp_path/'state')
     with pytest.raises(ValueError): store.create('invalid-benchmark',profile,{'benchmark':benchmark},tmp_path)
     assert not store.list()
+
+
+def test_declaration_choices_survive_snapshot_preview_and_invocation(tmp_path, profile):
+    path = snapshot_profile(profile, {'components': {'allowed':['skills'], 'proposal_only':['diagnostic','tool_return']}}, tmp_path/'declaration-snapshot', tmp_path)
+    loaded = load_profile(path)
+    assert loaded['components']['proposal_only'] == ['diagnostic','tool_return']
+    assert profile_preview(path,tmp_path)['components']['proposal_only'] == ['diagnostic','tool_return']
+    _, env = invocation(loaded,'declaration-roundtrip')
+    assert json.loads(env['HAI_COMPONENT_POLICY'])['proposal_only'] == ['diagnostic','tool_return']
+    path2 = snapshot_profile(profile, {'components': {'proposal_only':[]}}, tmp_path/'no-declarations', tmp_path)
+    assert load_profile(path2)['components']['proposal_only'] == []

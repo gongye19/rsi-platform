@@ -37,7 +37,7 @@ def load_profile(path):
         result["models"] = normalize_models(raw["models"])
     from harnesslens.harnesses.component_policy import normalize_policy
     policy = normalize_policy(raw.get("components"))
-    result["components"] = {k: policy[k] for k in ("allowed", "denied", "experimental_fields")}
+    result["components"] = policy
     initial = raw.get("initial_harness", "")
     if not isinstance(initial, str):
         raise ValueError("initial_harness must be a directory/package path")

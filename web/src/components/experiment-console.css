@@ -10,7 +10,7 @@
   overflow: hidden;
   background: #f4f4f5;
   color: var(--console-ink);
-  font: 13px/1.5 var(--font-ui);
+  font: 15px/1.5 var(--font-ui);
 }
 
 .console-topbar {
@@ -18,14 +18,14 @@
   align-items: center;
   flex-shrink: 0;
   gap: 12px;
-  height: 48px;
+  height: 56px;
   padding: 0 24px;
 }
 
 .console-brand {
-  width: 196px;
+  width: 212px;
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 650;
   letter-spacing: -.45px;
 }
@@ -35,7 +35,7 @@
 }
 
 .console-breadcrumb, .console-current-run {
-  font-size: 12px;
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -50,13 +50,16 @@
 }
 
 .console-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
 .console-runtime {
   color: #8c8e94;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .console-body {
@@ -69,7 +72,7 @@
 .experiment-list {
   display: flex;
   flex-direction: column;
-  flex: 0 0 232px;
+  flex: 0 0 248px;
   min-width: 0;
   min-height: 0;
   padding: 12px 12px 16px;
@@ -87,18 +90,18 @@
   align-items: center;
   padding: 0 10px;
   color: #73757b;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .experiment-list h2 span {
-  font-size: 11px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: #777980;
 }
 
 .experiment-list > header button {
-  height: 32px;
+  height: 36px;
   justify-content: center;
   padding-inline: 10px;
   border-radius: 6px;
@@ -106,7 +109,7 @@
   background: var(--primary);
   color: #fff;
   box-shadow: 0 1px 2px #24252908;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -121,8 +124,8 @@
 }
 
 .experiment-list-controls input {
-  height: 30px;
-  font-size: 12px;
+  height: 36px;
+  font-size: 15px;
   border-radius: 5px;
   box-shadow: none;
   border-color: transparent;
@@ -142,7 +145,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  height: 34px;
+  height: 38px;
   border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
@@ -167,14 +170,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #34353a;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 18px;
 }
 
 .experiment-list-empty {
   padding: 16px 10px;
-  font-size: 12px;
+  font-size: 15px;
   color: var(--console-muted);
 }
 
@@ -207,7 +210,7 @@
   align-items: center;
   gap: 12px;
   color: var(--console-ink);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: -.5px;
@@ -217,7 +220,7 @@
 .console-page-heading p {
   margin-top: 6px;
   color: var(--console-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .console-header-actions {
@@ -228,9 +231,9 @@
 }
 
 .console-header-actions button {
-  height: 30px;
+  height: 36px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .console-header-actions [data-size="icon"] {
@@ -244,7 +247,7 @@
   align-items: center;
   gap: 5px;
   color: #73757b;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1.5;
@@ -304,14 +307,14 @@
 
 .console-metrics span {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   color: #73757b;
   margin-bottom: 6px;
 }
 
 .console-metrics strong {
   display: block;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 550;
   line-height: 1.5;
   letter-spacing: -.3px;
@@ -322,13 +325,13 @@
 }
 
 .console-metrics strong.console-phase-value {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 27px;
   letter-spacing: -.1px;
 }
 
 .console-metrics strong em {
-  font-size: 12px;
+  font-size: 15px;
   font-style: normal;
   font-weight: 400;
   color: #74767d;
@@ -338,7 +341,7 @@
 .console-metrics small {
   display: block;
   margin-top: 3px;
-  font-size: 10px;
+  font-size: 13px;
   color: #74767d;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -360,7 +363,7 @@
   margin-left: auto;
   padding-left: 12px;
   color: #777980;
-  font-size: 10px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -424,7 +427,7 @@
   margin: 10px 10px 0;
   border-top: 1px solid var(--console-border);
   padding-top: 10px;
-  font-size: 10px;
+  font-size: 13px;
   color: #74767d;
 }
 
@@ -435,13 +438,13 @@
 }
 
 .console-lineage-wait strong {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
 }
 
 .console-lineage-wait span {
   color: #73757b;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .console-alert, .console-notice {
@@ -453,7 +456,7 @@
   background: #fbf8f4;
   border-radius: 6px;
   color: #936a43;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -479,11 +482,11 @@
   text-align: center;
   padding: 30px;
   color: #73757b;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .console-empty h2 {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 550;
   color: #34353a;
 }
@@ -491,7 +494,7 @@
 .console-bottom-note {
   padding: 12px 24px;
   color: #73757b;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 /* One central settings page. Label and value columns stay aligned across groups. */
@@ -531,7 +534,7 @@
   align-items: center;
   gap: 9px;
   margin-bottom: 15px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: #34353a;
 }
@@ -553,7 +556,7 @@
   gap: 20px;
   min-width: 0;
   padding: 11px 0;
-  font-size: 12px;
+  font-size: 15px;
   border-bottom: 1px solid #f0f0f1;
 }
 
@@ -565,7 +568,7 @@
 }
 
 .config-field small {
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
   color: #74767d;
   font-weight: 400;
@@ -574,15 +577,15 @@
 .config-field input, .config-field [data-slot="select-trigger"] {
   width: 100%;
   max-width: none;
-  height: 32px;
-  min-height: 32px;
+  height: 36px;
+  min-height: 36px;
   padding-inline: 10px;
   border: 1px solid #dedfe2;
   border-radius: 5px;
   background: #fff;
   box-shadow: 0 1px 2px #24252903;
   color: #34353a;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
 }
 
@@ -595,7 +598,7 @@
 
 .config-field input::placeholder {
   color: #777980;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .config-field input:disabled, .config-field [data-slot="select-trigger"]:disabled {
@@ -616,7 +619,7 @@
   border-radius: 5px;
   background: #f7f7f8;
   color: #73757b;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .config-profile-context strong {
@@ -635,7 +638,7 @@
   gap: 6px;
   margin-top: 10px;
   color: #74767d;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.7;
 }
 
@@ -659,13 +662,13 @@
   margin-left: 2px;
   color: #74767d;
   font-weight: 400;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .config-section-heading button {
   height: 26px;
   padding-inline: 7px;
-  font-size: 11px;
+  font-size: 14px;
   color: #73757b;
 }
 
@@ -690,7 +693,7 @@
   padding: 10px 12px;
   color: #73757b;
   background: #fff;
-  font-size: 12px;
+  font-size: 15px;
   cursor: pointer;
   border-bottom: 1px solid #ededee;
 }
@@ -771,7 +774,7 @@
   align-items: center;
   gap: 6px;
   list-style: none;
-  font-size: 12px;
+  font-size: 15px;
   color: #73757b;
 }
 
@@ -787,7 +790,7 @@
   padding: 14px;
   border: 1px solid #e5e5e8;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: 14px;
   color: #73757b;
 }
 
@@ -820,7 +823,7 @@
 
 .config-test strong {
   display: block;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -828,7 +831,7 @@
   display: block;
   margin-top: 5px;
   color: #74767d;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -839,7 +842,7 @@
   gap: 10px;
   padding: 40px 0;
   color: #73757b;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .console-config-footer {
@@ -854,10 +857,10 @@
 }
 
 .console-config-footer button {
-  height: 30px;
+  height: 36px;
   min-width: 88px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .saved-configuration,.activity-panel {
@@ -865,7 +868,7 @@
   overflow: auto;
   min-height: 0;
   flex: 1;
-  font-size: 12px;
+  font-size: 15px;
   scrollbar-width: thin;
 }
 
@@ -877,20 +880,20 @@
 }
 
 .saved-configuration h2,.activity-panel h2 {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 550;
   color: #28282f;
 }
 
 .saved-configuration p,.activity-panel>p {
-  font-size: 11px;
+  font-size: 14px;
   color: #70707b;
   margin-top: 5px;
   line-height: 1.8;
 }
 
 .saved-heading button {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .saved-grid {
@@ -903,19 +906,19 @@
 .saved-grid>div span {
   display: block;
   color: #70707b;
-  font-size: 10px;
+  font-size: 13px;
   margin-bottom: 6px;
 }
 
 .saved-grid strong {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
   color: #28282f;
   overflow-wrap: anywhere;
 }
 
 .saved-configuration h3 {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 550;
   margin: 24px 0 12px;
   color: #28282f;
@@ -942,7 +945,7 @@
   border: 1px solid #e5e5e8;
   background: #f5f5f7;
   color: #92929c;
-  font-size: 10px;
+  font-size: 13px;
 }
 
 .saved-parameters {
@@ -958,7 +961,7 @@
   padding: 10px 0;
   border-bottom: 1px solid #f5f5f7;
   color: #70707b;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .saved-parameters strong {
@@ -967,7 +970,7 @@
 }
 
 .saved-configuration details {
-  font-size: 11px;
+  font-size: 14px;
   color: #70707b;
   margin: 20px 0;
 }
@@ -977,7 +980,7 @@
 }
 
 .saved-configuration pre,.activity-events pre {
-  font: 10px/1.8 ui-monospace,SFMono-Regular,monospace;
+  font: 13px/1.8 ui-monospace,SFMono-Regular,monospace;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: #f5f5f7;
@@ -995,20 +998,20 @@
 }
 
 .saved-decision>strong {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
   color: #70707b;
 }
 
 .saved-decision>span {
   margin-left: 13px;
-  font-size: 10px;
+  font-size: 13px;
   color: #92929c;
 }
 
 .saved-decision small {
   display: block;
-  font-size: 10px;
+  font-size: 13px;
   color: #70707b;
   margin-top: 7px;
 }
@@ -1020,18 +1023,18 @@
 }
 
 .saved-configuration h2, .activity-panel h2 {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 550;
   color: #34353a;
 }
 
 .saved-configuration p, .activity-panel > p {
-  font-size: 12px;
+  font-size: 15px;
   color: #73757b;
 }
 
 .saved-grid strong {
-  font-size: 13px;
+  font-size: 15px;
   color: #34353a;
 }
 
@@ -1079,7 +1082,7 @@
     white-space: normal;
   }
   .console-metrics strong.console-phase-value {
-    font-size: 13px;
+    font-size: 15px;
   }
   .console-config-editor {
     width: 100%;
@@ -1098,6 +1101,9 @@
     width: 142px;
   }
   .console-current-run, .console-path-divider, .console-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
     display: none;
   }
   .experiment-list {
@@ -1105,14 +1111,14 @@
     padding-inline: 8px;
   }
   .experiment-list-row strong {
-    font-size: 11px;
+    font-size: 14px;
   }
   .console-page-heading {
     flex-wrap: wrap;
     padding: 18px 16px;
   }
   .console-page-heading h1 {
-    font-size: 18px;
+    font-size: 22px;
   }
   .console-header-actions {
     margin-left: auto;
@@ -1185,15 +1191,15 @@
 
 .console-evolution-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 44px; flex-shrink: 0; padding: 0 24px; }
 
-.console-evolution-heading h2 { font-size: 12px; font-weight: 500; color: #505158; }
+.console-evolution-heading h2 { font-size: 15px; font-weight: 500; color: #505158; }
 
-.console-config-sheet { width: min(640px,100vw) !important; max-width: 640px !important; gap: 0; padding: 0; font: 13px/1.5 var(--font-ui); }
+.console-config-sheet { width: min(720px,100vw) !important; max-width: 720px !important; gap: 0; padding: 0; font: 15px/1.5 var(--font-ui); }
 
 .console-config-sheet [data-slot="sheet-header"] { flex-shrink: 0; padding: 22px 52px 20px 24px; border-bottom: 1px solid #e7e7e9; }
 
-.console-config-sheet [data-slot="sheet-title"] { font-size: 17px; line-height: 24px; font-weight: 550; letter-spacing: -.3px; }
+.console-config-sheet [data-slot="sheet-title"] { font-size: 20px; line-height: 24px; font-weight: 550; letter-spacing: -.3px; }
 
-.console-config-sheet [data-slot="sheet-description"] { font-size: 12px; margin-top: 5px; line-height: 18px; }
+.console-config-sheet [data-slot="sheet-description"] { font-size: 15px; margin-top: 5px; line-height: 18px; }
 
 .console-config-sheet .config-section:first-child { border-top: 0; }
 
@@ -1203,14 +1209,14 @@
 
 .console-config-overlay { backdrop-filter: none; }
 /* Compact removable records; the title and delete action are separate controls. */
-.experiment-list-entry { display: flex; align-items: center; height: 34px; margin-bottom: 2px; border-radius: 5px; padding-right: 4px; }
+.experiment-list-entry { display: flex; align-items: center; height: 38px; margin-bottom: 2px; border-radius: 5px; padding-right: 4px; }
 .experiment-list-entry:hover { background: #ebebed; }
 .experiment-list-entry[data-selected="true"] { background: #e6e6e9; }
 .experiment-list-entry .experiment-list-row { flex: 1; width: auto; min-width: 0; margin: 0; background: transparent; }
 .experiment-delete-trigger { color: #85878f; flex-shrink: 0; opacity: .65; }
 .experiment-list-entry:hover .experiment-delete-trigger,.experiment-delete-trigger:focus-visible { opacity: 1; }
-.experiment-delete-confirm { width: 290px; padding: 16px; font: 12px/1.6 var(--font-ui); }
-.experiment-delete-confirm h3 { font-size: 13px; font-weight: 550; }
+.experiment-delete-confirm { width: 290px; padding: 16px; font: 15px/1.6 var(--font-ui); }
+.experiment-delete-confirm h3 { font-size: 15px; font-weight: 550; }
 .experiment-delete-confirm p { color: #73757b; margin: 8px 0 14px; overflow-wrap: anywhere; }
 .experiment-delete-confirm strong { font-weight: 400; color: #34353a; }
 .experiment-delete-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
@@ -1220,8 +1226,8 @@
   inset-block: 12px;
   right: 12px;
   height: calc(100dvh - 24px);
-  width: min(640px,calc(100vw - 24px)) !important;
-  max-width: 640px !important;
+  width: min(720px,calc(100vw - 24px)) !important;
+  max-width: 720px !important;
   border: 1px solid #e5e5e9;
   border-radius: 14px;
   outline: none;
@@ -1239,4 +1245,8 @@
 @keyframes strata-overlay-out { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .console-config-sheet[data-state],.console-config-overlay[data-state] { animation-duration: .01ms; } }
 
-.console-demo-label { font-size: 11px; font-weight: 500; color: #665fa8; background: #efedf8; border: 1px solid #e2dff1; border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
+.console-demo-label { font-size: 14px; font-weight: 500; color: #665fa8; background: #efedf8; border: 1px solid #e2dff1; border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
+
+.config-declaration-options { grid-template-columns: minmax(0,1fr); }
+.config-declaration-options label { background: #fafafb; }
+.config-declarations .config-note { margin-bottom: 14px; }

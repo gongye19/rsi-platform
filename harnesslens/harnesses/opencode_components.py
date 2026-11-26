@@ -182,9 +182,10 @@ def runtime_contract(*, business: Mapping[str, Any] | None = None, loader_facts=
     # These describe the actual backend, not a benchmark-specific edit whitelist.
     declared = sorted({component_id(v) for v in business["capabilities"]["channels"]}) if business else None
     from .component_policy import policy_contract
-    return {"component_protocol": protocol_manifest(), "declared_channels": declared, "component_policy": policy_contract(business),
+    policy = policy_contract(business)
+    return {"component_protocol": protocol_manifest(), "declared_channels": declared, "component_policy": policy,
             "fixed": ["model", "provider", "budget", "task inputs", "host grading"],
-            "proposal_only": sorted(PROPOSAL_ONLY),
+            "proposal_only": policy["proposal_only"],
             "loader_facts": loader_facts or {
                 "config_loading": "Candidate JSON configs and flat patches are merged into the prepared bundle; a business service must explicitly load delivered files.",
                 "implemented_lane": "All 16 component payloads can be delivered. The receiving service must load them (shared receiver helper available) and return actual native callbacks/model-request evidence.",

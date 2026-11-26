@@ -66,7 +66,7 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
             tickLine={false} axisLine={false} tickMargin={6} tickCount={5}
             domain={domains[s.key] as [number, number]} allowDataOverflow
             ticks={Array.from({ length: 5 }, (_, i) => domains[s.key][0] + (domains[s.key][1] - domains[s.key][0]) * i / 4)}
-            tick={{ fill: s.color, style: { fill: s.color }, fontSize: 11 }} tickFormatter={n => tick(n, s.key === "score" ? 2 : 1)} hide={!available[s.key]} />)}
+            tick={{ fill: s.color, style: { fill: s.color }, fontSize: 14 }} tickFormatter={n => tick(n, s.key === "score" ? 2 : 1)} hide={!available[s.key]} />)}
           <ChartTooltip cursor={false} isAnimationActive={false} content={<ChartTooltipContent
             labelFormatter={(_v, payload) => `${roundName(payload[0]?.payload?.round ?? 0)} · Retained configuration`}
             formatter={(v, _name, item) => {

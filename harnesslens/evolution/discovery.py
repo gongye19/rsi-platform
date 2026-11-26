@@ -450,8 +450,12 @@ class DiscoveryModule:
             str(item) for item in runtime_loading.get("conditional_surface_ids") or []
         }
         surface_hypotheses = [_surface_hypothesis(item) for item in inventory]
+        declaration_policy = contract.get("component_policy", {}) if isinstance(contract, Mapping) else {}
         for hypothesis in surface_hypotheses:
             channel_id = str(hypothesis.get("id") or "")
+            if str(probe["harness_id"]) == "opencode" and channel_id in PROPOSAL_ONLY:
+                hypothesis["declaration_enabled"] = channel_id in declaration_policy.get("proposal_only", sorted(PROPOSAL_ONLY))
+                hypothesis["declaration_rule"] = "May be described as a recommendation only; never edit." if hypothesis["declaration_enabled"] else "Fixed; no change recommendations requested."
             if channel_id in fixed_surface_ids:
                 hypothesis["policy_status"] = "forbidden"
             elif channel_id in conditional_surface_ids:

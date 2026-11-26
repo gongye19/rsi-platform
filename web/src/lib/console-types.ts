@@ -1,5 +1,5 @@
 export type Metrics = {pass_at_1?: number; trial_success_count?: number; trial_count?: number; task_count?: number};
-export type Policy = {allowed: string[]; denied: string[]; experimental_fields: string[]};
+export type Policy = {allowed: string[]; denied: string[]; experimental_fields: string[]; proposal_only?: string[]};
 export type Connection = {model?: string; managed_by?: string; api?: string};
 export type Settings = {benchmark?: string; models: {execution: string; analysis: string}; components: Policy; parameters: Record<string, number>; initial_harness: string; full_evaluation: boolean};
 export type Configuration = {benchmark?: string; models?: {execution?: Connection; analysis?: Connection}; components?: Policy; parameters?: Record<string, number>; initial_harness?: string; full_evaluation?: boolean};

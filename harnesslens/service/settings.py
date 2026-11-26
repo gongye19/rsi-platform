@@ -190,7 +190,7 @@ def snapshot_profile(source, settings, directory, profiles):
                 raise ValueError('Selected model credential is unavailable in this task environment')
     if 'components' in settings:
         from harnesslens.harnesses.component_policy import normalize_policy
-        raw['components'] = {k: v for k, v in normalize_policy(settings['components']).items() if k != 'proposal_only'}
+        raw['components'] = normalize_policy(settings['components'])
     parameters = settings.get('parameters', {})
     if not isinstance(parameters, dict) or set(parameters) - set(PARAMETERS):
         raise ValueError('Unknown evolution parameters')

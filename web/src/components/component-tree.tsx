@@ -102,7 +102,6 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
   const maxPan = Math.max(0, layout.width * zoom - size.width);
   const lastAutoRound = useRef<string | null>(null);
   const syncedScroll = useRef<number | null>(null);
-  const lastVerticalFocus = useRef('');
   const focusedIndex = layout.rounds.findIndex(round=>round.round===selectedRound);
   const changedComponents = new Set(focusedIndex>=0 ? roundChanges(data,layout.rounds[focusedIndex],step).filter(change=>change.generated.length).map(change=>change.component.id) : []);
 
@@ -135,15 +134,7 @@ function LineageCanvas({ data, step, selected, configuration, selectedRound, foc
       void flow.setViewport({ x: -Math.min(maxPan, Math.max(x, end - size.width)), y: 0, zoom }, { duration: 500 });
   }, [initialized, focusedRound, focusRevision, data.steps, layout, flow, step, followLive, maxPan, size.width, zoom, labelWidth]);
 
-  useEffect(() => {
-    if (!initialized) return;
-    const key=`${focusedRound}:${focusRevision}`;
-    if (lastVerticalFocus.current===key) return;
-    lastVerticalFocus.current=key;
-    const round=layout.rounds.find(row=>row.round===focusedRound);
-    const changed=round && roundChanges(data,round,step).find(change=>change.generated.length);
-    host.current?.closest('.ce-tree-scroll')?.scrollTo({top:changed?Math.max(0,layout.rows.get(changed.component.id)!.top-8):0,behavior:focusRevision?'smooth':'auto'});
-  },[initialized,focusedRound,focusRevision,data,step,layout]);
+
 
   const nodes = useMemo(() => graph.nodes.map((node) => ({
     ...node,

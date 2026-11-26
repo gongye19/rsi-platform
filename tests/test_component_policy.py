@@ -209,3 +209,38 @@ def test_receiver_policy_intersects_server_without_cross_request_state(monkeypat
     assert "permissions" not in a["allowed"] and "permissions" in b["allowed"]
     assert "mcp_servers" not in a["allowed"] and "mcp_servers" not in b["allowed"]
     assert current_policy() == original
+
+
+def test_declaration_selection_never_grants_edit_permission(monkeypatch):
+    from harnesslens.harnesses.component_policy import receiver_policy
+    from harnesslens.harnesses.opencode_components import runtime_contract, validate_config
+    selected = ['model_provider', 'diagnostic']
+    policy = normalize_policy({'proposal_only': selected})
+    assert policy['proposal_only'] == sorted(selected)
+    assert set(policy['allowed']) == EDITABLE_IDS
+    assert normalize_policy({'proposal_only': []})['proposal_only'] == []
+    assert set(normalize_policy()['proposal_only']) == PROPOSAL_ONLY
+    with pytest.raises(ValueError): normalize_policy({'proposal_only': ['skills']})
+    with pytest.raises(ValueError): normalize_policy({'proposal_only': 'diagnostic'})
+    monkeypatch.setenv('HAI_COMPONENT_POLICY', json.dumps(policy))
+    assert runtime_contract()['proposal_only'] == sorted(selected)
+    assert receiver_policy({'proposal_only': ['diagnostic', 'runtime_env']})['proposal_only'] == ['diagnostic']
+    for config in [{'model': 'other/model'}, {'logLevel': 'DEBUG'}]:
+        with pytest.raises(ValueError, match='non-editable'): validate_config(config, EDITABLE_IDS)
+
+
+def test_discovery_receives_selected_declaration_categories(tmp_path, monkeypatch):
+    from harnesslens.evolution.discovery import DiscoveryModule
+    from harnesslens.harnesses.opencode_components import runtime_contract
+    from harnesslens.harnesses.opencode_harness import OpencodeHarnessAdapter
+    adapter = OpencodeHarnessAdapter()
+    monkeypatch.setattr(adapter, 'architecture_probe', lambda: {'harness_id':'opencode','harness_version':'1.18.32'})
+    monkeypatch.setattr(adapter, 'query_evidence_catalog', lambda _: [])
+    monkeypatch.setattr('harnesslens.evolution.discovery.harness_query_adapter', lambda *a, **k: adapter)
+    monkeypatch.setenv('HAI_COMPONENT_POLICY', json.dumps({'proposal_only':['diagnostic']}))
+    module = DiscoveryModule(repo_root=Path(__file__).resolve().parents[1], run_root=tmp_path, budget=None, cell='crm')
+    payload = module._harness_query_input({'environment':{'runtime_contract':runtime_contract()}})
+    hypotheses = {row['id']:row for row in payload['surface_hypotheses']}
+    assert hypotheses['diagnostic']['declaration_enabled'] is True
+    assert hypotheses['model_provider']['declaration_enabled'] is False
+    assert all(hypotheses[key]['policy_status']=='forbidden' for key in PROPOSAL_ONLY)

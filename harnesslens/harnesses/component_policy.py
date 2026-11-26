@@ -17,8 +17,8 @@ DEFAULT_EXPERIMENTAL_FIELDS = frozenset({"primary_tools", "continue_loop_on_deny
 def normalize_policy(raw=None):
     if raw is None:
         raw = {}
-    if not isinstance(raw, Mapping) or set(raw) - {"allowed", "denied", "experimental_fields"}:
-        raise ValueError("components supports allowed, denied and experimental_fields")
+    if not isinstance(raw, Mapping) or set(raw) - {"allowed", "denied", "experimental_fields", "proposal_only"}:
+        raise ValueError("components supports allowed, denied, experimental_fields and proposal_only")
     def names(key, default, universe, aliases=False):
         values = raw.get(key, default)
         if not isinstance(values, list) or any(not isinstance(v, str) for v in values):
@@ -33,8 +33,9 @@ def normalize_policy(raw=None):
     allowed = names("allowed", ["*"], EDITABLE_IDS, True)
     denied = names("denied", [], EDITABLE_IDS, True)
     experimental = names("experimental_fields", sorted(DEFAULT_EXPERIMENTAL_FIELDS), EXPERIMENTAL_FIELDS)
+    proposals = names("proposal_only", sorted(PROPOSAL_ONLY), PROPOSAL_ONLY)
     return {"allowed": sorted(allowed - denied), "denied": sorted(denied),
-            "experimental_fields": sorted(experimental), "proposal_only": sorted(PROPOSAL_ONLY)}
+            "experimental_fields": sorted(experimental), "proposal_only": sorted(proposals)}
 
 
 def current_policy():
@@ -51,7 +52,8 @@ def allowed_components(business=None, *, policy=None):
 
 def policy_contract(business=None, *, policy=None):
     return {**(policy if policy is not None else current_policy()), "effective_allowed": sorted(allowed_components(business, policy=policy)),
-            "admission": "Model discovery plus candidate runtime preflight; an allowed component is not automatically selected or verified."}
+            "admission": "Model discovery plus candidate runtime preflight; an allowed component is not automatically selected or verified.",
+            "declaration_rule": "Only selected proposal_only categories may receive declarative recommendations. These categories must never be automatically edited or materialized. Unselected categories remain fixed and must not receive change proposals."}
 
 
 def receiver_policy(requested=None):
@@ -59,7 +61,8 @@ def receiver_policy(requested=None):
     server = current_policy()
     if requested is None: return server
     if not isinstance(requested, Mapping): raise ValueError("component_policy must be an object")
-    request = normalize_policy({key: requested[key] for key in ("allowed", "denied", "experimental_fields") if key in requested})
+    request = normalize_policy({key: requested[key] for key in ("allowed", "denied", "experimental_fields", "proposal_only") if key in requested})
     return normalize_policy({"allowed": sorted(set(server["allowed"]) & set(request["allowed"])),
         "denied": sorted(set(server["denied"]) | set(request["denied"])),
-        "experimental_fields": sorted(set(server["experimental_fields"]) & set(request["experimental_fields"]))})
+        "experimental_fields": sorted(set(server["experimental_fields"]) & set(request["experimental_fields"])),
+        "proposal_only": sorted(set(server["proposal_only"]) & set(request["proposal_only"]))})

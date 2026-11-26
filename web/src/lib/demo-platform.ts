@@ -13,7 +13,7 @@ export const demoOptions: Options = {
   benchmarks:[{id:'knowledge-qa-13',label:'Knowledge QA · 13 tasks'},{id:'service-operations',label:'Service operations'},{id:'data-analysis',label:'Data analysis'}],
   models:modelRows,components:ids.map(id=>({id,name:componentLabels[id]})),
   proposal_only:['model_provider','runtime_env','file_attachments','tool_return','diagnostic'],
-  experimental_fields:['batch_tool','continue_loop_on_deny'],
+  experimental_fields:['batch_tool','primary_tools','continue_loop_on_deny','mcp_timeout','disable_paste_summary'],
   parameters:[
     {key:'HAI_TOTAL_CREATION_BUDGET',label:'Creation budget',default:52,min:13,max:10000},
     {key:'HAI_TRAIN_ROLLOUT_REPEATS',label:'TRAIN repeats per task',default:1,min:1,max:20},
@@ -30,7 +30,7 @@ export const demoPreview: Preview = {
   benchmark:'knowledge-qa-13',benchmark_selection:'knowledge-qa-13',
   model_selection:{execution:'gpt-execution',analysis:'gpt-analysis'},
   models:{execution:{model:'gpt-execution'},analysis:{model:'gpt-analysis'}},
-  components:{allowed:ids,denied:[],experimental_fields:[]},parameters,
+  components:{allowed:ids,denied:[],experimental_fields:[],proposal_only:demoOptions.proposal_only},parameters,
   initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
 };
 type DemoStore = {runs:Run[];started:Record<string,number>;stopped:Record<string,number>};

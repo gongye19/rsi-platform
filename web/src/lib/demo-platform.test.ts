@@ -30,12 +30,12 @@ test('browser-local lifecycle never invokes fetch and deletion stays deleted',as
  const original=globalThis.fetch;let networkCalls=0;
  globalThis.fetch=(()=>{networkCalls++;throw new Error('Unexpected network');}) as typeof fetch;
  try {
-  const settings:Settings={models:{execution:'open-model',analysis:'gpt-analysis'},benchmark:'data-analysis',components:{allowed:['skills'],denied:[],experimental_fields:[]},parameters:{HAI_TOTAL_CREATION_BUDGET:52},initial_harness:'',full_evaluation:false};
+  const settings:Settings={models:{execution:'open-model',analysis:'gpt-analysis'},benchmark:'data-analysis',components:{allowed:['skills'],denied:[],experimental_fields:[],proposal_only:['diagnostic']},parameters:{HAI_TOTAL_CREATION_BUDGET:52},initial_harness:'',full_evaluation:false};
   const send=(body:unknown)=>demoRequest('',{method:'POST',body:JSON.stringify(body)});
   await send({action:'create',run_id:'mock-lifecycle',settings});
   await send({action:'start',run_id:'mock-lifecycle'});
   let run=await demoRequest<Run>('?run=mock-lifecycle');
-  assert.equal(run.state,'running');assert.equal(run.configuration.benchmark,'data-analysis');
+  assert.equal(run.state,'running');assert.equal(run.configuration.benchmark,'data-analysis');assert.deepEqual(run.configuration.components?.proposal_only,['diagnostic']);
   assert.equal(run.configuration.models?.execution?.model,'open-model');
   await send({action:'stop',run_id:run.id});
   run=await demoRequest<Run>('?run=mock-lifecycle');assert.equal(run.state,'stopped');
