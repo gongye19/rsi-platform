@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@font-face { font-family: "Plex Sans"; src: url("/fonts/ibm-plex-sans.ttf") format("truetype"); font-style: normal; font-weight: 100 900; font-display: swap; }
 :root {
   --background: #fff;
   --foreground: #202735;
@@ -6,18 +7,18 @@
   --card-foreground: #202735;
   --popover: #fff;
   --popover-foreground: #202735;
-  --primary: #3e64d8;
+  --primary: #625184;
   --primary-foreground: #fff;
-  --secondary: #edf1f8;
-  --secondary-foreground: #344361;
-  --muted: #f3f5f8;
-  --muted-foreground: #8992a2;
-  --accent: #eef2fb;
-  --accent-foreground: #3154b0;
+  --secondary: #f1efec;
+  --secondary-foreground: #353139;
+  --muted: #f5f3f0;
+  --muted-foreground: #706b74;
+  --accent: #f0edf5;
+  --accent-foreground: #5e4c80;
   --destructive: #cc4e4e;
-  --border: #e6e9ee;
-  --input: #e3e7ee;
-  --ring: #7895e7;
+  --border: #e6e3df;
+  --input: #d8d4d0;
+  --ring: #8a75b1;
   --radius: 0.6rem;
   --sidebar: #fafbfc;
   --sidebar-foreground: #657084;
@@ -52,7 +53,7 @@ body {
   background: #fff;
   color: var(--foreground);
   font-family:
-    Inter,
+    "Plex Sans",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
@@ -89,10 +90,10 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #7b96de;
+  outline: 2px solid #8a75b1;
   outline-offset: 3px;
 }
 ::selection {
-  background: #dceafe;
-  color: #244775;
+  background: #e9e0f4;
+  color: #423554;
 }

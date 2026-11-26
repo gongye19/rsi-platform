@@ -7,9 +7,9 @@ import { measurementDomain } from "@/lib/presentation";
 import type { ComponentHistory } from "@/lib/component-types";
 
 const series = [
-  { key: "score", label: "Score", unit: "", color: "#2a78d6" },
-  { key: "seconds", label: "Time", unit: " s", color: "#d55181" },
-  { key: "tokens", label: "Tokens", unit: " tokens", color: "#7d3c98" },
+  { key: "score", label: "Score", unit: "", color: "#65558f" },
+  { key: "seconds", label: "Time", unit: " s", color: "#488c82" },
+  { key: "tokens", label: "Tokens", unit: " tokens", color: "#ad8552" },
 ] as const;
 const config = Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.color }]));
 const roundName = (round: number) => round === 0 ? "Baseline" : `Round ${round}`;
@@ -34,9 +34,9 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
   return <div className="ce-chart-scroll" aria-label="Score, time and tokens by round, horizontally scrollable">
     <div className="ce-round-chart" style={{ minWidth: Math.max(360, points.length * 80 + 100) }}>
       <div className="ce-series-legend" aria-label="Recorded metrics for the selected round">
-        {series.map((s) => <span key={s.key} data-series={s.key} title={current?.reused ? "Previously measured" : undefined} style={{ color: s.color }}>
+        {series.map((s) => <span key={s.key} data-series={s.key} title={!available[s.key] ? "No measurement recorded for this metric" : current?.reused ? "Previously measured" : undefined} className={available[s.key] ? "" : "is-unmeasured"} style={{ color: available[s.key] ? s.color : undefined }}>
           <i style={{ background: s.color }} />{s.label}
-          <strong>{current?.[s.key] != null ? format(current[s.key]!, s.key) : "Not measured"}</strong>
+          <strong>{current?.[s.key] != null ? format(current[s.key]!, s.key) : "—"}</strong>
         </span>)}
       </div>
       <ChartContainer config={config} className="ce-recharts" initialDimension={{ width: 500, height: 400 }}>
@@ -72,9 +72,9 @@ function RoundOutcomeChart({ data, step, activeRound, onHoverRound, onRound }: {
             formatter={(v, _name, item) => {
               const key = item.dataKey as ResultMetric;
               const s = series.find((s) => s.key === key)!;
-              return <div className="ce-score-tooltip"><span style={{ color: s.color }}>{s.label}</span><strong>{format(Number(v), key)}</strong></div>;
+              return <div className="ce-score-tooltip"><span className={available[s.key] ? "" : "is-unmeasured"} style={{ color: available[s.key] ? s.color : undefined }}>{s.label}</span><strong>{format(Number(v), key)}</strong></div>;
             }} />} />
-          {current && <ReferenceLine x={current.round} yAxisId="score" stroke="#2a78d6" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 5" />}
+          {current && <ReferenceLine x={current.round} yAxisId="score" stroke="#65558f" strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 5" />}
           {series.map((s) => <Line key={s.key} yAxisId={s.key} dataKey={s.key} type="bumpX"
             stroke={s.color} strokeWidth={2.8} strokeDasharray={s.key === "tokens" ? "6 4" : undefined}
             connectNulls={false} activeDot={false} isAnimationActive={false} animationDuration={650} animationEasing="ease-in-out"

@@ -63,24 +63,8 @@ export interface ComponentHistory {
   steps: EvolutionStep[];
   decisions: VersionDecision[];
 }
-export const COMPONENT_COLORS = [
-  "#2a78d6",
-  "#7d3c98",
-  "#26858b",
-  "#b7791f",
-  "#7952b3",
-  "#d55181",
-  "#278268",
-  "#5274ad",
-  "#88618f",
-  "#687fa8",
-  "#a75b7f",
-  "#527e86",
-  "#8c6baa",
-  "#986566",
-  "#4d7199",
-  "#7b758e",
-];
+/** Color expresses change, while fixed lane labels identify components. */
+export const COMPONENT_COLORS = ["#827d88"];
 export const decisionLabels = {
   passed: "Component check passed",
   failed: "Component check failed",

@@ -1,6 +1,6 @@
 "use client";
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {ChevronDown, ExternalLink, GitBranch, Info, RefreshCw} from 'lucide-react';
+import {ChevronDown, ExternalLink, GitBranch, MoreHorizontal, RefreshCw} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Select, SelectTrigger, SelectValue, SelectContent, SelectItem} from '@/components/ui/select';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
@@ -52,11 +52,24 @@ export default function ComponentStudio({run, live, revision, onOpenArtifacts}: 
   const ready = data?.context?.initial_ready !== false;
   return <div className={live ? "ce-root ce-console-embedded ce-follow-live" : "ce-root ce-console-embedded"}>
     <div className="ce-experiment">
-      <div className="ce-controls"><span className="studio-mode-label"><GitBranch size={14}/>{live ? 'Live execution' : 'Recorded execution'}</span><span className="ce-harness-picker">Harness<Select value={inspected?.id || ''} disabled={!views.length} onValueChange={setInspectedId}><SelectTrigger aria-label="Inspect Harness"><SelectValue placeholder="No snapshot yet"/></SelectTrigger><SelectContent>{views.map(v => <SelectItem value={v.id} key={v.id}>{v.label} · {v.bundle.id}{v.bundleIds.includes(active?.id || '') ? ' · Selected' : ''}</SelectItem>)}</SelectContent></Select></span><Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="Measurement information"><Info size={14}/></Button></PopoverTrigger><PopoverContent className="ce-record-popover" align="end"><p>Scores describe the retained TRAIN configuration. Candidate task subsets may differ. Final TEST results are shown in the console summary.</p><p>Each metric has its own axis. Reused measurements are identified; missing values stay empty. Bundle selection does not establish an individual component’s causal contribution.</p></PopoverContent></Popover><Button variant="ghost" size="icon-sm" aria-label="Refresh lineage" onClick={() => void refresh()}><RefreshCw size={14}/></Button></div>
-      <div className="ce-experiment-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-rejected">×</i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
+      <div className="ce-controls ce-inspection-toolbar">
+        <div className="ce-snapshot-control"><span>Snapshot</span><Select value={inspected?.id || ''} disabled={!views.length} onValueChange={id => {setInspectedId(id);const view=views.find(v => v.id === id);if (view) focus(view.bundle.round);}}>
+          <SelectTrigger aria-label="Inspect Harness"><SelectValue placeholder="Not available yet"/></SelectTrigger><SelectContent>
+            {views.map(v => <SelectItem value={v.id} key={v.id}>{v.bundle.id === 'v0' ? 'Initial · v0' : v.bundle.id}{v.bundleIds.includes(active?.id || '') ? ' · Retained' : ''}</SelectItem>)}
+          </SelectContent></Select></div>
+        <span className="ce-inspected-round">{ready && data ? linkedRound ? `Round ${linkedRound}` : 'Baseline' : 'Awaiting snapshot'}</span>
+        <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon-sm" aria-label="View options"><MoreHorizontal size={17}/></Button></PopoverTrigger>
+          <PopoverContent className="ce-record-popover ce-view-options" align="end">
+            <Button variant="ghost" size="sm" onClick={() => void refresh()}><RefreshCw size={13}/>Refresh records</Button>
+            <div className="ce-options-legend"><span><i className="ce-key-normal"/>Version</span><span><i className="ce-key-rejected">×</i>Not retained</span><span><i className="ce-key-trunk"/>Derived version</span><span><i className="ce-key-carry"/>Unchanged version</span></div>
+            <p>Results describe the retained TRAIN configuration. Candidate task subsets may differ. See the console summary for final TEST results.</p>
+            <p>Metrics have independent axes. Missing values stay empty. Bundle selection does not establish individual component gains.</p>
+          </PopoverContent>
+        </Popover>
+      </div>
       {error && <div className="ce-error" role="alert">{error}<Button variant="ghost" size="sm" onClick={() => void refresh()}>Retry</Button></div>}
       {!data ? <div className="ce-loading"><GitBranch size={22}/>{error ? 'Lineage unavailable' : 'Loading execution records…'}</div> : !ready ? <div className="ce-loading console-lineage-wait"><GitBranch size={28}/><strong>Waiting for the initial snapshot</strong><span>Lineage will appear when the worker freezes the actual starting Harness.</span></div> : <>
-        <EvolutionWorkspace left={<section className="ce-lineages"><div className="ce-result-heading"><h2 className="ce-plot-title">Component lineage <span className="ce-component-count">{data.components.length}</span></h2><span className="ce-round-chip"><i/>{linkedRound ? `Round ${linkedRound}` : 'Baseline'}</span></div><div className="ce-tree-scroll" role="region" tabIndex={0} aria-label="Component lineage, horizontally scrollable"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={linkedRound} focusedRound={focusedRound} focusRevision={focusRevision} onHoverRound={setHoveredRound} onRound={focus} onSelect={choose} followLive={live}/></div></section>} right={<section className="ce-results"><div className="ce-result-heading"><h2 className="ce-plot-title">Retained configuration results</h2><span className="ce-round-chip"><i/>{linkedRound ? `Round ${linkedRound}` : 'Baseline'}</span></div><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}/>
+        <EvolutionWorkspace left={<section className="ce-lineages"><div className="ce-result-heading"><h2 className="ce-plot-title">Component lineage <span className="ce-component-count">{data.components.length}</span></h2></div><div className="ce-tree-scroll" role="region" tabIndex={0} aria-label="Component lineage, horizontally scrollable"><ComponentTree data={data} step={step} selected={selected} configuration={bundle?.components} selectedRound={linkedRound} focusedRound={focusedRound ?? rounds.at(-1)?.round ?? null} focusRevision={focusRevision} onHoverRound={setHoveredRound} onRound={focus} onSelect={choose} followLive={live}/></div></section>} right={<section className="ce-results"><div className="ce-result-heading"><h2 className="ce-plot-title">Retained configuration results</h2></div><RoundOutcomeChart data={data} step={step} activeRound={linkedRound} onHoverRound={setHoveredRound} onRound={focus}/></section>}/>
         <div className="console-lineage-footnote"><span>TRAIN measurements · {rounds.length} recorded {rounds.length === 1 ? 'round' : 'rounds'}</span><span>Click a version to inspect its snapshot</span></div>
       </>}
     </div>

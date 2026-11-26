@@ -4,16 +4,18 @@
 
 The user approved Mobbin-led dashboard work and explicitly retained **component lineage on the left, result curves on the right**. The console UI is English; conversational updates remain Chinese. No new workflow builder, chat, billing, teams or reference-product features are added.
 
-References:
-- [n8n execution history](https://mobbin.com/screens/3de1bd57-5cbe-441e-89fd-df40985f3806): compact execution rows, consistent status badges and run selection.
-- [Langdock workflow run](https://mobbin.com/flows/76e059cf-d211-470a-a885-5edc842d7a94?tab=screens): configure, launch and inspect recorded outputs. Its canvas/chat layout is not adopted.
-- [n8n official execution documentation](https://docs.n8n.io/workflows/executions/all-executions/): separate execution status and history from configuration.
+Current references, explicitly selected by the user on 2026-11-26:
+- [Linear project directory](https://mobbin.com/screens/3d3a4fae-d824-440a-961b-001c6b715a4a): a compact registry with status and result columns, replacing the chat-session sidebar.
+- [Mercury overview](https://mobbin.com/screens/dbf9eb63-dcfe-4876-965a-e8a6d8702092): warm neutral surfaces, restrained accent color and a stronger type hierarchy.
+- [MILO, AWS AI Labs and collaborators](https://jprithwish.github.io/MILO/#demos): persistent lineage with rejected children kept as evidence and results alongside it. This reference informs visualization only; no MILO search algorithm, island model or playback controls are introduced.
 
-Screenshots were inspected at full resolution. No authenticated reference-product session was available; screenshots establish visual hierarchy, not keyboard/hover behavior. Controls below use the existing local Radix/shadcn components. Dimensions are project choices, not claimed measurements from Mobbin.
+The earlier n8n / Langdock references are superseded for visual styling. Screenshots were actually inspected. Direct website checks reached Mercury's login page and Linear's public site, not authenticated workspaces; app styling is based on the approved Mobbin images. MILO's actual public interactive demo was inspected. Unmeasured reference dimensions and fonts are not presented as facts.
+
+The platform is branded **Strata**, independently of its optimization algorithm. HarnessLens remains the name of the underlying package/algorithm. The local IBM Plex Sans font is shipped with its OFL license under `web/public/fonts`; no runtime font CDN is needed. Georgia is the system serif fallback for the directory title only.
 
 ## Core flow
 
-Select a real run or New experiment → select a server-owned benchmark profile → select independent execution/analysis models, editable components and evolution settings → Start run → save an immutable configuration and queue the backend job → follow persisted checkpoints and lineage → inspect final TRAIN/TEST results, configuration, artifacts and activity. Save draft is optional. Viewing history never launches an experiment.
+Open the experiment directory → filter/search/select a real run or New experiment → select a server-owned benchmark profile → select independent execution/analysis models, editable components and evolution settings → Start run → save an immutable configuration and queue the backend job → follow persisted checkpoints and lineage → inspect final TRAIN/TEST results, configuration, artifacts and activity. Save draft is optional. Viewing history never launches an experiment.
 
 ## State contract
 
@@ -31,9 +33,11 @@ Select a real run or New experiment → select a server-owned benchmark profile 
 
 ## Layout and components
 
-One shell with a compact run sidebar and a main workspace. Main header aligns run identity, status and actions. A summary row precedes tabs for Overview, Configuration, Artifacts and Activity. Overview retains the existing resizable two-panel lineage/curve layout. Configuration opens in an accessible sheet; it never replaces the graph with an editor canvas. Small screens can horizontally scroll the graph area and open the run list without clipping actions.
+A persistent workspace navigation provides All experiments, In progress, Drafts and Completed filters, with backend counts. The directory contains experiment identity, status, benchmark, TRAIN baseline, final TEST, selected version and creation date. Opening a record uses the existing `?run=` URL; breadcrumbs return to the full directory. Closing configuration preserves the current directory or record.
 
-Reuse Button, Input, Select, Sheet, Badge, Chart and Resizable components. Keep React Flow for lineage and Recharts for measurements. No new dependencies. A single 36px form-control height, shared spacing, neutral borders and blue primary actions apply to configuration and dashboard controls.
+Run detail keeps the resizable lineage panel on the left and retained-result curves on the right. Component labels are fixed outside the horizontally pannable graph. Unchanged lanes use neutral ink; new versions use the purple accent and rejection has an explicit cross. Missing metrics remain unavailable, shown as a dash with an explanatory title. Snapshot selection and round inspection focus the matching recorded round. Snapshot controls, round context and an overflow menu replace the repeated toolbar labels and separate legend strip.
+
+Reuse existing Button, Input, Select, Sheet, Popover, Chart and Resizable components. Keep React Flow for lineage and Recharts for measurements. The directory is a semantic table, with explicit buttons for keyboard navigation. No new npm dependencies. The palette uses warm white, charcoal, neutral borders and a restrained purple accent. The summary and graph preserve TRAIN / TEST provenance and immutable run settings.
 
 ## Acceptance
 
@@ -55,3 +59,12 @@ Reuse Button, Input, Select, Sheet, Badge, Chart and Resizable components. Keep 
 - Frontend: type check, lint, production build and 41 unit tests pass. Launch tests cover save-before-start order, failure without retry, preserved drafts and draft-only behavior.
 - Backend: the CRM/business/service/runtime regression group passes (131 tests, 2 skips), plus the new live non-v0-parent preflight regression passes.
 - The real experiment was imported and inspected; validation did not start a new paid optimization experiment. Small-height windows scroll the workspace vertically to retain readable component lanes.
+
+## 2026-11-26 refinement validation
+
+- TypeScript, lint, production build and the existing 41 frontend unit tests pass.
+- In-browser: directory status filters/counts, name search, open record, close configuration without losing context, snapshot/round selection, graph panning with fixed component names, and component evidence inspection were checked.
+- Bundled Plex Sans loads successfully. The Overview DOM has all 16 fixed component labels, English document language and zero playback sliders.
+- The local browser offers no viewport emulation; narrow-screen CSS was reviewed in source rather than claimed as a device test. Small-height desktop windows scroll vertically to retain readable lanes.
+- Validation did not launch a paid model experiment. The API and worker were preserved during frontend-only restarts.
+- Current proof images: `runs/platform/directory-ui.png`, `runs/platform/console-ui.png`, `runs/platform/configuration-ui.png`.

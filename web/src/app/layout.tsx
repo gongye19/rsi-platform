@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import {PLATFORM_NAME} from "@/lib/branding";
 export const metadata: Metadata = {
-  title: "HarnessLens · Experiment Console",
+  title: `${PLATFORM_NAME} · Experiment Console`,
   description: "Configure, run and inspect Harness evolution experiments.",
 };
 export default function RootLayout({
