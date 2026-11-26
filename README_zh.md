@@ -1,11 +1,19 @@
-# HarnessLens
+# RSI Platform
+
+基于 [HarnessLens](https://github.com/jhxu5214/HarnessLens) 扩展的 Agent 自进化实验平台，支持配置 Benchmark、独立的执行／分析模型和组件权限，并在实验台查看组件谱系与评测曲线。
+
+[公网演示](https://rsi-platform-demo.vercel.app/experiments) · [English](README.md) · [内网部署](docs/INTRANET.zh-CN.md)
+
+公网演示使用浏览器本地的模拟数据，不连接业务 Agent 或模型 API。真实实验通过本地 API 和 Worker 执行，支持 Python 函数和 HTTP 接入业务 Agent。
 
 任务启动需分别指定执行与分析模型，详见 [模型连接配置](docs/model-connections.zh-CN.md)。
 
+## 上游 HarnessLens
+
 **Verify Smarter, Evolve Further：通过行为感知验证实现高效 Harness 演化**
 
-本仓库提供论文在 OpenCode、Codex CLI 和 Pi Coding Agent 上的实现，包括完整的 TRAIN
-演化流程与独立的 blind TEST 评测入口。
+本项目在上游论文的 OpenCode、Codex CLI 和 Pi Coding Agent 实现上扩展，包括完整的 TRAIN
+演化流程与独立的 blind TEST 评测入口。保留原有 MIT 许可证和作者署名；内部 Python 包继续使用 `harnesslens` 名称。
 
 [English](README.md)
 
@@ -61,8 +69,8 @@ Benchmark 数据和 agent runtime 体积较大且许可独立，因此不随仓�
 ## 安装
 
 ```bash
-git clone https://github.com/jhxu5214/HarnessLens.git
-cd HarnessLens
+git clone https://github.com/gongye19/rsi-platform.git
+cd rsi-platform
 
 # 创建 .venv、安装 HarnessLens 依赖，并生成 .env。
 scripts/setup.sh

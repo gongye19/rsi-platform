@@ -1,4 +1,10 @@
-# HarnessLens
+# RSI Platform
+
+An experiment platform for agent harness evolution, built on [HarnessLens](https://github.com/jhxu5214/HarnessLens). Configure benchmarks, independent execution and analysis models, and permitted components; inspect component lineage and evaluation results in the experiment console.
+
+[Public demo](https://rsi-platform-demo.vercel.app/experiments) · [中文文档](README_zh.md) · [Deployment guide](docs/INTRANET.zh-CN.md)
+
+The public demo uses synthetic browser-local data and does not connect to a business agent or model API. Real experiments run through the local API and worker, with Python-function or HTTP business-agent connections.
 
 Task startup requires independent execution/analysis model selections: [模型连接配置](docs/model-connections.zh-CN.md).
 
@@ -13,12 +19,15 @@ Existing business agents can also be called through [Python functions or HTTP AP
 Configuration-driven JSONL benchmarks reuse the same execution and optimization
 flow; see the [benchmark adapter guide](docs/BENCHMARK-ADAPTERS.zh-CN.md).
 
+## Upstream HarnessLens
+
 **Verify Smarter, Evolve Further: Efficient Harness Evolution through
 Behavior-Aware Verification**
 
-This repository provides the paper implementation for OpenCode, Codex CLI, and
+This project extends the upstream paper implementation for OpenCode, Codex CLI, and
 Pi Coding Agent, including the full TRAIN evolution loop and separate blind-TEST
-evaluation entrypoints.
+evaluation entrypoints. The original MIT license and attribution are preserved.
+The internal Python package keeps its `harnesslens` name.
 
 [中文文档](README_zh.md)
 
@@ -61,8 +70,8 @@ versions and setup.
 ## Install
 
 ```bash
-git clone https://github.com/jhxu5214/HarnessLens.git
-cd HarnessLens
+git clone https://github.com/gongye19/rsi-platform.git
+cd rsi-platform
 
 # Create .venv, install HarnessLens dependencies, and generate .env.
 scripts/setup.sh

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "web",
+      "name": "rsi-platform",
       "dependencies": {
         "@xyflow/react": "^13.0.3",
         "class-variance-authority": "^0.7.1",
