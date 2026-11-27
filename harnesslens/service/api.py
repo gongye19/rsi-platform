@@ -67,7 +67,7 @@ def server(store, token, host="127.0.0.1", port=8765, profiles=None):
                     store.sync_local_runs()
                     identity = run_id(parts[2]); job = store.get(identity)
                     if len(parts) == 3:
-                        self.json(run_record(job))
+                        self.json(run_record(job, include_telemetry=True))
                     elif parts[3] == "history":
                         self.json(history(identity))
                     elif parts[3] == "events":

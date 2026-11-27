@@ -30,6 +30,9 @@ denied = []
 experimental_fields = ["batch_tool", "primary_tools", "continue_loop_on_deny", "mcp_timeout", "disable_paste_summary"]
 
 [environment]
+# Local database + complete document corpus; no search API is required.
+# Use "live" only when ZHIPU_API_KEY is configured, before creating a new run.
+HAI_FDABENCH_WEB_SEARCH = "disabled"
 # The 70-task TRAIN baseline already costs 140 solver executions at two repeats.
 # A candidate screen and paired confirmation consume additional executions.
 HAI_TOTAL_CREATION_BUDGET = 800

@@ -8,13 +8,13 @@
 - 划分保存在 `configs/fdabench_split.json`，种子 42；这是当前全量可评分版本，不是此前 40 TRAIN / 20 TEST 的 60 题子集。
 - 16 个 SQLite 数据库、完整 1418 份 PDF，原始资料约 7.4 GB。另留出索引、下载临时文件和实验记录空间；建议至少 30 GB 空闲磁盘。
 - SQL 只读，单次查询最多 1000 行、20 秒。文档使用全量 PDF 的逐页 FTS5/BM25 检索及按页阅读；不使用参考答案提供的命中文档来缩小资料池。
-- 网页搜索使用已有的智谱 `web_search_prime` MCP，每次 solver 执行最多 15 次。需要服务器配置 `ZHIPU_API_KEY`。
+- 默认使用**离线工具环境**：只读 SQL + 全量文档检索/阅读，不需要任何网页搜索 API。`configs/experiments/fdabench.toml` 固定 `HAI_FDABENCH_WEB_SEARCH="disabled"`；工具说明、公开任务的工具列表、客户端选项和服务端权限均禁止网页搜索。
 - 评分器在平台侧调用模型，分别评 SQL 准确性、外部资料整合、逻辑推理、完整性，再按题目 rubric 权重汇总为 `[0,1]` 连续 RS。默认复用分析模型，也能独立配置 judge。
 - **优化目标为 `mean_reward`（平均 RS）**。`pass_at_1` 继续表示满分回答比例，不会把“部分分提高”误算成零提升。保留候选仍需配对证据、行为归因和确认，均分提高本身不能绕过这些条件。
 
 预算里的 creation 是逻辑试验次数，不是 API 调用次数或金额；每次试验有多步执行和 4 个评分维度，分析与失败重试也会产生额外模型费用。
 
-这是当前工具环境与可配置模型下的 **adapted RS**，不能直接当作官方排行榜分数。文档检索为词法检索，不是官方 embedding/FAISS；网页搜索有时效变化，应保留每轮工具结果。
+这是当前工具环境与可配置模型下的 **adapted RS**，不能直接当作官方排行榜分数。文档检索为词法检索，不是官方 embedding/FAISS；离线模式可能缺少题目所需的外部网页事实，相关维度仍按原参考与 rubric 评分，不因缺少搜索 API 放宽评分。需要联网的任务因此可能较低分。不能把离线和联网环境的成绩直接混为同一种实验。
 
 ## 1. 安装并填写配置
 
@@ -38,7 +38,6 @@ HAI_EXECUTION_BASE_URL=https://your-execution-provider.example/v1
 HAI_EXECUTION_API_KEY=...
 HAI_ANALYSIS_BASE_URL=https://your-analysis-provider.example/v1
 HAI_ANALYSIS_API_KEY=...
-ZHIPU_API_KEY=...
 HAI_FDABENCH_ROOT=/data/fdabench-lite-report
 HAI_FDABENCH_INDEX=/data/fdabench-index/documents.sqlite
 HF_TOKEN=...
@@ -119,11 +118,11 @@ bash /tmp/download-fdabench.sh /data/fdabench-lite-report
 
 运行包包含 16 个数据库、117 道公开问题与宿主侧评分资料，以及覆盖全部 1,418 份 PDF 的预处理文本索引（76,720 个文本块）。**不包含原始 PDF**；`document_search` 和 `document_read` 使用索引，与原执行工具一致。原始 PDF 仍可按前文从源站下载。
 
-将 `.env` 的 `HAI_FDABENCH_ROOT` 设置为解压目录，照常执行 `prepare` 和 `doctor`。`prepare` 自动识别 `prebuilt/documents.sqlite`，校验仓库固定的索引摘要、文档覆盖数、数据库摘要和题目／参考投影后导入，不需要重新解析 PDF，也不需要 Hugging Face 凭据。执行和分析模型、实时网页搜索仍需独立配置。
+将 `.env` 的 `HAI_FDABENCH_ROOT` 设置为解压目录，照常执行 `prepare` 和 `doctor`。`prepare` 自动识别 `prebuilt/documents.sqlite`，校验仓库固定的索引摘要、文档覆盖数、数据库摘要和题目／参考投影后导入，不需要重新解析 PDF，也不需要 Hugging Face 凭据。执行和分析模型仍需配置；默认离线环境不需要网页搜索密钥。
 
 ## 训练／测试数量与任务 domain
 
-新实验配置抽屉的 **Dataset** 区域可选择 `Task domain`、`Training tasks`、`Test tasks`。题数指不同问题数；每题重复次数仍在 Evolution settings 中单独设置。选中的 TRAIN 子集用于首次基线、问题发现、后续候选选题与确认；TEST 子集只用于冻结后的最终评测。每轮小批量验证规则不因这里的数量而改写。
+新实验配置抽屉的 **Benchmark** 下方可选择 `Task domain`、`Training tasks`、`Test tasks`。题数指不同问题数；每题重复次数仍在 Evolution settings 中单独设置。选中的 TRAIN 子集用于首次基线、问题发现、后续候选选题与确认；TEST 子集只用于冻结后的最终评测。每轮小批量验证规则不因这里的数量而改写。
 
 FDABench-Lite 的公开题目包含 `db` 字段，没有单独的人工业务 domain 标签。本平台按数据库提供任务分组；105 道可评分题分布于 15 个数据库组。16 个原始数据库中，另一个组没有进入本次可评分划分。
 
@@ -150,3 +149,15 @@ test_count = 5
 `domain="all"` 表示全部任务组，数量 `0` 表示该组的全部可用题。采样固定使用 seed 42，在原有 TRAIN／TEST 池内分别完成，不重新划分、不混用。界面创建实验时冻结具体 ID；工作目录的 `dataset_selection.json` 保留完整选择。配置变化或恢复时选题不一致会被拒绝。
 
 直接 CLI 同样支持 `--domain group:bank_sales_trading --train-count 10 --test-count 5`，也支持读取 `--models-config` 文件中的 `[dataset]`。服务器拉取代码后，现有下载的数据包无需重新下载。
+
+## 可选联网模式
+
+服务器没有搜索 API 时无需额外处理，沿用默认 `disabled` 即可。如将来需要联网，在创建**新实验前**将 profile 的 `HAI_FDABENCH_WEB_SEARCH` 改为 `"live"`，并在私有 `.env` 配置 `ZHIPU_API_KEY`。`doctor` 仅在 live 模式要求此密钥。模式进入 benchmark 环境指纹；同一 run 不能中途切换，联网失败也不会静默降级为离线。
+
+## 实时进度与资源用量
+
+控制台每约 3 秒读取一次真实记录，显示阶段、当前优化轮、当前评测批次的完成/总试验数、正在执行的题目及最近输出时间。题目重复一次计一个 trial；这些计数不等于 creation。算法没有固定总轮数，因此不预测整个实验的百分比和结束时间。
+
+总耗时与 execution / analysis token 分开展示。FDA 的四维评分模型请求额外记为 evaluation，不并入优化分析用量。模型相同也按实际调用角色分开计数。token 为 provider 返回的 usage，包含缓存输入；缺失 usage 单独标注，失败和重试保留，不估算缺失量。API time 为已观测的请求用时之和，包含排队/重试等待，并发时可能超过实验墙钟耗时；旧日志没有该时间时不补造。
+
+小型 `progress.json` 与 `api_usage.jsonl` 随运行写入；控制台读到的汇总在 `runs/local_experiments/<run-id>/telemetry.json`。真实 trace、评分结果、流程指纹和历史证据均保留。旧实验可从现有原始 trace 补出 token 和已记录 trial 总数；旧实验的逐题实时状态及 API 用时无法追溯补造。

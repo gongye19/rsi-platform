@@ -708,10 +708,12 @@ class IterationController:
         return str(output)
 
     def _checkpoint(self, stage: str, details: dict) -> None:
+        import time
         write_json(
             self.run_root / "controller_state.json",
             {
                 "stage": str(stage),
+                "updated_at": time.time(),
                 "details": dict(details),
                 "budget": self.budget.status(),
             },

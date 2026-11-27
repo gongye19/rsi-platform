@@ -4,6 +4,7 @@ import {ArrowRight, Check, FlaskConical, Loader2, RefreshCw, Square, WifiOff} fr
 import {Button} from '@/components/ui/button';
 import ExperimentList, {RunStatus as Status} from './experiment-list';
 import ComponentStudio from './component-studio';
+import ExperimentProgress from './experiment-progress';
 import ExperimentConfiguration from './experiment-configuration';
 import {launchRun} from '@/lib/launch-run';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '@/components/ui/sheet';
@@ -13,6 +14,7 @@ import './experiment-console.css';
 const activeStates = new Set(['queued','running','stopping']);
 export default function ExperimentConsole() {
   const mainRef = useRef<HTMLElement>(null);
+  const selectedRef = useRef('');
   const configurationTrigger = useRef<HTMLElement | null>(null);
   const [runs,setRuns] = useState<Run[]>([]);
   const [selected,setSelected] = useState('');
@@ -31,6 +33,12 @@ export default function ExperimentConsole() {
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
       const value = await platformRead<Run[]>('',{signal});
+      const id=selectedRef.current || new URLSearchParams(window.location.search).get('run') || value.find(row=>activeStates.has(row.state))?.id || value[0]?.id;
+      if(id && value.some(row=>row.id===id)) {
+        const detail=await platformRead<Run>('?'+new URLSearchParams({run:id}),{signal});
+        const index=value.findIndex(row=>row.id===id);
+        value[index]=detail;
+      }
       if (signal?.aborted) return;
       setRuns(value);setConnected(true);setConnectionError('');setLoading(false);setRevision(v => v+1);
       setSelected(current => {
@@ -45,12 +53,10 @@ export default function ExperimentConsole() {
     catch(e) {if (!signal?.aborted) setConfigError((e as Error).message);}
   },[]);
   useEffect(() => {
-    const abort = new AbortController();let timer: ReturnType<typeof setTimeout>;
-    async function poll() {await refresh(abort.signal);if (!abort.signal.aborted) timer=setTimeout(() => void poll(),4000);}
-    void poll();
+    const abort = new AbortController();
     const choices = setTimeout(() => void loadChoices(abort.signal),0);
-    return () => {abort.abort();clearTimeout(timer);clearTimeout(choices);};
-  },[refresh,loadChoices]);
+    return () => {abort.abort();clearTimeout(choices);};
+  },[loadChoices]);
   function select(id: string) {
     setSelected(id);setError('');setNotice('');
     mainRef.current?.scrollTo({top:0});
@@ -92,6 +98,17 @@ export default function ExperimentConsole() {
       else setConfigError((e as Error).message);
     } finally {setBusy(false);}
   }
+  useEffect(()=>{selectedRef.current=selected;},[selected]);
+  useEffect(()=>{
+    const abort=new AbortController();
+    let timer:ReturnType<typeof setTimeout>;
+    async function poll() {
+      await refresh(abort.signal);
+      if(!abort.signal.aborted)timer=setTimeout(poll,3000);
+    }
+    timer=setTimeout(poll,0);
+    return ()=>{abort.abort();clearTimeout(timer);};
+  },[refresh,selected]);
   const phase = run?.phase?.label || (run?.stage ? run.stage.replaceAll('_',' ') : 'Not started');
   return <div className="experiment-console">
     <header className="console-topbar"><a className="console-brand" href="/experiments">{PLATFORM_NAME}</a><span className="console-topbar-divider"/><span className="console-breadcrumb">Experiments</span><div className="console-topbar-right">{DEMO_MODE && <span className="console-demo-label">Demo · Simulated data</span>}<span className="console-runtime">OpenCode 1.18.32</span></div></header>
@@ -105,6 +122,7 @@ export default function ExperimentConsole() {
             <div title={run.tests?.selected ? `${counts(run.tests.selected.metrics)} · ${run.tests.selected.repeats ?? '?'} per task` : 'No TEST result yet'}><span>Final TEST</span><strong>{metric(run.tests?.selected?.metrics)}</strong></div>
             <div title={run.budget?.remaining != null ? `${run.budget.remaining} TRAIN sessions remaining` : 'Not initialized'}><span>Budget</span><strong>{run.budget?.total != null ? <>{run.budget.used}<em> / {run.budget.total}</em></> : '—'}</strong></div>
           </section>
+          <ExperimentProgress run={run} connected={connected}/>
           <section className="console-workspace" aria-label="Experiment evolution">
             <ComponentStudio key={run.id} run={run.id} live={activeStates.has(run.state) && connected} revision={revision} tests={run.tests} selectedVersion={run.selected_version}/>
           </section>

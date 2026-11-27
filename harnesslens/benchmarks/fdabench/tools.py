@@ -103,6 +103,8 @@ def web_search(query):
 
 class ToolService:
     def __init__(self, root, task_map, index, output):
+        from .tool_policy import web_search_enabled
+        self.web_enabled = web_search_enabled()
         self.root, self.tasks, self.index, self.output = (
             Path(root),
             task_map,
@@ -208,6 +210,8 @@ class ToolService:
         if tool == "document_read":
             return read_document(self.index, value, body.get("page", 1))
         if tool == "web_search":
+            if not self.web_enabled:
+                raise ValueError("Web search is disabled for this offline experiment")
             key = (task, body.get("trial_id", "unknown"))
             with self.lock:
                 count = self.web_counts.get(key, 0)

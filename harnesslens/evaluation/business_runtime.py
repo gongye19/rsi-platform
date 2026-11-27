@@ -176,19 +176,22 @@ def run_business_batch(*, adapter, run_root, scope, harness, harness_version, ha
     signature = adapter.fingerprint()
     limits = limits or adapter.limits()
     output = Path(run_root).resolve()
+    from harnesslens.infrastructure.batch_progress import BatchProgress
+    progress = BatchProgress(output, scope, harness_version, task_repeats)
     with adapter.execution_context() as resources:
         def execute(tid):
             rows, paths = [], []
             for trial in range(task_repeats[tid]):
                 # Task IDs are data; a digest prevents path traversal and sanitized-name collisions.
                 directory = output / "trials" / stable_hash({"task": tid}) / f"trial_{trial:04d}"
-                row = run_trial(adapter=adapter, resources=resources, trial_root=directory,
-                    task_id=tid, trial=trial, pairing_slot=pairing_offsets.get(tid, 0) + trial,
-                    scope=scope, version=harness_version, manifest=harness_manifest, limits=limits, signature=signature)
-                if row.get("infrastructure_error"):
-                    raise RuntimeError(f"Business execution paused: {row.get('error')}; retained at {directory}")
-                rows.append(row)
-                paths.append(str(directory / "trial.jsonl"))
+                with progress.trial(tid, trial):
+                    row = run_trial(adapter=adapter, resources=resources, trial_root=directory,
+                        task_id=tid, trial=trial, pairing_slot=pairing_offsets.get(tid, 0) + trial,
+                        scope=scope, version=harness_version, manifest=harness_manifest, limits=limits, signature=signature)
+                    if row.get("infrastructure_error"):
+                        raise RuntimeError(f"Business execution paused: {row.get('error')}; retained at {directory}")
+                    rows.append(row)
+                    paths.append(str(directory / "trial.jsonl"))
             return {"task_id": tid, "harness_version": harness_version, "rewards": [r["reward"] for r in rows],
                 "trajectory_paths": paths, "worker_errors": [], "trial_summaries": [{k: r.get(k) for k in
                 ("trial", "pairing_slot", "reward", "n_messages", "n_tool_calls", "termination", "usage")} for r in rows]}

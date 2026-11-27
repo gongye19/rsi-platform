@@ -121,6 +121,14 @@ export function materializeDemoRun(store:DemoStore,source:Run,now=Date.now()/100
     if(run.configuration.full_evaluation) run.tests={initial:{metrics:metrics(8/13,testTasks),repeats:1},selected:{metrics:metrics(active.metrics.score!-(1/13),testTasks),repeats:1}};
   }
   run.iteration_history=history.decisions.map(d=>({iteration:Math.ceil(d.step/3),candidate_version:d.version_id,review_decision:d.outcome,review_rationale:d.reason,rollout_metrics:metrics(history.bundles.find(b=>b.id===d.version_id)?.metrics.score || 0),evaluation_mode:'simulated'}));
+  // Synthetic telemetry stays in the explicitly labeled browser-only demo.
+  const started=store.started[run.id];
+  const elapsed=store.stopped[run.id] ?? Math.min(now-started,Math.max(3,rounds*9+3));
+  const usage=(model:string,requests:number,scale:number)=>({requests,input_tokens:requests*scale,output_tokens:requests*180,total_tokens:requests*(scale+180),cached_input_tokens:0,missing_usage:0,failed_requests:0,request_seconds:requests*1.3,timed_requests:requests,retries:0,models:[model]});
+  run.telemetry={checked_at:now,started_at:started,finished_at:run.state==='running'?null:started+elapsed,elapsed_seconds:elapsed,last_activity_at:started+step*3,
+    usage:{execution:usage(run.configuration.models?.execution?.model || 'demo-execution',4+step*3,1600),analysis:usage(run.configuration.models?.analysis?.model || 'demo-analysis',step*2,2400),evaluation:usage('demo-evaluation',0,0)},
+    progress:{iteration:Math.ceil(step/3),reviewed_rounds:history.decisions.length,active_jobs:[],completed_trials:trainTasks*(1+Math.floor(step/3)),failed_trials:0,batch_count:1,
+      batch:{id:'synthetic-batch',scope:'TRAIN',version:active.id,total:trainTasks,task_count:trainTasks,completed:run.state==='running'?Math.min(trainTasks,step%3*Math.ceil(trainTasks/3)):trainTasks,failed:0,started_at:started,updated_at:now,active:run.state==='running'?[{task_id:'demo/query-1',trial:0,started_at:now-2},{task_id:'demo/query-2',trial:0,started_at:now-1}]:[]}}};
   return run;
 }
 export function demoHistory(id:string):ComponentHistory {

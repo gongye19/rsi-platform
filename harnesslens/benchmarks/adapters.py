@@ -26,7 +26,7 @@ def runtime_sources():
         "harnesses/harness_workspace.py", "harnesses/initial_harness.py", "harnesses/harness_manifest.py", "harnesses/channel_preflight.py",
         "harnesses/component_policy.py", "harnesses/component_preflight.py", "harnesses/opencode_execution.py", "harnesses/opencode_bridge.mjs",
         "../configs/opencode-plugin-runtime.json", "../assets/opencode-plugin-runtime-1.18.32.tar.gz",
-        "infrastructure/process_isolation.py", "infrastructure/trace_watch.py", "evaluation/rollout_outcome.py"))
+        "infrastructure/batch_progress.py", "infrastructure/process_isolation.py", "infrastructure/trace_watch.py", "evaluation/rollout_outcome.py"))
 
 
 @dataclass(frozen=True)

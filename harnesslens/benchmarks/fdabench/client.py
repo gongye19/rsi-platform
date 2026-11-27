@@ -9,16 +9,16 @@ import urllib.request
 
 
 def main():
+    cfg = json.loads(Path(__file__).with_name("endpoint.json").read_text())
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "tool",
-        choices=["schema", "sql", "document_search", "document_read", "web_search"],
+        choices=cfg.get("tools_available", ["schema", "sql", "document_search", "document_read", "web_search"]),
     )
     ap.add_argument("value", nargs="?", default="")
     ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--page", type=int, default=1)
     args = ap.parse_args()
-    cfg = json.loads(Path(__file__).with_name("endpoint.json").read_text())
     body = json.dumps(
         {
             "tool": args.tool,

@@ -14,6 +14,7 @@ from harnesslens.benchmarks.adapters import (
     runtime_sources,
 )
 from .data import tasks
+from .tool_policy import web_search_enabled, tool_names
 
 ROOT = Path(__file__).resolve().parents[3]
 CONTRACT = """Use the fixed task-scoped CLI tools:
@@ -30,6 +31,15 @@ Produce the requested complete analytical report; save it to output/answer.txt a
 """
 _HASHES = {}
 _LOCK = threading.Lock()
+
+
+def tool_contract():
+    if web_search_enabled():
+        return CONTRACT
+    return CONTRACT.replace('python source/client.py web_search "query"\n', '').replace(
+        "Web search uses the configured live backend, at most 15 calls per execution. Cite URLs and PDF paths/pages.",
+        "This is an offline evaluation: no web search or external network access is available. Use the local database and document corpus only. Cite PDF paths/pages; state evidence gaps without inventing sources.",
+    )
 
 
 def cached_sha(path):
@@ -126,7 +136,7 @@ class FDABenchAdapter(BusinessBenchmark):
 
     def public_task(self, task_id):
         raw = self.task_map()[task_id]
-        return {
+        public = {
             k: raw[k]
             for k in (
                 "task_id",
@@ -138,6 +148,8 @@ class FDABenchAdapter(BusinessBenchmark):
             )
             if k in raw
         }
+        public["tools_available"] = tool_names()
+        return public
 
     def explorer_input(self, task_ids):
         if set(task_ids) - set(self.split().train):
@@ -149,9 +161,9 @@ class FDABenchAdapter(BusinessBenchmark):
             "cell": self.cell,
             "tasks": [self.public_task(t) for t in task_ids],
             "environment": {
-                "tool_transport": {"kind": "cli", "contract": CONTRACT},
+                "tool_transport": {"kind": "cli", "contract": tool_contract()},
                 "runtime_contract": runtime_contract(),
-                "retriever": "full-corpus 1418-PDF FTS5 BM25; live configured web search; tool identities and sources are fixed",
+                "retriever": "full-corpus 1418-PDF FTS5 BM25; web search " + ("live" if web_search_enabled() else "disabled") + "; tool identities and sources are fixed",
             },
             "forbidden_inputs": [
                 "grader",
@@ -238,6 +250,7 @@ class FDABenchAdapter(BusinessBenchmark):
         return {
             "benchmark": self.cell,
             "primary_metric": "mean_reward",
+            "web_search": "live" if web_search_enabled() else "disabled",
             "tasks": cached_sha(self.data_root / "tasks/tasks.jsonl"),
             "references": cached_sha(self.data_root / "evaluation/references.jsonl"),
             "assets_manifest": sha(self.repo_root / "configs/fdabench-assets.json"),
@@ -304,12 +317,12 @@ class FDABenchAdapter(BusinessBenchmark):
         token = service.register(task_id, str(workspace))
         write_json(
             source / "endpoint.json",
-            {"url": service.url, "token": token, "trial_id": str(workspace)},
+            {"url": service.url, "token": token, "trial_id": str(workspace), "tools_available": tool_names()},
         )
         public = self.public_task(task_id)
         write_json(source / "task.json", public)
         return {
-            "prompt": public["query"] + "\n\n" + CONTRACT,
+            "prompt": public["query"] + "\n\n" + tool_contract(),
             "ports": [service.port],
             "private_roots": [str(self.data_root)],
             "private_ports": [],
@@ -317,6 +330,14 @@ class FDABenchAdapter(BusinessBenchmark):
 
     def grade(self, task_id, answer):
         return self._get_judge().grade(task_id, answer)
+
+    def grade_for_trial(self, task_id, answer, trial_root):
+        # Keep evaluation calls with their trial, including interrupted attempts.
+        # A retry reuses the same per-dimension checkpoints.
+        import copy
+        judge = copy.copy(self._get_judge())
+        judge.output = Path(trial_root) / 'judge_calls'
+        return judge.grade(task_id, answer)
 
     def run_batch(self, **kwargs):
         from harnesslens.evaluation.native_benchmark import run_batch

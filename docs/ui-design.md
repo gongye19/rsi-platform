@@ -225,3 +225,28 @@ local console and the public demo's simulated configuration. Unused native
 registration manifests are removed; directory discovery stays generic and custom
 benchmark registrations can still be added later. Native CLI adapters and existing
 experiment records are preserved. Proof: `runs/platform/benchmark-options-ui.png`.
+
+
+## Observed experiment progress and model usage
+
+The existing Linear light console remains the reference. The flow is unchanged:
+select an experiment, observe it, inspect its lineage or held-out evaluation.
+A single compact observation panel between the summary and charts groups stage,
+current batch, active tasks, last output, elapsed wall time and role-specific usage.
+It reuses the existing typography, borders and icons; no new navigation or dependency.
+
+States: queued shows waiting, running polls sequentially every 3s, failed/stopped
+freezes elapsed time and retains evidence, succeeded shows recorded totals,
+disconnected retains the last snapshot and stops claiming a live connection.
+Only current batch has a factual completed/total bar. No invented overall completion
+percentage or ETA. Execution and analysis stay separate even for the same model;
+FDA evaluation calls get a third role. Provider usage and missing usage stay distinct.
+Cached inputs are included. Summed API time is separate from wall-clock elapsed.
+
+Components: existing ExperimentConsole owns abortable polling; ExperimentProgress
+renders the read-only observation panel; BatchProgress writes atomic counters in
+CRM/native/business runners; service telemetry incrementally reads compact sidecars
+or historical traces and excludes copied evidence. No extra model calls.
+Acceptance: progress changes without manual refresh; concurrent task counts remain
+consistent; failed/retried requests remain charged in usage; TEST v0 reuse is not
+counted twice; no prompts or keys are included in telemetry; responsive layout.

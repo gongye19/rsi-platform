@@ -28,7 +28,7 @@ def trial_metrics(value):
     return value.get('metrics') or value.get('agent_workspace_entry', {}).get('metrics', {})
 
 
-def run_record(job):
+def run_record(job, *, include_telemetry=False):
     identity = job['id']; root = ROOT / 'runs/train' / identity
     local = ROOT / 'runs/local_experiments' / identity
     checkpoint = read(root / 'controller_state.json', {})
@@ -69,7 +69,11 @@ def run_record(job):
                          'full_evaluation': bool(receipt) or profile.get('full_evaluation', False)}
         if models: configuration['models'] = models
     except (OSError, ValueError): pass
-    return {**job, 'checkpoint': checkpoint, 'budget': budget, 'baseline_metrics': baseline,
+    observed = {}
+    if include_telemetry:
+        from .telemetry import snapshot
+        observed['telemetry'] = snapshot(ROOT, job)
+    return {**job, **observed, 'checkpoint': checkpoint, 'budget': budget, 'baseline_metrics': baseline,
             'candidates': candidates, 'tests': tests, 'selected_version': final.get('selected_version'),
             'iteration_history': final.get('iteration_history', []), 'models': models,
             'configuration': configuration, 'stage': read(local / 'stage.json', {}).get('stage') or checkpoint.get('stage'),

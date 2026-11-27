@@ -175,7 +175,7 @@ def run_trial(
                     raise RuntimeError('Native execution attempt limit reached; inspect retained failures')
                 archived = previous / f'attempt-{count+1:04d}'
                 archived.mkdir()
-                for name in ('workspace', 'api_calls.jsonl', 'stdout.jsonl', 'stderr.log', 'trial.jsonl'):
+                for name in ('workspace', 'api_calls.jsonl', 'api_usage.jsonl', 'stdout.jsonl', 'stderr.log', 'trial.jsonl'):
                     path = root / name
                     if path.exists(): path.rename(archived / name)
             workspace.mkdir()
@@ -397,7 +397,10 @@ def run_trial(
             finally:
                 _stop_process(proxy)
         try:
-            result = adapter.grade(task_id, row["answer"])
+            if hasattr(adapter, 'grade_for_trial'):
+                result = adapter.grade_for_trial(task_id, row["answer"], root)
+            else:
+                result = adapter.grade(task_id, row["answer"])
             write_json(root / "grading.json", result)
             import math
 
@@ -469,6 +472,8 @@ def run_batch(
     signature = adapter.fingerprint()
     limits = limits or adapter.limits()
     output = Path(run_root).resolve()
+    from harnesslens.infrastructure.batch_progress import BatchProgress
+    progress = BatchProgress(output, scope, harness_version, task_repeats)
     with adapter.execution_context() as resources:
 
         def execute(tid):
@@ -481,20 +486,21 @@ def run_batch(
                     / stable_hash({"task": tid})
                     / f"trial_{trial:04d}"
                 )
-                from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
-                for attempt in range(native_attempts()):
-                    try:
-                        row = run_trial(adapter, resources, root, tid, trial,
-                                        pairing_offsets.get(tid, 0) + trial, scope,
-                                        harness_version, harness_manifest, limits, signature)
-                        break
-                    except CandidateRuntimeError:
-                        raise
-                    except Exception:
-                        if attempt + 1 == native_attempts(): raise
-                        time.sleep(min(attempt + 1, 3))
-                rows.append(row)
-                paths.append(str(root / "trial.jsonl"))
+                with progress.trial(tid, trial):
+                    from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
+                    for attempt in range(native_attempts()):
+                        try:
+                            row = run_trial(adapter, resources, root, tid, trial,
+                                            pairing_offsets.get(tid, 0) + trial, scope,
+                                            harness_version, harness_manifest, limits, signature)
+                            break
+                        except CandidateRuntimeError:
+                            raise
+                        except Exception:
+                            if attempt + 1 == native_attempts(): raise
+                            time.sleep(min(attempt + 1, 3))
+                    rows.append(row)
+                    paths.append(str(root / "trial.jsonl"))
             return {
                 "task_id": tid,
                 "harness_version": harness_version,

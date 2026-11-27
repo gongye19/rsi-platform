@@ -24,6 +24,7 @@ import http.server
 import fcntl
 import json
 import os
+from pathlib import Path
 import random
 import signal
 import socketserver
@@ -231,6 +232,19 @@ def _log(entry):
             except OSError:
                 pass
             os.close(fd)
+        # Compact, append-only telemetry avoids rereading full prompts on every UI poll.
+        # Usage belongs to the provider response, never inferred from text length.
+        usage = entry.get("usage") or {}
+        compact = {k: entry[k] for k in ("ts", "event", "call_index", "role", "model", "upstream_status") if k in entry}
+        compact["finished_at"] = time.time()
+        if "event" not in entry:
+            compact["seconds"] = max(0, compact["finished_at"] - entry.get("ts", compact["finished_at"]))
+            compact["failed"] = bool(entry.get("error"))
+            compact["usage"] = {k: usage[k] for k in ("input_tokens", "output_tokens", "prompt_tokens", "completion_tokens", "total_tokens") if k in usage}
+            details = usage.get("input_tokens_details") or usage.get("prompt_tokens_details") or {}
+            compact["cached_input_tokens"] = details.get("cached_tokens", usage.get("prompt_cache_hit_tokens", 0))
+        with open(str(Path(LOG_FILE).with_name("api_usage.jsonl")), "a", encoding="utf-8") as stream:
+            stream.write(json.dumps(compact) + "\n")
 
 
 def _begin_request():
@@ -659,6 +673,7 @@ def main():
     LOG_FILE = a.log_file
     AGENT_SEED = a.agent_seed
     open(LOG_FILE, "w").close()
+    Path(LOG_FILE).with_name("api_usage.jsonl").write_text("")
     signal.signal(signal.SIGTERM, _graceful_shutdown)
     signal.signal(signal.SIGINT, _graceful_shutdown)
     s = ThreadingHTTPServer((a.host, a.port), H)

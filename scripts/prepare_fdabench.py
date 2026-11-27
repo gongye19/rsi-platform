@@ -75,7 +75,8 @@ def doctor(adapter):
         if "your-" in selected["model"]:
             raise ValueError("Configure a real " + role + " model in the profile")
     adapter._get_judge()
-    if not os.environ.get("ZHIPU_API_KEY"):
+    from harnesslens.benchmarks.fdabench.tool_policy import web_search_enabled
+    if web_search_enabled() and not os.environ.get("ZHIPU_API_KEY"):
         raise ValueError("ZHIPU_API_KEY is required for live web search")
     # Test real network namespaces and the Unix-socket bridge without external calls.
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer

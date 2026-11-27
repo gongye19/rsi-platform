@@ -405,22 +405,25 @@ def run_crm_batch(*, repo_root, run_root, scope, harness, harness_version, harne
     else:
         run_trial = _trial
     records = []
+    from harnesslens.infrastructure.batch_progress import BatchProgress
+    progress = BatchProgress(output, scope, harness_version, task_repeats)
     with ReadOnlyPostgresProxy() as proxy:
         def run_task(tid):
             rows = []
             paths = []
             for trial in range(task_repeats[tid]):
                 directory = output / "trials" / tid.replace("/", "_") / f"trial_{trial:04d}"
-                row = run_trial(repo_root=root, trial_root=directory, task_id=tid, trial=trial,
-                             pairing_slot=pairing_offsets.get(tid, 0) + trial, scope=scope, version=harness_version,
-                             manifest=harness_manifest, limits=limits, signature=signature, pg_port=proxy.port)
-                rows.append(row)
-                paths.append(str(directory / "trial.jsonl"))
-                if row.get("candidate_execution_failed"):
-                    from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
-                    raise CandidateRuntimeError(row.get("error", "Candidate component failed"), directory)
-                if row.get("infrastructure_error"):
-                    raise RuntimeError(f"CRM execution paused: {row.get('error')}; retained at {directory}")
+                with progress.trial(tid, trial):
+                    row = run_trial(repo_root=root, trial_root=directory, task_id=tid, trial=trial,
+                                 pairing_slot=pairing_offsets.get(tid, 0) + trial, scope=scope, version=harness_version,
+                                 manifest=harness_manifest, limits=limits, signature=signature, pg_port=proxy.port)
+                    rows.append(row)
+                    paths.append(str(directory / "trial.jsonl"))
+                    if row.get("candidate_execution_failed"):
+                        from harnesslens.harnesses.channel_preflight import CandidateRuntimeError
+                        raise CandidateRuntimeError(row.get("error", "Candidate component failed"), directory)
+                    if row.get("infrastructure_error"):
+                        raise RuntimeError(f"CRM execution paused: {row.get('error')}; retained at {directory}")
             return {"task_id": tid, "harness_version": harness_version, "rewards": [row["reward"] for row in rows],
                     "trajectory_paths": paths, "worker_errors": [],
                     "trial_summaries": [{k: row.get(k) for k in ("trial", "pairing_slot", "reward", "n_messages", "n_tool_calls", "termination", "usage")} for row in rows]}

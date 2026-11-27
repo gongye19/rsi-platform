@@ -105,6 +105,7 @@ def test_document_tools(assets):
 def test_scoped_service_and_web_budget(assets, monkeypatch):
     import harnesslens.benchmarks.fdabench.tools as module
 
+    monkeypatch.setenv("HAI_FDABENCH_WEB_SEARCH", "live")
     monkeypatch.setattr(module, "web_search", lambda q: {"results": []})
     root, _, index = assets
     service = ToolService(root, {"task": {"db": "demo"}}, index, root / "logs")
@@ -543,3 +544,25 @@ def test_runtime_bundle_import_without_raw_pdfs(assets,tmp_path):
     assert prepare_runtime(root,destination,repo_root=fake_repo)==receipt
     (root/'prebuilt/documents.sqlite').write_bytes(b'tampered')
     with pytest.raises(ValueError,match='checksum'):prepare_runtime(root,destination,repo_root=fake_repo)
+
+
+def test_offline_tool_contract_and_server_reject_search(assets, monkeypatch):
+    from harnesslens.benchmarks.fdabench.adapter import tool_contract, FDABenchAdapter
+    monkeypatch.delenv("ZHIPU_API_KEY", raising=False)
+    monkeypatch.setenv("HAI_FDABENCH_WEB_SEARCH", "disabled")
+    root, db, index = assets
+    service = ToolService(root, {"t": {"db": "demo"}}, index, root/"offline")
+    try:
+        assert "client.py web_search" not in tool_contract()
+        assert "offline evaluation" in tool_contract()
+        assert service.call("t", {"tool":"sql", "value":"select sum(amount) from sales"})["rows"] == [(10,)]
+        assert service.call("t", {"tool":"document_search", "value":"Revenue"})
+        with pytest.raises(ValueError, match="disabled"):
+            service.call("t", {"tool":"web_search", "value":"anything"})
+        adapter = FDABenchAdapter(root)
+        adapter._tasks = {"t":{"task_id":"t","query":"question","tools_available":["web_search"]}}
+        assert "web_search" not in adapter.public_task("t")["tools_available"]
+    finally:
+        service.close()
+    monkeypatch.setenv("HAI_FDABENCH_WEB_SEARCH", "live")
+    assert "client.py web_search" in tool_contract()
