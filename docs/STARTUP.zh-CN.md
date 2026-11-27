@@ -4,7 +4,7 @@
 
 | 配置 | 用途 | 默认 |
 | --- | --- | --- |
-| `benchmark` | 内置题库名称，或外部 `benchmark.toml` 路径 | 本轮用 `crm` |
+| `benchmark` | 内置题库名称，或外部 `benchmark.toml` 路径 | 本轮用 `fdabench` |
 | `initial_harness` | 初始 OpenCode Harness 目录，或已导出的完整 Harness JSON 包 | **省略或空字符串表示空 v0** |
 | `agent_config` | HTTP/Python 调用、答案和 trace 映射配置 | 省略则使用本机原生 OpenCode |
 | `env_file` | 私有模型地址、凭据、外部数据位置等 | 模板使用仓库 `.env` |
@@ -16,31 +16,32 @@
 
 模型凭据只写私有 `.env`。远程业务 Agent 的固定运行时和模型由业务服务配置；平台模型用于分析、编辑和选优。
 
-配置文件中的相对路径均相对于该 TOML 所在目录。例：保存为 `configs/experiments/crm.local.toml`：
+配置文件中的相对路径均相对于该 TOML 所在目录。例：仓库自带的 `configs/experiments/fdabench.toml`（节选）：
 
 ```toml
 schema = "harnesslens.experiment.v1"
-benchmark = "crm"
+benchmark = "fdabench"
 mode = "train"
 full_evaluation = true
-initial_harness = ""  # 默认空；也可填 ../../harnesses/business-agent
-agent_config = "../../examples/agents/company-http.local.toml"
+initial_harness = ""  # 默认空；也可填 ../../harnesses/<name>
 env_file = "../../.env"
-readiness = "draft"   # 完成接口/trace/数据冒烟后改 ready
+readiness = "ready"
 
-[environment]
-HAI_TOTAL_CREATION_BUDGET = 200
-HAI_MAX_ROLLOUT_CONCURRENCY = 1
-HAI_MAX_ANALYSIS_CONCURRENCY = 1
-HAI_PROVIDER_MAX_CONCURRENCY = 1
+[dataset]
+domain = "all"
+train_count = 0        # 0 使用所选分组的全部任务
+test_count = 0
 
 [models.execution]
-managed_by = "business_agent"
+model = "glm/glm-5.3"
+api = "chat_completions"
+base_url_env = "HAI_EXECUTION_BASE_URL"
+api_key_env = "HAI_EXECUTION_API_KEY"
 
 [models.analysis]
-model = "david/gpt-6.2-sol"
-api = "responses"
-base_url = "https://api.david-ai.net/v1"
+model = "glm/glm-5.3"
+api = "chat_completions"
+base_url_env = "HAI_ANALYSIS_BASE_URL"
 api_key_env = "HAI_ANALYSIS_API_KEY"
 
 [components]
@@ -49,7 +50,9 @@ denied = []
 # 如需固定权限/MCP：denied = ["permissions", "mcp_servers"]
 ```
 
-会话预算不是费用或 token 上限。一次 train 实验内部可能有多轮优化。当前 CRM 的训练为 query1–8，query9–13 为最终评测用工程留出，不在本次训练中优化；这些题在此前实验中已有曝光，不应称作从未见过的独立测试集。历史实验保留其原有划分。
+接入 HTTP/Python 业务 agent 时，改为在 `agent_config` 指向私有接入配置，并把 `[models.execution]` 写成 `managed_by = "business_agent"`。
+
+会话预算不是费用或 token 上限。一次 train 实验内部可能有多轮优化。
 
 `allowed` 是候选上限，不会强迫模型选择全部组件。先读取实际Agent能力和基线工具目录，再由模型发现可改项，候选通过真实生效检查后才进入评测。业务接入还受服务能力声明约束；详见 [16组件协议](OPENCODE-COMPONENTS.zh-CN.md)。
 
@@ -91,15 +94,15 @@ harnesses/business-agent/
 无需 Web/API 时，同样可用本地队列入口执行配置：
 
 ```bash
-.venv/bin/python -m harnesslens.service create crm-001 --profile configs/experiments/crm.local.toml
-.venv/bin/python -m harnesslens.service start crm-001
+.venv/bin/python -m harnesslens.service create fdabench-001 --profile configs/experiments/fdabench.toml
+.venv/bin/python -m harnesslens.service start fdabench-001
 .venv/bin/python -m harnesslens.service worker --once
 ```
 
 直接运行算法也支持可选参数（预算等环境变量需在进程启动前设置）：
 
 ```bash
-.venv/bin/python run_e2e.py --cell crm --harness opencode --run-id crm-001 --models-config configs/experiments/crm-local.toml
+.venv/bin/python run_e2e.py --cell fdabench --harness opencode --run-id fdabench-001 --models-config configs/experiments/fdabench.toml
 # 有初版时增加 --initial-harness /absolute/path/to/harness
 # 接业务服务时增加 --agent-config /absolute/path/to/agent.toml
 ```

@@ -10,7 +10,7 @@ if [[ "${1:-}" == --offline ]]; then
   uv pip sync --python .venv/bin/python --require-hashes --no-index --find-links "$bundle/wheelhouse" "$bundle/requirements.lock.txt"
   .venv/bin/python scripts/install_opencode.py --offline --archive "$bundle/opencode/$(uname -m)/opencode.tar.gz"
 else
-  uv sync --locked --extra crm --extra tau2 --extra dev
+  uv sync --locked --extra dev
   .venv/bin/python scripts/install_opencode.py
 fi
 if [[ ! -f .env ]]; then cp .env.example .env; fi

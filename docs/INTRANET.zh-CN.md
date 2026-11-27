@@ -10,7 +10,7 @@
 - OpenCode 固定 1.18.32，单独安装在本项目 `runtime/`，不覆盖系统或业务实例的 OpenCode。Linux x64/ARM64 官方归档 SHA256 见 `configs/opencode-assets.json`。
 - 优化器的 Harness Editor 需要 bubblewrap 和可用的 Linux namespace。管理员可安装 `bubblewrap`；若内核或公司策略禁用 namespace，环境检查失败即停止，需要管理员提供等价隔离，不能直接关闭沙箱。
 - 界面使用 Node ≥22、Bun 1.3.12 和 `web/bun.lock`，不由 uv 管理。仅用 CLI/API 时不需要前端依赖。
-- CRM 需要专用测试 PostgreSQL（推荐与原快照相同的 17 系列）和 13 题外部数据。代码仓库不包含数据库、题目答案、凭据和历史实验。
+- FDABench 数据在服务器本地准备（见 [FDABench 指南](FDABENCH.zh-CN.md)）；代码仓库不包含题目答案、凭据和历史实验。
 
 Linux 必须允许 bubblewrap 创建所需的命名空间；公司策略若禁用该能力，需管理员配置后再运行优化器。预检失败会阻止启动，不提供关闭隔离的绕过选项。
 
@@ -48,33 +48,14 @@ bash scripts/setup_linux.sh --offline /path/to/offline/linux-x86_64
 
 更大的 FDABench 报告实验及服务器数据下载命令见 [FDABench 指南](FDABENCH.zh-CN.md)。
 
-## 准备 13 题
-
-外网本机已有数据时，`python scripts/export_crm_data.py` 会生成私有 `offline/crm-data.tar.gz` 和校验文件。这些不会进入 GitHub。
-
-```bash
-mkdir -p third_party
-tar -xzf /path/to/crm-data.tar.gz -C third_party
-```
-
-默认从 `third_party/dataagentbench/` 读取，也可在 `.env` 设置 `HAI_DAB_ROOT=/absolute/dataagentbench`。对外提供的业务测试环境也必须有相同数据指纹；宿主评分器和验证答案只放平台端。
-
-公司管理员在专用测试 PostgreSQL 的 loopback 55432 端口准备空实例后，可使用导入脚本。它只创建固定的新测试库/只读角色，发现已存在则拒绝修改；不要指向生产实例。管理员连接串放私有 `.env` 的 `CRM_BENCHMARK_ADMIN_DSN`，不要放终端命令或 Git。
-
-```bash
-.venv/bin/python scripts/init_crm_postgres.py --create-isolated-benchmark-db
-```
-
-为 `h2_crm_reader` 只配置本机 loopback 到 `h2_crm_support_v1` 的访问。当前 SQL 代理适用测试实例本机只读角色免密认证；不会把管理员连接或凭据传给 Agent。管理员角色不能对 Agent 网络开放。导入标记和六表内容要通过 `scripts/check_intranet.py --crm` 的规范指纹检查。
-
 ## 接业务 Agent
 
-1. 复制 `examples/agents/company-http.toml` 到 `examples/agents/company-http.local.toml`，填写现有 HTTP/trace 接口地址、字段映射、版本和鉴权环境变量。令牌写 `.env`。
+1. 复制 `examples/agents/http.toml`（或 `http-trace.toml`）为 `examples/agents/company-http.local.toml`，填写现有 HTTP/trace 接口地址、字段映射、版本和鉴权环境变量。令牌写 `.env`。
 2. 在业务端评测入口为每个请求创建独立 session，按请求加载候选文件，返回版本/摘要回执。实际模型请求和工具轨迹可由主接口返回，或由单独 trace 接口按 request/session 获取。
-3. 将隔离 CRM 数据/工具接到该评测 session，确认业务端能查询。平台本机 `source/query.py`、文件路径和 localhost 代理不能被另一台机器直接使用。可以准备同指纹测试副本或接公司已有只读工具网关；**本仓库没有自动在业务机器安装远程数据网关**。
-4. 复制 `configs/experiments/crm-company.toml` 为 `crm-company.local.toml`，让 agent_config 指向私有配置；确认冒烟通过后才把 `readiness` 改成 `ready`。模板默认 draft，不能误启动付费实验。
+3. 将隔离业务数据/工具接到该评测 session，确认业务端能查询。平台本机 `source/query.py`、文件路径和 localhost 代理不能被另一台机器直接使用。可以准备同指纹测试副本或接公司已有只读工具网关；**本仓库没有自动在业务机器安装远程数据网关**。
+4. 复制一份实验 profile（如 `configs/experiments/fdabench.toml`）为私有 `company.local.toml`，让 `agent_config` 指向私有配置，`benchmark` 指向业务 JSONL benchmark 的 `benchmark.toml`；确认冒烟通过后才把 `readiness` 改成 `ready`。模板默认 draft，不能误启动付费实验。
 
-Python 适配是 Worker 本地 Python 函数调用；业务包和其依赖必须可访问，可在 `agent.python` 指定业务独立解释器。通用 JSONL benchmark 可使用 Linux Python 适配。**当前 CRM 的本机原生执行/SQL沙箱仍是 macOS Seatbelt；Linux Python CRM 路径会拒绝缺少端口隔离的执行。Linux 上本轮采用远程 HTTP 业务接入。** `scripts/run_crm.py` 的本机原生沙箱探针不可作为 Linux HTTP 冒烟命令。
+Python 适配是 Worker 本地 Python 函数调用；业务包和其依赖必须可访问，可在 `agent.python` 指定业务独立解释器。通用 JSONL benchmark 可使用 Linux Python 适配。
 
 HTTP/trace字段、回执协议与通用接收端见 [BUSINESS-AGENTS.zh-CN.md](BUSINESS-AGENTS.zh-CN.md)。16组件的交付与本机执行机制已接通；profile默认全纳入探索，也可通过 `[components]` 缩小范围。实际业务接口能力声明与实验许可取交集，模型依运行时证据选择，再做候选preflight；原5项proposal_only继续保留。声明全部能力不能代替接入真实业务加载器。
 
@@ -83,8 +64,8 @@ HTTP/trace字段、回执协议与通用接收端见 [BUSINESS-AGENTS.zh-CN.md](
 在 `.env` 增加 `HAI_SERVICE_TOKEN`（至少24字符随机串），仅供平台 API 与 Next.js 服务端使用，不会进入浏览器。可以用 Python 的 `secrets.token_urlsafe(32)` 在本机生成后手动写入 `.env`；不要提交。
 
 ```bash
-.venv/bin/python scripts/check_intranet.py --crm --profile configs/experiments/crm-company.local.toml
-.venv/bin/python -m harnesslens.service plan --profile configs/experiments/crm-company.local.toml
+.venv/bin/python scripts/check_intranet.py --profile configs/experiments/fdabench.toml
+.venv/bin/python -m harnesslens.service plan --profile configs/experiments/fdabench.toml
 .venv/bin/python scripts/install_services.py --web --enable
 systemctl --user status harnesslens-api harnesslens-worker harnesslens-web
 ```
@@ -105,11 +86,11 @@ systemctl --user status harnesslens-api harnesslens-worker harnesslens-web
 ## CLI、API 与恢复
 
 ```bash
-.venv/bin/python -m harnesslens.service create crm-001 --profile configs/experiments/crm-company.local.toml
-.venv/bin/python -m harnesslens.service start crm-001
-.venv/bin/python -m harnesslens.service status crm-001
-.venv/bin/python -m harnesslens.service stop crm-001
-.venv/bin/python -m harnesslens.service resume crm-001
+.venv/bin/python -m harnesslens.service create fdabench-001 --profile configs/experiments/fdabench.toml
+.venv/bin/python -m harnesslens.service start fdabench-001
+.venv/bin/python -m harnesslens.service status fdabench-001
+.venv/bin/python -m harnesslens.service stop fdabench-001
+.venv/bin/python -m harnesslens.service resume fdabench-001
 ```
 
 API 使用 `Authorization: Bearer $HAI_SERVICE_TOKEN`：
@@ -131,7 +112,7 @@ SQLite 队列和事件在 `runs/service/`；训练在 `runs/train/{id}/`，测�
 
 停止只操作本平台拥有且启动标识匹配的子进程组；systemd 同时收拢本服务 cgroup。停止不会自动取消已提交的远端 HTTP 工作。Worker 异常重启把旧 running 任务标为 interrupted，不自动重新消耗配额。恢复复用原算法已有检查点/完整缓存；若业务调用中断且结果不明，会保留现场拒绝静默重试，需要先按 request_id 查远端状态，然后决定新建实验。改变配置/代码/数据指纹后应新建 run_id。
 
-最终候选为 `runs/train/{id}/submission/final.json` 及其中的不可变 Harness 包，默认只作为实验输出，不自动发布到线上。保持 query1–10 TRAIN、query11–13 工程留出；留出3题此前已在工程中出现，不宣称全新盲测。
+最终候选为 `runs/train/{id}/submission/final.json` 及其中的不可变 Harness 包，默认只作为实验输出，不自动发布到线上。
 
 接其他 benchmark 时添加外部 `benchmark.toml` 并把实验 profile 的 benchmark 指向该文件；详见 [BENCHMARK-ADAPTERS.zh-CN.md](BENCHMARK-ADAPTERS.zh-CN.md)，不需要为每个数据集改优化器。
 

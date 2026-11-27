@@ -296,8 +296,8 @@ def test_visible_trial_packet_keeps_terminal_execution_authority(tmp_path):
         "verifier_completed": True,
         "verifier_timed_out": False,
     }
-def test_visible_trial_packet_normalizes_bird_tool_messages(tmp_path):
-    path = tmp_path / "bird-trial.jsonl"
+def test_visible_trial_packet_normalizes_mcp_tool_messages(tmp_path):
+    path = tmp_path / "task-trial.jsonl"
     path.write_text(
         json.dumps(
             {
@@ -326,7 +326,7 @@ def test_visible_trial_packet_normalizes_bird_tool_messages(tmp_path):
         + "\n"
     )
 
-    packet = _visible_trial_packet(path, evidence_id="ev_bird")
+    packet = _visible_trial_packet(path, evidence_id="ev_task")
 
     assert len(packet["tool_interactions"]) == 1
     interaction = packet["tool_interactions"][0]
@@ -341,11 +341,11 @@ def test_visible_trial_packet_normalizes_bird_tool_messages(tmp_path):
 
 
 def test_visible_trial_packet_exposes_only_sanitized_grader_diagnostic(tmp_path):
-    path = tmp_path / "bird.jsonl"
+    path = tmp_path / "task.jsonl"
     path.write_text(
         json.dumps(
             {
-                "task_id": "bird_1",
+                "task_id": "task_1",
                 "reward": 0.0,
                 "termination": "completed",
                 "messages": [{"role": "assistant", "content": "SELECT 1"}],
@@ -361,7 +361,7 @@ def test_visible_trial_packet_exposes_only_sanitized_grader_diagnostic(tmp_path)
         encoding="utf-8",
     )
 
-    packet = _visible_trial_packet(path, evidence_id="ev_bird")
+    packet = _visible_trial_packet(path, evidence_id="ev_task")
 
     assert packet["grader_diagnostic"] == {
         "mismatch_type": "row_count_mismatch",

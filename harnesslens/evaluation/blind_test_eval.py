@@ -10,21 +10,9 @@ from typing import Any, Mapping, Sequence
 
 from harnesslens.core.artifacts import write_json
 from harnesslens.benchmarks.benchmark_splits import BenchmarkSplit, load_benchmark_split
-from harnesslens.benchmarks.bird_eval import BirdLimits
-from harnesslens.infrastructure.clash_proxy import configure_terminal_clash_proxy
 from harnesslens.harnesses.harness_manifest import normalize_harness
-from harnesslens.infrastructure.rootless_docker import (
-    DEFAULT_DOCKER_HOST,
-    ensure_rootless_docker,
-)
-from harnesslens.benchmarks.terminal_images import (
-    TERMINAL_BENCH_IMAGE_TEMPLATE,
-    ensure_terminal_shared_network,
-    require_preloaded_terminal_images,
-)
 from harnesslens.evaluation.rollout_bridge import (
     MAX_CONCURRENCY,
-    BIRD_CELL,
     RolloutRequest,
     RolloutResponse,
     TrainRolloutRecord,
@@ -37,7 +25,6 @@ from harnesslens.evaluation.rollout_bridge import (
     _trajectory_retention,
     _write_json,
     retain_trial_trajectories,
-    validate_bird_rollout_interactions,
     validate_native_rollout_interactions,
     validate_rollout_interactions,
 )
@@ -46,14 +33,7 @@ from harnesslens.evaluation.rollout_bridge import (
 # Paper results use one fresh TEST trial per task (held-out pass@1).
 BASELINE_REPEATS = 1
 BASELINE_MAX_CONCURRENCY = MAX_CONCURRENCY
-TERMINAL_BASELINE_MAX_CONCURRENCY = 10
 BASELINE_GROUP_TIMEOUT_S = 7200
-TAU2_AGENT_STEPS_PER_TURN = 10
-TAU2_MAX_CONVERSATION_TURNS = 40
-TAU2_TIMEOUT_PER_TURN_S = 180
-TERMINAL_AGENT_STEPS = 50
-TERMINAL_EXEC_TIMEOUT_S = 600
-TERMINAL_VERIFY_TIMEOUT_S = 1800
 
 
 @dataclass(frozen=True)
@@ -111,11 +91,7 @@ class BlindTestRolloutService(TrainRolloutService):
         requested = sum(int(value) for value in request.task_repeats.values())
         if self.adapter:
             self.adapter.validate_retained(records)
-        if self.cell == "terminal_bench":
-            _validate_terminal_trajectories(records)
-        elif self.cell == BIRD_CELL:
-            validate_bird_rollout_interactions(records)
-        elif self.harness in {"pi", "codex"}:
+        if self.harness in {"pi", "codex"}:
             validate_native_rollout_interactions(records, harness=self.harness)
         else:
             validate_rollout_interactions(records)
@@ -199,7 +175,6 @@ def run_test_baseline(
     repo_root: str | Path,
     run_id: str,
     benchmark: str,
-    retrieval_config: str = "bm25",
     task_ids: Sequence[str] | None = None,
     repeats: int = BASELINE_REPEATS,
     harness: str = "opencode",
@@ -218,20 +193,6 @@ def run_test_baseline(
     from harnesslens.harnesses.business_agent import load_config
     if not os.environ.get("DEEPSEEK_API_KEY") and not load_config():
         raise RuntimeError("DEEPSEEK_API_KEY is required for a HarnessLens test baseline")
-    normalized_retrieval = str(retrieval_config).strip()
-    if split.cell == "banking_knowledge":
-        if not normalized_retrieval:
-            raise ValueError("banking retrieval_config must be non-empty")
-        os.environ["HAI_TAU2_RETRIEVAL_CONFIG"] = normalized_retrieval
-    image_preflight: Mapping[str, object] | None = None
-    if split.cell == "terminal_bench":
-        ensure_rootless_docker(
-            str(os.environ.get("DOCKER_HOST") or DEFAULT_DOCKER_HOST)
-        )
-        os.environ["TB_IMAGE_TEMPLATE"] = TERMINAL_BENCH_IMAGE_TEMPLATE
-        os.environ["TB_NO_REBUILD"] = "1"
-        image_preflight = require_preloaded_terminal_images(selected_test).to_dict()
-        os.environ["TB_SHARED_NETWORK"] = ensure_terminal_shared_network()
     run_root = (
         root
         / "runs"
@@ -257,21 +218,13 @@ def run_test_baseline(
         initial_budget=trial_count,
         evidence_root=run_root / "rollout_evidence",
         workspace_root=run_root / "rollout_workspaces",
-        timeout_s=(
-            BirdLimits().group_timeout_s
-            if split.cell == BIRD_CELL
-            else BASELINE_GROUP_TIMEOUT_S
-        ),
+        timeout_s=BASELINE_GROUP_TIMEOUT_S,
         local_rootless_rollout=split.local_rootless_rollout,
         direct_model_network=True,
         harness=target_harness,
     )
     os.environ.setdefault("HAI_MIN_FREE_GB", "0")
     os.environ.setdefault("HAI_MIN_MEM_GB", "0")
-    os.environ.setdefault("HAI_TAU2_LLM_MODEL", "openai/deepseek-v4-flash")
-    os.environ.setdefault("TB_OPENCODE_MODEL", "deepseek/deepseek-v4-flash")
-    if split.cell == "terminal_bench":
-        configure_terminal_clash_proxy()
     response = service.run(
         RolloutRequest(
             request_id=f"{run_id}-{target_harness}-{split.cell}-test-baseline",
@@ -299,14 +252,6 @@ def run_test_baseline(
         "repeats": effective_repeats,
         "runtime_limits": runtime_limits(split, repeats=effective_repeats),
         "model_network": "direct",
-        "retrieval_config": (
-            normalized_retrieval if split.cell == "banking_knowledge" else None
-        ),
-        "docker_host_proxy": "inherited" if split.cell == "terminal_bench" else "disabled",
-        "terminal_image_preflight": image_preflight,
-        "terminal_shared_network": (
-            os.environ.get("TB_SHARED_NETWORK") if split.cell == "terminal_bench" else None
-        ),
         "response": response.to_dict(),
     }
     write_json(output_path, payload)
@@ -322,7 +267,6 @@ def run_test_candidate(
     patch_descs_json: str | Path | None = None,
     candidate_label: str = "candidate",
     base_version: str = "v0",
-    retrieval_config: str = "bm25",
     task_ids: Sequence[str] | None = None,
     max_concurrency: int | None = None,
     repeats: int = BASELINE_REPEATS,
@@ -341,11 +285,6 @@ def run_test_candidate(
     from harnesslens.harnesses.business_agent import load_config
     if not os.environ.get("DEEPSEEK_API_KEY") and not load_config():
         raise RuntimeError("DEEPSEEK_API_KEY is required for a HarnessLens test candidate")
-    normalized_retrieval = str(retrieval_config).strip()
-    if split.cell == "banking_knowledge":
-        if not normalized_retrieval:
-            raise ValueError("banking retrieval_config must be non-empty")
-        os.environ["HAI_TAU2_RETRIEVAL_CONFIG"] = normalized_retrieval
 
     run_root = (
         root
@@ -386,16 +325,6 @@ def run_test_candidate(
             delta=delta,
         )
 
-    image_preflight: Mapping[str, object] | None = None
-    if split.cell == "terminal_bench":
-        ensure_rootless_docker(
-            str(os.environ.get("DOCKER_HOST") or DEFAULT_DOCKER_HOST)
-        )
-        os.environ["TB_IMAGE_TEMPLATE"] = TERMINAL_BENCH_IMAGE_TEMPLATE
-        os.environ["TB_NO_REBUILD"] = "1"
-        image_preflight = require_preloaded_terminal_images(selected_test).to_dict()
-        os.environ["TB_SHARED_NETWORK"] = ensure_terminal_shared_network()
-
     trial_count = len(selected_test) * effective_repeats
     effective_max_concurrency = min(
         baseline_max_concurrency(split),
@@ -413,21 +342,13 @@ def run_test_candidate(
         initial_budget=trial_count,
         evidence_root=evidence_root,
         workspace_root=run_root / "rollout_workspaces",
-        timeout_s=(
-            BirdLimits().group_timeout_s
-            if split.cell == BIRD_CELL
-            else BASELINE_GROUP_TIMEOUT_S
-        ),
+        timeout_s=BASELINE_GROUP_TIMEOUT_S,
         local_rootless_rollout=split.local_rootless_rollout,
         direct_model_network=True,
         harness=target_harness,
     )
     os.environ.setdefault("HAI_MIN_FREE_GB", "0")
     os.environ.setdefault("HAI_MIN_MEM_GB", "0")
-    os.environ.setdefault("HAI_TAU2_LLM_MODEL", "openai/deepseek-v4-flash")
-    os.environ.setdefault("TB_OPENCODE_MODEL", "deepseek/deepseek-v4-flash")
-    if split.cell == "terminal_bench":
-        configure_terminal_clash_proxy()
     response = service.run(
         RolloutRequest(
             request_id=(
@@ -465,14 +386,6 @@ def run_test_candidate(
         "runtime_limits": runtime_limits(split, repeats=effective_repeats),
         "max_concurrency": effective_max_concurrency,
         "model_network": "direct",
-        "retrieval_config": (
-            normalized_retrieval if split.cell == "banking_knowledge" else None
-        ),
-        "docker_host_proxy": "inherited" if split.cell == "terminal_bench" else "disabled",
-        "terminal_image_preflight": image_preflight,
-        "terminal_shared_network": (
-            os.environ.get("TB_SHARED_NETWORK") if split.cell == "terminal_bench" else None
-        ),
         "response": response.to_dict(),
     }
     write_json(output_path, payload)
@@ -569,30 +482,10 @@ def runtime_limits(
     adapter = benchmark_adapter(Path(__file__).resolve().parents[2], split.cell)
     if adapter:
         return {"repeats": effective_repeats, "max_concurrency": adapter.max_concurrency, **adapter.limits().to_dict()}
-    if split.cell == BIRD_CELL:
-        limits = BirdLimits()
-        return {
-            "repeats": effective_repeats,
-            "max_concurrency": baseline_max_concurrency(split),
-            **limits.to_dict(),
-        }
-    common = {
+    return {
         "repeats": effective_repeats,
         "max_concurrency": baseline_max_concurrency(split),
         "group_timeout_s": BASELINE_GROUP_TIMEOUT_S,
-    }
-    if split.cell == "terminal_bench":
-        return {
-            **common,
-            "agent_steps": TERMINAL_AGENT_STEPS,
-            "exec_timeout_s": TERMINAL_EXEC_TIMEOUT_S,
-            "verify_timeout_s": TERMINAL_VERIFY_TIMEOUT_S,
-        }
-    return {
-        **common,
-        "agent_steps_per_turn": TAU2_AGENT_STEPS_PER_TURN,
-        "max_conversation_turns": TAU2_MAX_CONVERSATION_TURNS,
-        "timeout_per_turn_s": TAU2_TIMEOUT_PER_TURN_S,
     }
 
 
@@ -601,11 +494,7 @@ def baseline_max_concurrency(split: BenchmarkSplit) -> int:
     adapter = benchmark_adapter(Path(__file__).resolve().parents[2], split.cell)
     if adapter:
         return adapter.max_concurrency
-    return (
-        TERMINAL_BASELINE_MAX_CONCURRENCY
-        if split.cell == "terminal_bench"
-        else BASELINE_MAX_CONCURRENCY
-    )
+    return BASELINE_MAX_CONCURRENCY
 
 
 def _validated_test_repeats(value: int) -> int:
@@ -613,24 +502,3 @@ def _validated_test_repeats(value: int) -> int:
     if repeats not in {1, 2}:
         raise ValueError("TEST repeats must be 1 or 2")
     return repeats
-
-
-def _validate_terminal_trajectories(records: list[TrainRolloutRecord]) -> None:
-    for record in records:
-        if len(record.trajectory_paths) != len(record.rewards):
-            raise RuntimeError(
-                f"terminal rollout task {record.task_id} did not retain one trajectory per trial"
-            )
-        for trajectory_path in record.trajectory_paths:
-            path = Path(trajectory_path)
-            if not path.is_file():
-                raise RuntimeError(f"retained terminal trajectory is missing: {path}")
-            rows = [
-                json.loads(line)
-                for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
-                if line.strip()
-            ]
-            if len(rows) != 1 or not isinstance(rows[0], Mapping):
-                raise RuntimeError(f"retained terminal trajectory is malformed: {path}")
-            if str(rows[0].get("task_id") or "") != record.task_id:
-                raise RuntimeError(f"retained terminal trajectory task mismatch: {path}")

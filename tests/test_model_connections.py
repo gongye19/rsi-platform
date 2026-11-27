@@ -178,7 +178,7 @@ def test_other_opencode_benchmarks_use_generic_execution_connection(tmp_path, mo
 
 
 def test_responses_behavioral_view_contains_question_tool_result_and_final_answer():
-    from harnesslens.benchmarks.crm_eval import _messages
+    from harnesslens.benchmarks.native_runtime import _messages
     from harnesslens.core.model_trace import tool_call_count
     request = {"instructions": "rules", "input": [
         {"role": "user", "content": [{"type": "input_text", "text": "question"}]},

@@ -16,7 +16,7 @@ def test_loads_train_accepted_opencode_incumbent(tmp_path):
         / "rollout_evidence"
         / "old-run"
         / "versions_percell"
-        / "bird_mini_dev_challenging"
+        / "fdabench"
         / "candidate-04"
     )
     _write_json(
@@ -48,7 +48,7 @@ def test_loads_train_accepted_opencode_incumbent(tmp_path):
                     "candidate_version": "candidate-04",
                     "review_decision": "accept_delta",
                     "selected_version": "candidate-04",
-                    "rollout_task_ids": ["bird_760", "bird_775", "outside"],
+                    "rollout_task_ids": ["task_a", "task_b", "outside"],
                     "channel_diffs": [
                         {
                             "channel_id": "tool_description",
@@ -56,7 +56,7 @@ def test_loads_train_accepted_opencode_incumbent(tmp_path):
                         }
                     ],
                     "review_evidence": {
-                        "recovered_task_ids": ["bird_760"],
+                        "recovered_task_ids": ["task_a"],
                         "attributable_regression_task_ids": [],
                     },
                 }
@@ -66,13 +66,13 @@ def test_loads_train_accepted_opencode_incumbent(tmp_path):
 
     candidate = load_incumbent_candidate(
         submission,
-        cell="bird_mini_dev_challenging",
+        cell="fdabench",
         harness="opencode",
-        train_task_ids=("bird_760", "bird_775"),
+        train_task_ids=("task_a", "task_b"),
     )
 
     assert candidate["_portfolio_side"] == "incumbent"
-    assert candidate["_direct_task_ids"] == ["bird_760", "bird_775"]
+    assert candidate["_direct_task_ids"] == ["task_a", "task_b"]
     assert candidate["channel_plan"] == [
         {
             "channel_id": "tool_description",
@@ -84,14 +84,14 @@ def test_loads_train_accepted_opencode_incumbent(tmp_path):
     assert candidate["manifest_delta"]["tool_desc_patches"] == {
         "execute_sql": {"desc": "Use CAST(... AS REAL) for integer division."}
     }
-    assert candidate["_prior_train_evidence"]["recovered_task_ids"] == ["bird_760"]
+    assert candidate["_prior_train_evidence"]["recovered_task_ids"] == ["task_a"]
 
 
 def test_loads_native_incumbent_manifest(tmp_path):
     snapshot = (
         tmp_path
         / "versions_percell"
-        / "retail"
+        / "fdabench"
         / "candidate-02"
     )
     _write_json(
@@ -116,11 +116,11 @@ def test_loads_native_incumbent_manifest(tmp_path):
                     "candidate_version": "candidate-02",
                     "review_decision": "accept_delta",
                     "selected_version": "candidate-02",
-                    "rollout_task_ids": ["retail_1"],
+                    "rollout_task_ids": ["task_1"],
                     "channel_diffs": [
                         {"channel_id": "system_prompt", "experience_ids": ["exp-1"]}
                     ],
-                    "review_evidence": {"recovered_task_ids": ["retail_1"]},
+                    "review_evidence": {"recovered_task_ids": ["task_1"]},
                 }
             ],
         },
@@ -128,9 +128,9 @@ def test_loads_native_incumbent_manifest(tmp_path):
 
     candidate = load_incumbent_candidate(
         submission,
-        cell="retail",
+        cell="fdabench",
         harness="pi",
-        train_task_ids=("retail_1",),
+        train_task_ids=("task_1",),
     )
 
     assert candidate["manifest_delta"]["prompt_appends"] == [
@@ -139,7 +139,7 @@ def test_loads_native_incumbent_manifest(tmp_path):
 
 
 def test_rejects_incumbent_from_another_cell(tmp_path):
-    snapshot = tmp_path / "versions_percell" / "retail" / "candidate-01"
+    snapshot = tmp_path / "versions_percell" / "fdabench" / "candidate-01"
     _write_json(
         snapshot / "harness" / "opencode" / "patch.json",
         {"instructions": ["A prior rule."]},
@@ -157,7 +157,7 @@ def test_rejects_incumbent_from_another_cell(tmp_path):
     with pytest.raises(ValueError, match="cell"):
         load_incumbent_candidate(
             submission,
-            cell="banking_knowledge",
+            cell="legacy_cell",
             harness="opencode",
-            train_task_ids=("banking_1",),
+            train_task_ids=("task_1",),
         )

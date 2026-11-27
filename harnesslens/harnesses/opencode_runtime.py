@@ -192,7 +192,7 @@ class OpenCodeIntelligentAdapter:
                     command,
                     writable_root=run_root,
                     working_directory=run_cwd,
-                    read_only_roots=(Path(os.environ.get("HAI_CRM_RUNTIME_ROOT") or Path(executable).resolve().parent.parent),),
+                    read_only_roots=(Path(os.environ.get("HAI_NATIVE_RUNTIME_ROOT") or Path(executable).resolve().parent.parent),),
                 )
             (run_root / "invocation.json").write_text(
                 json.dumps(

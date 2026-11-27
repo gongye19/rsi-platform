@@ -20,7 +20,7 @@ from harnesslens.service.api import server
 @pytest.fixture
 def profile(tmp_path, model_tables):
     path = tmp_path / "ready.toml"
-    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\nreadiness="ready"\n' + model_tables)
+    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="fdabench"\nreadiness="ready"\n' + model_tables)
     return path
 
 
@@ -137,7 +137,7 @@ def test_history_uses_real_branch_parent_and_does_not_invent_component_results(t
     monkeypatch.setattr(module, "ROOT", tmp_path)
     root = tmp_path / "runs/train/branch"
     def snapshot(version, parent, text):
-        directory = root / f"rollout_evidence/run/versions_percell/crm/{version}"
+        directory = root / f"rollout_evidence/run/versions_percell/fdabench/{version}"
         path = directory / "harness/opencode"
         path.mkdir(parents=True)
         (path / "workspace.json").write_text(json.dumps({"files": [{"scope": "project", "path": "AGENTS.md", "content": text}]}))
@@ -145,6 +145,12 @@ def test_history_uses_real_branch_parent_and_does_not_invent_component_results(t
     snapshot("v1", "v0", "one")
     snapshot("v2", "v0", "two")
     snapshot("v3", "v1", "one")
+    # ext4 时间戳粒度会让连续写入共享 mtime，显式递增以固定快照顺序
+    for index, version in enumerate(("v1", "v2", "v3")):
+        os.utime(
+            root / f"rollout_evidence/run/versions_percell/fdabench/{version}/harness/opencode/workspace.json",
+            (index + 1, index + 1),
+        )
     data = module.history("branch")
     assert len(data["components"]) == 16
     versions = [row for row in data["versions"] if row["component_id"] == "instructions_rules"]

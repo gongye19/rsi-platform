@@ -5,7 +5,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import yaml
 
 from harnesslens.benchmarks.benchmark_splits import load_benchmark_split
 from harnesslens.evaluation.rollout_bridge import RolloutRequest, TrainRolloutService
@@ -32,26 +31,11 @@ def _service(cls, tmp_path: Path, *, cell: str, task_ids: list[str], local_rootl
     )
 
 
-@pytest.mark.parametrize(
-    ("cell", "harness"),
-    [
-        ("retail", "opencode"),
-        ("retail", "pi"),
-        ("retail", "codex"),
-        ("banking_knowledge", "opencode"),
-        ("banking_knowledge", "pi"),
-        ("banking_knowledge", "codex"),
-        ("terminal_bench", "opencode"),
-        ("terminal_bench", "pi"),
-        ("terminal_bench", "codex"),
-        ("bird_mini_dev_challenging", "opencode"),
-        ("bird_mini_dev_challenging", "pi"),
-        ("bird_mini_dev_challenging", "codex"),
-    ],
-)
-def test_test_service_uses_shared_multiharness_runner(
-    tmp_path, monkeypatch, cell, harness
-):
+def test_test_service_uses_shared_runner(business_benchmark, monkeypatch):
+    # 所有受支持 benchmark 都经 adapter 走 OpenCode 运行时；TEST 服务
+    # 仍须把 harness/cell 透传给共享的分组 runner。
+    tmp_path, cell = business_benchmark
+    harness = "opencode"
     task_id = "task"
     service = BlindTestRolloutService(
         cell=cell,
@@ -113,41 +97,11 @@ def _request(task_id: str, *, scope: str) -> RolloutRequest:
     )
 
 
-def test_owned_splits_match_the_canonical_inputs():
-    repo_root = Path(__file__).resolve().parents[1]
-    canonical = repo_root / "assets" / "canonical_splits"
-    retail = load_benchmark_split("retail")
-    banking = load_benchmark_split("banking")
-    terminal = load_benchmark_split("terminal-bench")
-
-    retail_reference_path = (
-        repo_root / "third_party/tau3-bench/data/tau2/domains/retail/split_tasks.json"
-    )
-    if not retail_reference_path.is_file():
-        pytest.skip("tau2 retail domain checkout is unavailable under third_party/")
-    retail_reference = json.loads(retail_reference_path.read_text())
-    banking_reference = json.loads(
-        (canonical / "banking_knowledge_split.json").read_text()
-    )
-    terminal_payload = yaml.safe_load(
-        (canonical / "terminal_bench_split_seed42_train30_test59.yaml").read_text()
-    )["terminal_bench_split"]
-
-    assert list(retail.test) == retail_reference["test"]
-    assert list(banking.train) == banking_reference["train"]
-    assert list(banking.test) == banking_reference["test"]
-    assert list(terminal.train) == terminal_payload["train_task_names"]
-    assert list(terminal.test) == terminal_payload["validation_task_names"]
-    assert (len(retail.train), len(retail.test)) == (30, 40)
-    assert (len(banking.train), len(banking.test)) == (30, 67)
-    assert (len(terminal.train), len(terminal.test)) == (30, 59)
-
-
-def test_existing_retail_rollout_service_still_rejects_test_scope(tmp_path):
+def test_train_rollout_service_still_rejects_test_scope(tmp_path):
     service = _service(
         TrainRolloutService,
         tmp_path,
-        cell="retail",
+        cell="fdabench",
         task_ids=["0"],
         local_rootless=True,
     )
@@ -160,7 +114,7 @@ def test_additive_test_service_accepts_only_test_scope(tmp_path):
     service = _service(
         BlindTestRolloutService,
         tmp_path,
-        cell="banking_knowledge",
+        cell="fdabench",
         task_ids=["task_001"],
         local_rootless=True,
     )
@@ -174,7 +128,7 @@ def test_test_rollout_rejects_repeat_groups_that_would_serialize(tmp_path):
     service = _service(
         BlindTestRolloutService,
         tmp_path,
-        cell="banking_knowledge",
+        cell="fdabench",
         task_ids=["task_001", "task_002"],
         local_rootless=True,
     )
@@ -194,20 +148,23 @@ def test_test_rollout_rejects_repeat_groups_that_would_serialize(tmp_path):
 
 
 def test_runtime_limits_are_fixed():
-    assert runtime_limits(load_benchmark_split("banking")) == {
+    # fdabench 适配器提供并发上限与运行时限，字段与 BusinessLimits 对齐。
+    assert runtime_limits(load_benchmark_split("fdabench")) == {
         "repeats": 1,
-        "max_concurrency": 20,
-        "group_timeout_s": 7200,
-        "agent_steps_per_turn": 10,
-        "max_conversation_turns": 40,
-        "timeout_per_turn_s": 180,
+        "max_concurrency": 8,
+        "max_steps": 40,
+        "timeout_s": 900,
+        "output_tokens": 8192,
     }
 
 
-def test_test_rollout_submits_one_global_queue_per_repeat_count(tmp_path, monkeypatch):
+def test_test_rollout_submits_one_global_queue_per_repeat_count(
+    business_benchmark, monkeypatch
+):
+    tmp_path, cell = business_benchmark
     task_ids = ["task_3", "task_1", "task_2", "task_4", "task_5"]
     service = BlindTestRolloutService(
-        cell="terminal_bench",
+        cell=cell,
         repo_root=tmp_path,
         run_id="run",
         artifact_root=tmp_path / "artifacts",
@@ -250,25 +207,15 @@ def test_test_rollout_submits_one_global_queue_per_repeat_count(tmp_path, monkey
         "harnesslens.evaluation.blind_test_eval.retain_trial_trajectories",
         lambda raw, target_root: raw,
     )
+    # 本用例只关注共享队列分组；轨迹校验走各自的专测试。
     monkeypatch.setattr(
-        "harnesslens.evaluation.blind_test_eval._validate_terminal_trajectories",
+        "harnesslens.evaluation.blind_test_eval.validate_rollout_interactions",
         lambda records: None,
     )
 
     service.run(request)
 
     assert calls == [(sorted(task_ids), 2)]
-
-
-def test_terminal_runtime_limits_are_bounded_by_concurrency():
-    assert runtime_limits(load_benchmark_split("terminal-bench")) == {
-        "repeats": 1,
-        "max_concurrency": 10,
-        "group_timeout_s": 7200,
-        "agent_steps": 50,
-        "exec_timeout_s": 600,
-        "verify_timeout_s": 1800,
-    }
 
 
 def test_test_baseline_rejects_task_outside_canonical_test_split(tmp_path, monkeypatch):
@@ -278,7 +225,7 @@ def test_test_baseline_rejects_task_outside_canonical_test_split(tmp_path, monke
         run_test_baseline(
             repo_root=tmp_path,
             run_id="run",
-            benchmark="banking",
+            benchmark="fdabench",
             task_ids=["not-a-test-task"],
         )
 
@@ -287,7 +234,7 @@ def test_test_baseline_rejects_task_outside_canonical_test_split(tmp_path, monke
 def test_test_baseline_threads_target_harness_to_service(
     tmp_path, monkeypatch, harness
 ):
-    split = load_benchmark_split("retail")
+    split = load_benchmark_split("fdabench")
     task_id = split.test[0]
     captured = {}
 
@@ -308,7 +255,7 @@ def test_test_baseline_threads_target_harness_to_service(
     result = run_test_baseline(
         repo_root=tmp_path,
         run_id="run",
-        benchmark="retail",
+        benchmark="fdabench",
         task_ids=[task_id],
         repeats=1,
         harness=harness,
@@ -323,7 +270,7 @@ def test_test_baseline_threads_target_harness_to_service(
 def test_test_candidate_materializes_workspace_submission(
     tmp_path, monkeypatch, harness
 ):
-    split = load_benchmark_split("retail")
+    split = load_benchmark_split("fdabench")
     task_id = split.test[0]
     snapshot = (
         tmp_path
@@ -331,7 +278,7 @@ def test_test_candidate_materializes_workspace_submission(
         / "train"
         / "train"
         / "versions_percell"
-        / "retail"
+        / "fdabench"
         / "candidate-01"
     )
     native = snapshot / "harness" / harness
@@ -402,7 +349,7 @@ def test_test_candidate_materializes_workspace_submission(
     result = run_test_candidate(
         repo_root=tmp_path,
         run_id="test",
-        benchmark="retail",
+        benchmark="fdabench",
         patch_json=submission,
         task_ids=[task_id],
         repeats=1,
@@ -445,7 +392,7 @@ def test_workspace_submission_maps_selected_v0_to_empty_workspace(tmp_path):
 def test_test_candidate_threads_target_harness_to_repository_and_service(
     tmp_path, monkeypatch, harness
 ):
-    split = load_benchmark_split("retail")
+    split = load_benchmark_split("fdabench")
     task_id = split.test[0]
     patch_path = tmp_path / "patch.json"
     patch_path.write_text("{}", encoding="utf-8")
@@ -479,7 +426,7 @@ def test_test_candidate_threads_target_harness_to_repository_and_service(
     result = run_test_candidate(
         repo_root=tmp_path,
         run_id="run",
-        benchmark="retail",
+        benchmark="fdabench",
         patch_json=patch_path,
         task_ids=[task_id],
         repeats=1,

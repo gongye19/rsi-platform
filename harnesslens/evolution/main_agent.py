@@ -1020,7 +1020,7 @@ class MainAgentModule:
         run_root: str | Path,
         budget: CreationBudget,
         harness: str = "opencode",
-        cell: str = "retail",
+        cell: str = "fdabench",
         promotion_metric: str | None = None,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()

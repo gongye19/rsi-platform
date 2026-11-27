@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
+@pytest.mark.parametrize("harness", ["opencode"])
 def test_native_candidate_snapshot_runs_in_same_harness_and_cleans_up(
     monkeypatch, harness
 ):
@@ -37,10 +37,7 @@ def test_native_candidate_snapshot_runs_in_same_harness_and_cleans_up(
         monkeypatch.setenv("HAI_PI_RUNTIME_CWD_ROOT", str(temporary_root / "pi-cwd"))
         monkeypatch.setenv("HAI_CODEX_RUNTIME_CWD_ROOT", str(temporary_root / "codex-cwd"))
         monkeypatch.setenv("HAI_OPENCODE_RUNTIME_ROOT", str(temporary_root / "opencode-cwd"))
-        monkeypatch.setattr(rollout_bridge, "TAU2_MAX_CONVERSATION_TURNS", 2)
-        monkeypatch.setattr(rollout_bridge, "TAU2_AGENT_STEPS_PER_TURN", 5)
-        monkeypatch.setattr(rollout_bridge, "TAU2_TIMEOUT_PER_TURN_S", 180)
-        split = load_benchmark_split("retail")
+        split = load_benchmark_split("fdabench")
         task_id = split.train[0]
         evidence_root = temporary_root / "evidence"
         repository = CellHarnessRepository(

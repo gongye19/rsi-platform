@@ -67,7 +67,7 @@ class JsonlAdapter(BusinessBenchmark):
         self.cell = raw.get("id", "")
         from .cell_config import _ALIASES
         if not isinstance(self.cell, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", self.cell) or self.cell in {
-            *_ALIASES, "crm", "crmarenapro", "retail", "banking", "banking_knowledge", "bird", "bird_mini_dev_challenging", "terminal", "terminal_bench"}:
+            *_ALIASES}:
             raise ValueError("External benchmark needs a unique safe ID")
         self.tasks_path = (self.descriptor.parent / raw["tasks"]).resolve()
         for scope in ("train", "test"):

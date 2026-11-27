@@ -10,7 +10,6 @@ from harnesslens.benchmarks.benchmark_splits import (
     load_benchmark_split,
     supported_test_benchmarks,
 )
-from harnesslens.infrastructure.rootless_docker import DEFAULT_DOCKER_HOST
 from harnesslens.core.config import load_repo_env, repo_root
 from harnesslens.evaluation.blind_test_eval import (
     BASELINE_REPEATS,
@@ -34,7 +33,6 @@ def main() -> int:
     parser.add_argument("--patch-descs-json", type=Path)
     parser.add_argument("--candidate-label", default="candidate")
     parser.add_argument("--base-version", default="v0")
-    parser.add_argument("--retrieval-config", default="bm25")
     parser.add_argument("--repeats", type=int, choices=(1, 2), default=BASELINE_REPEATS)
     parser.add_argument(
         "--max-concurrency",
@@ -46,7 +44,6 @@ def main() -> int:
         action="append",
         help="Run pass@k for one or more canonical TEST tasks; omit for the full TEST split.",
     )
-    parser.add_argument("--docker-host", default=DEFAULT_DOCKER_HOST)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--repo-root", type=Path, default=repo_root())
     parser.add_argument('--train-count',type=int,help='TRAIN task count; 0 uses the entire available pool')
@@ -68,8 +65,6 @@ def main() -> int:
     from harnesslens.harnesses.business_agent import select_config
     select_config(args.agent_config)
     split = load_benchmark_split(args.benchmark)
-    if split.cell == "terminal_bench":
-        os.environ["DOCKER_HOST"] = args.docker_host
     if args.dry_run:
         print(
             json.dumps(
@@ -97,11 +92,6 @@ def main() -> int:
                         if args.max_concurrency
                         else runtime_limits(split, repeats=args.repeats)["max_concurrency"]
                     ),
-                    "retrieval_config": (
-                        args.retrieval_config
-                        if split.cell == "banking_knowledge"
-                        else None
-                    ),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -120,7 +110,6 @@ def main() -> int:
         patch_descs_json=args.patch_descs_json,
         candidate_label=args.candidate_label,
         base_version=args.base_version,
-        retrieval_config=args.retrieval_config,
         task_ids=args.task_id,
         max_concurrency=args.max_concurrency,
         repeats=args.repeats,

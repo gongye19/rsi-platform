@@ -23,7 +23,7 @@ def main() -> int:
     parser.add_argument("--rollout-output", required=True, type=Path)
     parser.add_argument("--label", default="final-submission")
     parser.add_argument("--base-version", default="v0")
-    parser.add_argument("--cell", default="retail", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
+    parser.add_argument("--cell", default="fdabench", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--no-publish", action="store_true")
     parser.add_argument("--repo-root", type=Path, default=repo_root())

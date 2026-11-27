@@ -25,7 +25,7 @@ fi
 
 echo "==> installing HarnessLens and dependencies"
 "$VENV/bin/pip" install --upgrade pip >/dev/null
-"$VENV/bin/pip" install -e ".[tau2,dev]"
+"$VENV/bin/pip" install -e ".[dev]"
 
 if [[ ! -f .env ]]; then
   cp .env.example .env
@@ -36,4 +36,4 @@ echo
 echo "==> done. Next steps:"
 echo "    1. edit .env and configure models.execution/models.analysis in your task profile"
 echo "    2. provide the benchmark checkouts under third_party/ (docs/benchmarks.md)"
-echo "    3. $VENV/bin/python scripts/check_env.py --cell retail"
+echo "    3. $VENV/bin/python scripts/check_env.py --cell fdabench"

@@ -25,9 +25,8 @@ PACKAGE = Path(__file__).resolve().parents[1] / "harnesslens"
 # them shows up as `TypeError: 'NoneType' object is not iterable` inside a
 # thread pool, which is exactly as unhelpful as it sounds.
 TRIAL_RUNNERS = (
-    ("benchmarks/opencode_tau2.py", "run_single_opencode_tau2_trial"),
-    ("benchmarks/codex_tau2.py", "run_single_codex_tau2_trial"),
-    ("benchmarks/pi_tau2.py", "run_single_pi_tau2_trial"),
+    ("evaluation/native_benchmark.py", "run_trial"),
+    ("evaluation/native_benchmark.py", "run_batch"),
 )
 
 

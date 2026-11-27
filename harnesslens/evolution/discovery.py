@@ -166,7 +166,7 @@ class DiscoveryModule:
         run_root: str | Path,
         budget: CreationBudget,
         harness: str = "opencode",
-        cell: str = "retail",
+        cell: str = "fdabench",
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.run_root = Path(run_root).resolve()

@@ -21,7 +21,7 @@ def main() -> int:
     parser.add_argument("--label", default="iteration-01")
     parser.add_argument("--candidate-label", default="v1")
     parser.add_argument("--parent-version", default="v0")
-    parser.add_argument("--cell", default="retail", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
+    parser.add_argument("--cell", default="fdabench", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--revision-candidate", type=Path)
     parser.add_argument("--attempted-candidate-id", action="append", default=[])

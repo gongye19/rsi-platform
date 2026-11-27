@@ -67,7 +67,7 @@ Cancel, Close or Escape dismisses the drawer without creating or launching anyth
 
 ## Latest configuration contract
 
-Benchmark is an independent selector populated from existing adapters (CRM, Tau² Retail/Banking, BIRD and Terminal-Bench), plus Custom benchmark with a server-side TOML descriptor path. Runtime profile selects the agent connection/environment. The selected benchmark is validated and saved into the immutable experiment snapshot; it does not silently fall back to CRM. Adapter selection does not assert that each dataset/runtime is installed. Custom task files and splits are validated before the snapshot is saved, without invoking a model or scorer.
+Benchmark is an independent selector populated from existing adapters (FDABench), plus Custom benchmark with a server-side TOML descriptor path. Runtime profile selects the agent connection/environment. The selected benchmark is validated and saved into the immutable experiment snapshot. Adapter selection does not assert that each dataset/runtime is installed. Custom task files and splits are validated before the snapshot is saved, without invoking a model or scorer.
 
 Deletion shows one confirmation with Cancel/Delete, then quietly removes the row. No success banner or Undo button. Existing recoverable storage semantics remain server-side. Browser validation uses a disposable draft, never a business experiment.
 
@@ -156,7 +156,7 @@ Git; only the directory instructions and builtin benchmark registrations ship.
 
 Browser checks cover changed-first ordering, 15 unchanged components hidden by
 default, opening/closing their disclosure, inline before/after content and real
-candidate evidence, CRM without domains, FDABench with domain-dependent limits,
+candidate evidence, JSONL benchmarks without domains, FDABench with domain-dependent limits,
 and selecting actual archived candidate versions. No experiment/model is launched.
 Latest proof: `runs/platform/component-comparison-ui.png` and
 `runs/platform/harness-library-ui.png`. Previous round-page screenshots are
@@ -220,7 +220,7 @@ train-only profile has no fabricated TEST curve. Latest evaluation proof:
 
 ## Focused benchmark catalog
 
-New experiment offers CRM Arena Pro and FDABench Lite · Reports only, in both the
+New experiment offers FDABench Lite · Reports only, in both the
 local console and the public demo's simulated configuration. Unused native
 registration manifests are removed; directory discovery stays generic and custom
 benchmark registrations can still be added later. Native CLI adapters and existing
@@ -245,7 +245,7 @@ Cached inputs are included. Summed API time is separate from wall-clock elapsed.
 
 Components: existing ExperimentConsole owns abortable polling; ExperimentProgress
 renders the read-only observation panel; BatchProgress writes atomic counters in
-CRM/native/business runners; service telemetry incrementally reads compact sidecars
+native/business runners; service telemetry incrementally reads compact sidecars
 or historical traces and excludes copied evidence. No extra model calls.
 Acceptance: progress changes without manual refresh; concurrent task counts remain
 consistent; failed/retried requests remain charged in usage; TEST v0 reuse is not

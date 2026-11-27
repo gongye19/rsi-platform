@@ -1,4 +1,4 @@
-"""A second benchmark exercises shared orchestration without CRM services."""
+"""A second benchmark exercises shared orchestration without external benchmark services."""
 import json
 import os
 from pathlib import Path
@@ -33,10 +33,6 @@ def solve(question, harness_files, model_url):
 def dataset(tmp_path, monkeypatch):
     monkeypatch.setenv("HAI_BENCHMARK_CONFIG", "")
     monkeypatch.delenv("HAI_AGENT_CONFIG", raising=False)
-    from harnesslens.benchmarks.adapters import CrmAdapter
-    def no_crm(*args, **kwargs):
-        raise AssertionError("External benchmark must not start CRM resources")
-    monkeypatch.setattr(CrmAdapter, "execution_context", no_crm)
     name = "qa_" + uuid.uuid4().hex[:12]
     tasks = tmp_path / "tasks.jsonl"
     tasks.write_text("".join(json.dumps(row) + "\n" for row in [

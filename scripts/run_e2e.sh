@@ -2,7 +2,7 @@
 # Run one full auto-iteration: baseline -> discovery -> experience -> analyzer
 # -> candidate -> paired TRAIN rollout -> promotion -> submission.
 #
-#   scripts/run_e2e.sh --run-id my-run --cell retail --harness opencode
+#   scripts/run_e2e.sh --run-id my-run --cell fdabench --harness opencode
 #
 # The run is resumable: re-invoking with the same --run-id continues from the
 # last checkpoint under runs/train/<run-id>/. Every flag is forwarded to
@@ -18,7 +18,7 @@ PYTHON="${PYTHON:-$( [[ -x "$ROOT/.venv/bin/python" ]] && echo "$ROOT/.venv/bin/
 
 # Pull --cell/--harness out of the argument list so preflight checks the right
 # thing; both are still forwarded to run_e2e.py below.
-cell="retail"
+cell="fdabench"
 harness="opencode"
 previous=""
 for arg in "$@"; do

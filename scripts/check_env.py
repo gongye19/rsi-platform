@@ -4,7 +4,7 @@
 Every check is read-only. The exit code is non-zero when a required item is
 missing, so this doubles as a preflight step in a wrapper script:
 
-    python scripts/check_env.py --cell retail --harness opencode
+    python scripts/check_env.py --cell fdabench --harness opencode
 """
 from __future__ import annotations
 
@@ -34,14 +34,7 @@ RUNTIME_BINARIES = {
 }
 
 # Benchmark checkouts, keyed by the cell kind that needs them.
-BENCHMARK_CHECKOUTS = {
-    "tau2": ("third_party/tau3-bench", "https://github.com/sierra-research/tau2-bench"),
-    "bird": ("third_party/bird-mini-dev", "https://github.com/bird-bench/mini_dev"),
-    "terminal_bench": (
-        "third_party/terminal-bench",
-        "https://github.com/harbor-framework/terminal-bench",
-    ),
-}
+BENCHMARK_CHECKOUTS = {}
 
 
 class Report:
@@ -71,10 +64,6 @@ def check_python(report: Report) -> None:
         found = importlib.util.find_spec(module) is not None
         report.line(OK if found else MISSING, f"import {module}",
                     "" if found else "run scripts/setup.sh")
-    for module in ("loguru",):
-        found = importlib.util.find_spec(module) is not None
-        report.line(OK if found else OPTIONAL, f"import {module}",
-                    "" if found else "only needed by the tau2 MCP bridge")
 
 
 def check_credentials(report: Report) -> None:
@@ -139,56 +128,7 @@ def check_benchmark(report: Report, root: Path, cell: str) -> None:
             report.line(MISSING, "Benchmark prerequisites", str(exc))
         return
 
-    checkout, url = BENCHMARK_CHECKOUTS[config.kind]
-    path = root / checkout
-    report.line(OK if path.is_dir() else MISSING, checkout, "" if path.is_dir() else f"clone {url}")
-
-    for relative in config.task_source_files()[:6]:
-        target = root / relative
-        report.line(OK if target.exists() else MISSING, relative)
-
-    if config.kind == "tau2":
-        venv = root / "third_party" / "tau3-bench" / ".venv" / "bin" / "python3"
-        report.line(OK if venv.is_file() else MISSING, str(venv.relative_to(root)),
-                    "" if venv.is_file() else "create the tau2 virtualenv")
-    if config.kind == "terminal_bench":
-        docker = shutil.which("docker")
-        report.line(OK if docker else MISSING, "docker", docker or "terminal-bench runs one container per task")
-        check_docker_daemon(report)
-
-
-def check_docker_daemon(report: Report) -> None:
-    """Report which docker daemon terminal-bench will actually talk to.
-
-    The rootless state directory defaults to ~/dockers. A machine that keeps it
-    on another volume silently gets an unreachable socket, so resolve it here
-    rather than letting the first rollout discover it.
-    """
-    from harnesslens.infrastructure.rootless_docker import rootless_docker_host, rootless_docker_root
-
-    # resolve now rather than at import, so a .env loaded since then counts
-    root = rootless_docker_root()
-    host = rootless_docker_host(root)
-    source = (
-        "DOCKER_HOST"
-        if os.environ.get("DOCKER_HOST")
-        else "HAI_DOCKER_HOST"
-        if os.environ.get("HAI_DOCKER_HOST")
-        else "derived from HAI_DOCKER_ROOT"
-    )
-    report.line(OK, "docker host", f"{host} (from {source})")
-
-    if host.startswith("unix://"):
-        socket_path = Path(host[len("unix://") :])
-        if socket_path.exists():
-            report.line(OK, "docker socket", str(socket_path))
-        else:
-            report.line(
-                MISSING,
-                "docker socket",
-                f"{socket_path} does not exist — set HAI_DOCKER_ROOT (currently "
-                f"{root}) or DOCKER_HOST",
-            )
+    report.line(MISSING, f"cell {cell}", f"unsupported benchmark kind: {config.kind}")
 
 
 def check_assets(report: Report, root: Path) -> None:
@@ -196,8 +136,6 @@ def check_assets(report: Report, root: Path) -> None:
     for relative in (
         "assets/docs_cache/opencode/config.md",
         "assets/docs_cache/codex/config_reference.md",
-        "assets/canonical_splits/banking_knowledge_split.json",
-        "assets/terminal_task_assets/headless-terminal/tests/test.sh",
     ):
         target = root / relative
         report.line(OK if target.is_file() else MISSING, relative)
@@ -205,8 +143,8 @@ def check_assets(report: Report, root: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cell", default="retail",
-                        help="retail, banking, terminal-bench, bird")
+    parser.add_argument("--cell", default="fdabench",
+                        help="fdabench or a benchmark.toml path")
     parser.add_argument("--harness", choices=tuple(RUNTIME_BINARIES), default="opencode")
     parser.add_argument("--repo-root", type=Path, default=None)
     parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")

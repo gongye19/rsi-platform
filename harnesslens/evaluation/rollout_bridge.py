@@ -5,14 +5,10 @@ from harnesslens.benchmarks.cell_config import benchmark_config
 import json
 import os
 import shutil
-import subprocess
-import sys
-import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
-from harnesslens.benchmarks.bird_eval import BirdLimits, run_bird_batch
 from harnesslens.harnesses.opencode_harness import normalize_opencode_manifest
 from harnesslens.harnesses.opencode_runtime import validate_api_trace
 from harnesslens.harnesses.harness_manifest import (
@@ -26,38 +22,10 @@ from harnesslens.harnesses.harness_workspace import (
     normalize_workspace_snapshot,
 )
 from harnesslens.harnesses.native_candidate_runtime import attach_candidate_workspace
-from harnesslens.benchmarks.terminal_bench import (
-    TerminalLimits,
-    run_terminal_batch,
-)
 from harnesslens.core.train_protocol import MAX_ROLLOUT_CONCURRENCY
 
 
 MAX_CONCURRENCY = MAX_ROLLOUT_CONCURRENCY
-TAU2_AGENT_STEPS_PER_TURN = 10
-TAU2_MAX_CONVERSATION_TURNS = 40
-
-
-def tau2_timeout_per_turn_s() -> int:
-    raw = str(os.environ.get("HAI_TAU2_TIMEOUT_PER_TURN_S") or "180")
-    try:
-        value = int(raw)
-    except ValueError as exc:
-        raise ValueError(
-            "HAI_TAU2_TIMEOUT_PER_TURN_S must be a positive integer"
-        ) from exc
-    if value < 1:
-        raise ValueError(
-            "HAI_TAU2_TIMEOUT_PER_TURN_S must be a positive integer"
-        )
-    return value
-
-
-TAU2_TIMEOUT_PER_TURN_S = tau2_timeout_per_turn_s()
-TERMINAL_AGENT_STEPS = 50
-TERMINAL_EXEC_TIMEOUT_S = 600
-TERMINAL_VERIFY_TIMEOUT_S = 1800
-BIRD_CELL = "bird_mini_dev_challenging"
 
 
 class IncompleteRolloutTraceError(RuntimeError):
@@ -381,11 +349,7 @@ class TrainRolloutService:
         # target. Repairing it can turn infrastructure errors into apparently
         # complete behavioral failures and incorrectly admit them to review.
         if infrastructure == 0:
-            if self.cell == "terminal_bench":
-                validate_terminal_rollout_trajectories(records)
-            elif self.cell == BIRD_CELL:
-                validate_bird_rollout_interactions(records)
-            elif self.harness in {"pi", "codex"}:
+            if self.harness in {"pi", "codex"}:
                 validate_native_rollout_interactions(records, harness=self.harness)
             else:
                 validate_rollout_interactions(records)
@@ -500,11 +464,7 @@ class TrainRolloutService:
             }
         if self.adapter:
             self.adapter.validate_retained(records)
-        if self.cell == "terminal_bench":
-            validate_terminal_rollout_trajectories(records)
-        elif self.cell == BIRD_CELL:
-            validate_bird_rollout_interactions(records)
-        elif self.harness in {"pi", "codex"}:
+        if self.harness in {"pi", "codex"}:
             validate_native_rollout_interactions(records, harness=self.harness)
         else:
             validate_rollout_interactions(records)
@@ -602,148 +562,7 @@ class TrainRolloutService:
                 harness_manifest=manifest, task_repeats={tid: repeats for tid in task_ids},
                 pairing_offsets={tid: int(request.pairing_offsets.get(tid, 0)) for tid in task_ids},
                 max_concurrency=request.max_concurrency)
-        if self.cell == BIRD_CELL:
-            if self.harness == "opencode":
-                _ensure_bird_v0(self.evidence_root, self.run_id)
-            manifest = _rollout_candidate_manifest(
-                CellHarnessRepository(
-                    cell=self.cell,
-                    repo_root=self.repo_root,
-                    run_id=self.run_id,
-                    evidence_root=self.evidence_root,
-                    harness=self.harness,
-                ),
-                request.harness_version,
-            )
-            return run_bird_batch(
-                repo_root=self.repo_root,
-                run_root=(
-                    self.evidence_root
-                    / group_run_id
-                    / self.cell
-                    / request.harness_version
-                ),
-                scope=request.scope,
-                harness=self.harness,
-                harness_version=request.harness_version,
-                harness_manifest=manifest,
-                task_repeats={task_id: repeats for task_id in task_ids},
-                pairing_offsets={
-                    task_id: int(request.pairing_offsets.get(task_id, 0))
-                    for task_id in task_ids
-                },
-                max_concurrency=request.max_concurrency,
-                limits=BirdLimits(),
-            )
-        if self.cell == "terminal_bench":
-            manifest = _rollout_candidate_manifest(
-                CellHarnessRepository(
-                    cell=self.cell,
-                    repo_root=self.repo_root,
-                    run_id=self.run_id,
-                    evidence_root=self.evidence_root,
-                    harness=self.harness,
-                ),
-                request.harness_version,
-            )
-            return run_terminal_batch(
-                repo_root=self.repo_root,
-                run_root=self.artifact_root / "terminal_groups" / group_run_id,
-                scope=request.scope,
-                harness=self.harness,
-                harness_version=request.harness_version,
-                harness_manifest=manifest,
-                task_repeats={task_id: repeats for task_id in task_ids},
-                pairing_offsets={
-                    task_id: int(request.pairing_offsets.get(task_id, 0))
-                    for task_id in task_ids
-                },
-                max_concurrency=request.max_concurrency,
-                limits=TerminalLimits(
-                    max_steps=TERMINAL_AGENT_STEPS,
-                    agent_timeout_s=TERMINAL_EXEC_TIMEOUT_S,
-                    verify_timeout_s=TERMINAL_VERIFY_TIMEOUT_S,
-                ),
-            )
-        if self.harness in {"opencode", "pi", "codex"}:
-            return self._run_native_tau2_group(
-                request=request,
-                task_ids=task_ids,
-                repeats=repeats,
-                group_run_id=group_run_id,
-            )
-        raise ValueError(f"unsupported Tau2 harness: {self.harness}")
-
-    def _run_native_tau2_group(
-        self,
-        *,
-        request: RolloutRequest,
-        task_ids: list[str],
-        repeats: int,
-        group_run_id: str,
-    ) -> dict[str, Any]:
-        if self.cell not in {"retail", "banking_knowledge"}:
-            raise ValueError(
-                f"{self.harness} rollout is not implemented for benchmark cell {self.cell}"
-            )
-        from harnesslens.benchmarks.tau2_driver import Tau2Limits
-
-        manifest = _rollout_candidate_manifest(
-            CellHarnessRepository(
-                cell=self.cell,
-                repo_root=self.repo_root,
-                run_id=self.run_id,
-                evidence_root=self.evidence_root,
-                harness=self.harness,
-            ),
-            request.harness_version,
-        )
-        native_request = RolloutRequest(
-            request_id=f"{request.request_id}-native-k{repeats}",
-            run_id=group_run_id,
-            scope=request.scope,
-            harness_version=request.harness_version,
-            task_repeats={task_id: repeats for task_id in task_ids},
-            max_concurrency=request.max_concurrency,
-            purpose=request.purpose,
-            pairing_offsets={
-                task_id: int(request.pairing_offsets.get(task_id, 0))
-                for task_id in task_ids
-            },
-        )
-        limits = Tau2Limits(
-            max_conversation_turns=TAU2_MAX_CONVERSATION_TURNS,
-            timeout_per_turn_s=TAU2_TIMEOUT_PER_TURN_S,
-            max_tool_calls_per_turn=TAU2_AGENT_STEPS_PER_TURN,
-            max_tool_calls=60,
-            group_timeout_s=self.timeout_s,
-        )
-        payload = {
-            "harness": self.harness,
-            "repo_root": self.repo_root,
-            "run_root": self.artifact_root / "native_groups" / group_run_id,
-            "benchmark": self.cell,
-            "request": native_request.to_dict(),
-            "retrieval_config": (
-                str(os.environ.get("HAI_TAU2_RETRIEVAL_CONFIG") or "bm25")
-                if self.cell == "banking_knowledge"
-                else None
-            ),
-            "limits": {
-                "max_conversation_turns": limits.max_conversation_turns,
-                "timeout_per_turn_s": limits.timeout_per_turn_s,
-                "max_tool_calls_per_turn": limits.max_tool_calls_per_turn,
-                "max_tool_calls": limits.max_tool_calls,
-                "group_timeout_s": limits.group_timeout_s,
-                "timeout_retries_per_turn": limits.timeout_retries_per_turn,
-            },
-            "harness_manifest": manifest,
-        }
-        return _run_native_tau2_worker(
-            repo_root=self.repo_root,
-            payload=payload,
-            timeout_s=self.timeout_s,
-        )
+        raise ValueError(f"unsupported harness: {self.harness}")
 
     def _load_cached(
         self, request: RolloutRequest, request_root: Path
@@ -933,50 +752,6 @@ def validate_native_rollout_interactions(
                     )
 
 
-def validate_bird_rollout_interactions(records: list[TrainRolloutRecord]) -> None:
-    for record in records:
-        if len(record.trajectory_paths) != len(record.rewards):
-            raise RuntimeError(
-                f"rollout task {record.task_id} did not retain one trajectory per trial"
-            )
-        for trajectory_path in record.trajectory_paths:
-            path = Path(trajectory_path)
-            try:
-                row = json.loads(path.read_text(encoding="utf-8").strip())
-            except (OSError, json.JSONDecodeError) as exc:
-                raise RuntimeError(f"retained BIRD trajectory is malformed: {path}") from exc
-            if row.get("infrastructure_error"):
-                continue
-            messages = row.get("messages")
-            if not isinstance(messages, list) or len(messages) < 2:
-                raise IncompleteRolloutTraceError(path, "missing user/assistant interaction")
-            if messages[0].get("role") != "user" or messages[-1].get("role") != "assistant":
-                raise IncompleteRolloutTraceError(path, "invalid interaction boundaries")
-
-
-def validate_terminal_rollout_trajectories(records: list[TrainRolloutRecord]) -> None:
-    for record in records:
-        if len(record.trajectory_paths) != len(record.rewards):
-            raise RuntimeError(
-                f"terminal rollout task {record.task_id} did not retain one trajectory per trial"
-            )
-        for trajectory_path in record.trajectory_paths:
-            path = Path(trajectory_path)
-            if not path.is_file():
-                raise RuntimeError(f"retained terminal trajectory is missing: {path}")
-            rows = [
-                json.loads(line)
-                for line in path.read_text(
-                    encoding="utf-8", errors="replace"
-                ).splitlines()
-                if line.strip()
-            ]
-            if len(rows) != 1 or not isinstance(rows[0], Mapping):
-                raise RuntimeError(f"retained terminal trajectory is malformed: {path}")
-            if str(rows[0].get("task_id") or "") != record.task_id:
-                raise RuntimeError(f"retained terminal trajectory task mismatch: {path}")
-
-
 def _retain_api_sidecars(value: Any, *, source_dir: Path, destination: Path) -> Any:
     copied: dict[Path, str] = {}
 
@@ -1029,63 +804,6 @@ def _manifest_for_v1(delta: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _run_native_tau2_worker(
-    *, repo_root: Path, payload: Mapping[str, Any], timeout_s: int
-) -> dict[str, Any]:
-    executable = (
-        repo_root / "third_party" / "tau3-bench" / ".venv" / "bin" / "python3"
-    )
-    script = (
-        repo_root
-        / "harnesslens"
-        / "native_tau2_worker.py"
-    )
-    if not executable.is_file() or not script.is_file():
-        raise RuntimeError("native Tau2 worker prerequisites are unavailable")
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
-        json.dump(payload, handle, ensure_ascii=False, default=str)
-        input_path = Path(handle.name)
-    env = dict(os.environ)
-    pythonpath = str(repo_root)
-    env["PYTHONPATH"] = (
-        pythonpath
-        if not env.get("PYTHONPATH")
-        else pythonpath + os.pathsep + str(env["PYTHONPATH"])
-    )
-    try:
-        process = subprocess.run(
-            [str(executable), str(script), str(input_path)],
-            cwd=str(repo_root),
-            env=env,
-            capture_output=True,
-            text=True,
-            timeout=int(timeout_s),
-            check=False,
-        )
-    finally:
-        input_path.unlink(missing_ok=True)
-    if process.returncode != 0:
-        raise RuntimeError(
-            "native Tau2 worker failed: "
-            + (process.stderr or process.stdout)[-4000:]
-        )
-    return _last_json(process.stdout)
-
-
-def _bird_harness_root(
-    evidence_root: str | Path, run_id: str, version: str
-) -> Path:
-    return (
-        Path(evidence_root).resolve()
-        / str(run_id)
-        / "versions_percell"
-        / BIRD_CELL
-        / str(version)
-        / "harness"
-        / "opencode"
-    )
-
-
 def _native_harness_root(
     evidence_root: str | Path,
     run_id: str,
@@ -1102,27 +820,6 @@ def _native_harness_root(
         / "harness"
         / normalize_harness(harness)
     )
-
-
-def _ensure_bird_v0(evidence_root: str | Path, run_id: str) -> None:
-    root = _bird_harness_root(evidence_root, run_id, "v0")
-    root.mkdir(parents=True, exist_ok=True)
-    patch = root / "patch.json"
-    descriptions = root / "patch_descs.json"
-    if not patch.exists():
-        _write_json(
-            patch,
-            {
-                "config_patch": {},
-                "files": [],
-                "instructions": [],
-                "prompt_appends": [],
-                "removals": [],
-                "replace_channels": [],
-            },
-        )
-    if not descriptions.exists():
-        _write_json(descriptions, {})
 
 
 def _merge_bird_manifest(
@@ -1187,10 +884,7 @@ def _api_trace_required(cell: str, harness: str = "opencode") -> bool:
     business = load_config()
     if business:
         return bool(business["agent"]["api_calls_path"] or business.get("trace"))
-    return normalize_harness(harness) in {"opencode", "codex"} and str(cell) not in {
-        "terminal_bench",
-        BIRD_CELL,
-    }
+    return normalize_harness(harness) in {"opencode", "codex"}
 
 
 def _trajectory_retention(cell: str, harness: str = "opencode") -> str:

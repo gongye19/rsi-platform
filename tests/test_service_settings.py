@@ -13,7 +13,7 @@ from harnesslens.service.store import Store
 @pytest.fixture
 def profile(tmp_path, model_tables):
     path = tmp_path / 'ready.toml'
-    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\n' + model_tables)
+    path.write_text('schema="harnesslens.experiment.v1"\nbenchmark="fdabench"\n' + model_tables)
     return path
 
 
@@ -35,7 +35,7 @@ def test_snapshot_freezes_choices_and_runtime_without_touching_source(tmp_path, 
     assert env['HAI_EXECUTION_API_KEY'] == 'analysis-test-only'
     assert env['HAI_ANALYSIS_MODEL'] == 'test/execution'
     assert env['HAI_ANALYSIS_API_KEY'] == 'execution-test-only'
-    assert env['HAI_CRM_MAX_CONCURRENCY'] == env['HAI_MAX_ROLLOUT_CONCURRENCY'] == '3'
+    assert env['HAI_FDABENCH_MAX_CONCURRENCY'] == env['HAI_MAX_ROLLOUT_CONCURRENCY'] == '3'
     assert env['HAI_TOTAL_CREATION_BUDGET'] == '80'
     assert 'test-only' not in saved.read_text()
     public = catalog(tmp_path, discover=False)
@@ -92,12 +92,11 @@ def test_import_finished_cli_evidence_is_read_only_and_idempotent(tmp_path, monk
 @pytest.mark.parametrize('selected,repeats,stages', [('v0', 1, ['train','test_initial']), ('candidate-01', 2, ['train','test_initial','test_selected'])])
 def test_ui_full_evaluation_freezes_parent_and_preserves_test_repeats(tmp_path, monkeypatch, profile, selected, repeats, stages):
     import harnesslens.service.experiment as experiment
-    import scripts.run_crm_experiment as launcher
     import harnesslens.harnesses.initial_harness as initial
     import harnesslens.harnesses.opencode_package as package
     monkeypatch.setattr(experiment, 'ROOT', tmp_path)
     (tmp_path / 'configs').mkdir()
-    (tmp_path / 'configs/crmarenapro_split.json').write_text('{"train":["query1"],"test":["query13"]}')
+    (tmp_path / 'configs/fdabench_split.json').write_text('{"train":["query1"],"test":["query13"]}')
     p = snapshot_profile(profile, {'parameters': {'HAI_TEST_ROLLOUT_REPEATS': repeats}}, tmp_path / 'snapshot', tmp_path)
     calls = []
     def execute(argv, env, stage, directory):
@@ -106,7 +105,7 @@ def test_ui_full_evaluation_freezes_parent_and_preserves_test_repeats(tmp_path, 
             target = tmp_path / 'runs/train/ui/submission/final.json'
             target.parent.mkdir(parents=True)
             target.write_text(json.dumps({'selected_version': selected}))
-    monkeypatch.setattr(launcher, 'execute', execute)
+    monkeypatch.setattr(experiment, 'execute', execute)
     monkeypatch.setattr(initial, 'freeze_initial_harness', lambda **kwargs: {'workspace': {'files': []}, 'manifest': {}})
     monkeypatch.setattr(package, 'export_package', lambda **kwargs: {'path': '/frozen/v0.json'})
     experiment.run(p, 'ui')
@@ -130,7 +129,7 @@ def test_history_attaches_only_actual_bundle_reviews_and_non_preflight_scores(tm
         'baseline/bootstrap_event.json': {'metrics': {'pass_at_1': .75}},
         'rollout/iteration-01-candidate-01-channel-preflight.json': {'harness_version': 'candidate-01', 'metrics': {'pass_at_1': 0}},
         'submission/final.json': {'selected_version': 'v0', 'iteration_history': [{'iteration': 1, 'candidate_version': 'candidate-01', 'selected_version': 'v0', 'review_decision': 'channel_preflight_failed', 'review_rationale': 'Command not invoked'}]},
-        'rollout_evidence/run/versions_percell/crm/candidate-01/harness/opencode/workspace.json': {'files': [{'scope': 'project', 'path': '.opencode/commands/test.md', 'content': 'candidate'}]},
+        'rollout_evidence/run/versions_percell/fdabench/candidate-01/harness/opencode/workspace.json': {'files': [{'scope': 'project', 'path': '.opencode/commands/test.md', 'content': 'candidate'}]},
     }.items():
         p = root / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(json.dumps(data))
     result = module.history('reviews')
@@ -169,17 +168,18 @@ def test_live_preflight_rejection_preserves_actual_nonempty_parent(tmp_path, mon
     monkeypatch.setattr(module,'ROOT',tmp_path)
     root=tmp_path/'runs/train/live'
     payloads={
-        'rollout_evidence/run/versions_percell/crm/champion/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'parent'}]},
-        'rollout_evidence/run/versions_percell/crm/champion/lineage.json': {'parent':'v0'},
-        'rollout_evidence/run/versions_percell/crm/candidate-02/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'candidate'}]},
-        'rollout_evidence/run/versions_percell/crm/candidate-02/lineage.json': {'parent':'champion'},
+        'rollout_evidence/run/versions_percell/fdabench/champion/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'parent'}]},
+        'rollout_evidence/run/versions_percell/fdabench/champion/lineage.json': {'parent':'v0'},
+        'rollout_evidence/run/versions_percell/fdabench/candidate-02/harness/opencode/workspace.json': {'files':[{'scope':'project','path':'AGENTS.md','content':'candidate'}]},
+        'rollout_evidence/run/versions_percell/fdabench/candidate-02/lineage.json': {'parent':'champion'},
         'channel_preflight/iteration-02-candidate-02.json': {'harness_version':'candidate-02','passed':False},
         'main_agent/iteration-02.json': {'harness_version':'candidate-02','candidate':{'parent_version':'champion'}},
     }
     for relative,value in payloads.items():
         p=root/relative;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(value))
     result=module.history('live')
-    assert result['steps'][-1]['active_bundle_id']=='champion'
+    # preflight 拒绝后，实际非空 parent（champion）仍是最后一个有效步骤
+    assert result['steps'][-1]['bundle_id']=='champion'
     assert result['decisions'][-1]['outcome']=='not_retained'
     assert result['decisions'][-1]['scope']=='bundle'
 
@@ -187,13 +187,13 @@ def test_live_preflight_rejection_preserves_actual_nonempty_parent(tmp_path, mon
 def test_benchmark_can_be_selected_independently_of_runtime_profile(tmp_path, profile):
     original = profile.read_bytes()
     available = {row['id'] for row in catalog(tmp_path, discover=False)['benchmarks']}
-    assert available == {'crm', 'fdabench'}
-    saved = snapshot_profile(profile, {'benchmark': 'retail'}, tmp_path/'selected', tmp_path)
+    assert available == {'fdabench'}
+    saved = snapshot_profile(profile, {'benchmark': 'fdabench'}, tmp_path/'selected', tmp_path)
     loaded = load_profile(saved)
-    assert loaded['benchmark'] == 'retail'
+    assert loaded['benchmark'] == 'fdabench'
     assert profile.read_bytes() == original
     argv, _ = invocation(loaded, 'benchmark-check')
-    assert argv[argv.index('--cell')+1] == 'retail'
+    assert argv[argv.index('--cell')+1] == 'fdabench'
 
 
 def test_custom_benchmark_descriptor_is_validated_and_frozen(tmp_path, profile):

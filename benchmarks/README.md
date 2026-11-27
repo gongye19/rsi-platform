@@ -50,8 +50,8 @@ name = "FDABench Lite · Reports"
 adapter = "fdabench"
 ```
 
-The console ships with CRM Arena Pro and FDABench Lite · Reports registrations.
-Their data may remain at the configured
+The console ships with the FDABench Lite · Reports registration.
+Its data may remain at the configured
 external data root; registering an adapter does not download or install it.
 Other native adapters remain usable through the CLI; add a registration manifest
 under this directory when they are needed in the console.

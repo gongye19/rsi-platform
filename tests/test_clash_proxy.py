@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-import run_e2e
 from harnesslens.infrastructure.clash_proxy import configure_terminal_clash_proxy
 
 
@@ -26,17 +25,3 @@ def test_terminal_clash_proxy_rejects_host_loopback(monkeypatch):
 
     with pytest.raises(RuntimeError, match="allow-lan"):
         configure_terminal_clash_proxy()
-
-
-def test_e2e_configures_terminal_clash_before_controller(monkeypatch):
-    calls: list[str] = []
-    monkeypatch.setattr(
-        run_e2e,
-        "configure_terminal_clash_proxy",
-        lambda: calls.append("configured"),
-    )
-
-    repo_root = Path(__file__).resolve().parents[1]
-    run_e2e.configure_cell_runtime(repo_root, "terminal-bench")
-
-    assert calls == ["configured"]

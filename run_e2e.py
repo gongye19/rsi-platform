@@ -6,15 +6,9 @@ import json
 import os
 from pathlib import Path
 
-from harnesslens.benchmarks.cell_config import benchmark_cell, benchmark_config, supported_cell_help
-from harnesslens.infrastructure.clash_proxy import configure_terminal_clash_proxy
+from harnesslens.benchmarks.cell_config import benchmark_cell, supported_cell_help
 from harnesslens.core.config import load_repo_env, repo_root
 from harnesslens.evolution.controller import IterationController
-
-
-def configure_cell_runtime(repo_root: Path, cell: str) -> None:
-    if benchmark_config(repo_root, cell).kind == "terminal_bench":
-        configure_terminal_clash_proxy()
 
 
 def main() -> int:
@@ -50,7 +44,7 @@ def main() -> int:
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument(
         "--cell",
-        default="retail", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
+        default="fdabench", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
     parser.add_argument("--repo-root", type=Path, default=repo_root())
     parser.add_argument('--train-count',type=int,help='TRAIN task count; 0 uses the entire available pool')
     parser.add_argument('--test-count',type=int,help='TEST task count; 0 uses the entire available pool')
@@ -73,7 +67,6 @@ def main() -> int:
     from harnesslens.core.model_config import task_models
     task_models(args.models_config, business=bool(args.agent_config or os.environ.get("HAI_AGENT_CONFIG")),
                 run_root=root / "runs/train" / args.run_id)
-    configure_cell_runtime(root, args.cell)
     from harnesslens.harnesses.library import sync_run_harnesses
     if args.harness == "opencode":
         sync_run_harnesses(root, args.run_id, args.initial_harness)

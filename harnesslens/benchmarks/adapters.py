@@ -111,79 +111,7 @@ class BusinessBenchmark:
                     raise ValueError("Cached provider trace changed")
 
 
-class CrmAdapter(BusinessBenchmark):
-    cell = "crmarenapro"
-
-    @property
-    def max_concurrency(self):
-        from .crm_eval import crm_workers
-        return crm_workers(30, 30)
-
-    def __init__(self, repo_root):
-        self.repo_root = Path(repo_root).resolve()
-
-    def split(self):
-        from .benchmark_splits import load_benchmark_split
-        return load_benchmark_split("crm")
-
-    def explorer_input(self, task_ids):
-        from .crm import public_explorer_input
-        return public_explorer_input(self.repo_root, task_ids)
-
-    def fingerprint(self):
-        from .crm_eval import runtime_fingerprint
-        return runtime_fingerprint(self.repo_root)
-
-    def limits(self):
-        from .crm_eval import effective_limits
-        return effective_limits()
-
-    def target_model(self):
-        from .crm_eval import model
-        return model()
-
-    def public_task(self, task_id):
-        from .crm import load_tasks
-        return load_tasks(self.repo_root)[task_id]
-
-    def prepare_task(self, workspace, task_id, resources):
-        from .crm_eval import prepare_task
-        from .crm import dataset_root
-        from .crm_postgres import pg_port
-        return {"prompt": prepare_task(self.repo_root, workspace, task_id, resources["pg_port"]),
-                "private_roots": [str(dataset_root(self.repo_root))], "private_ports": [pg_port()]}
-
-    def grade(self, task_id, answer):
-        from .crm import grade
-        return grade(self.repo_root, task_id, answer)
-
-    def execution_context(self):
-        from contextlib import contextmanager
-        from .crm_postgres import ReadOnlyPostgresProxy
-        @contextmanager
-        def start():
-            with ReadOnlyPostgresProxy() as proxy:
-                yield {"pg_port": proxy.port}
-        return start()
-
-    def baseline_fields(self, harness):
-        from .crm_eval import model
-        if harness != "opencode":
-            raise ValueError("The configured native runtime supports OpenCode only")
-        return {"target_model": model(), "user_model": None,
-                "benchmark_environment": self.fingerprint(), "rollout": self.limits().to_dict()}
-
-    def run_batch(self, **kwargs):
-        from harnesslens.harnesses.business_agent import load_config
-        if load_config():
-            return super().run_batch(**kwargs)
-        from .crm_eval import run_crm_batch
-        return run_crm_batch(repo_root=self.repo_root, **kwargs)
-
-
 def benchmark_adapter(repo_root, cell):
-    if str(cell) in {"crm", "crmarenapro", "dab-crmarenapro"}:
-        return CrmAdapter(repo_root)
     if str(cell) in {"fdabench", "fdabench-lite-report"}:
         from .fdabench.adapter import FDABenchAdapter
         return FDABenchAdapter(repo_root)

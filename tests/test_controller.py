@@ -147,7 +147,7 @@ def test_analysis_reuse_requires_exact_baseline_and_charges_source_jobs(tmp_path
         json.dumps({"harness": "opencode"})
     )
     (source / "discovery" / "task_explorer_input.json").write_text(
-        json.dumps({"domain": "retail"})
+        json.dumps({"domain": "fdabench"})
     )
     source_index = {
         "task_ids": ["0"],
@@ -204,7 +204,7 @@ def test_analysis_reuse_requires_exact_baseline_and_charges_source_jobs(tmp_path
         target_run=target,
         baseline_event=event,
         harness="opencode",
-        cell="retail",
+        cell="fdabench",
         workflow_fingerprint=workflow,
     ) == 4
     assert (target / "discovery" / "harness_query.json").is_file()
@@ -240,7 +240,7 @@ def test_analysis_reuse_rejects_a_different_analysis_workflow(tmp_path):
             target_run=tmp_path / "target",
             baseline_event=tmp_path / "unused.json",
             harness="opencode",
-            cell="retail",
+            cell="fdabench",
             workflow_fingerprint=current_workflow,
         )
 
@@ -578,9 +578,9 @@ def test_replan_problem_returns_post_analyzer_candidate_to_portfolio():
     result = replan_candidate_from_review(
         {"decision": "replan_problem", "evidence": {"recovered_task_ids": []}},
         adjustment={"replan_candidate": candidate},
-        rollout_task_ids=("bird_1037",),
+        rollout_task_ids=("task_1037",),
     )
 
     assert result["id"] == "replan-count-distinct"
     assert result["_portfolio_side"] == "adjustment"
-    assert result["_direct_task_ids"] == ["bird_1037"]
+    assert result["_direct_task_ids"] == ["task_1037"]

@@ -58,7 +58,7 @@ def test_manual_harness_directory_is_discovered_and_frozen(tmp_path):
 
 def test_new_versions_are_reusable_without_overwriting_the_initial_harness(tmp_path):
     index=sync_run_harnesses(tmp_path,'experiment-a')
-    source=tmp_path/'runs/train/experiment-a/rollout_evidence/experiment-a/versions_percell/crm/candidate-01/harness/opencode'
+    source=tmp_path/'runs/train/experiment-a/rollout_evidence/experiment-a/versions_percell/fdabench/candidate-01/harness/opencode'
     source.mkdir(parents=True)
     workspace={'schema':1,'files':[{'scope':'project','path':'AGENTS.md','content':'Improved rule','executable':False}]}
     (source/'workspace.json').write_text(json.dumps(workspace));(source/'manifest.json').write_text('{}')
@@ -88,7 +88,7 @@ def test_task_snapshot_resolves_harness_library_choice(tmp_path,monkeypatch,mode
     from harnesslens.service.settings import snapshot_profile,profile_preview
     monkeypatch.setattr(config,'ROOT',tmp_path)
     source=tmp_path/'harnesses/manual/project';source.mkdir(parents=True);(source/'AGENTS.md').write_text('Initial instructions')
-    profile=tmp_path/'runtime.toml';profile.write_text('schema="harnesslens.experiment.v1"\nbenchmark="crm"\n'+model_tables)
+    profile=tmp_path/'runtime.toml';profile.write_text('schema="harnesslens.experiment.v1"\nbenchmark="fdabench"\n'+model_tables)
     saved=snapshot_profile(profile,{'initial_harness':'harness:manual'},tmp_path/'job',tmp_path)
     loaded=config.load_profile(saved)
     assert loaded['initial_harness']==str(source.parent)
@@ -97,7 +97,7 @@ def test_task_snapshot_resolves_harness_library_choice(tmp_path,monkeypatch,mode
 
 
 def test_backfill_uses_the_recorded_initial_snapshot(tmp_path):
-    run=tmp_path/'runs/train/existing';native=run/'rollout_evidence/existing/versions_percell/crm/v0/harness/opencode';native.mkdir(parents=True)
+    run=tmp_path/'runs/train/existing';native=run/'rollout_evidence/existing/versions_percell/fdabench/v0/harness/opencode';native.mkdir(parents=True)
     workspace={'schema':1,'files':[{'scope':'project','path':'AGENTS.md','content':'Actual recorded baseline','executable':False}]}
     (native/'workspace.json').write_text(json.dumps(workspace));(native/'manifest.json').write_text('{}')
     (run/'initial_harness.json').write_text(json.dumps({'snapshot_path':str(native.parents[1])}))

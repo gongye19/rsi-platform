@@ -5,13 +5,13 @@ import {activeAt, type ComponentHistory} from './component-types';
 const STORAGE_KEY = 'rsi-platform-demo-v1';
 const ids = Object.keys(componentLabels).slice(0,16);
 const modelRows = [
-  {id:'gpt-execution',label:'GPT · Execution',model:'gpt-execution',configured:true},
-  {id:'gpt-analysis',label:'GPT · Analysis',model:'gpt-analysis',configured:true},
+  {id:'glm-execution',label:'GLM · Execution',model:'glm-execution',configured:true},
+  {id:'glm-analysis',label:'GLM · Analysis',model:'glm-analysis',configured:true},
   {id:'open-model',label:'Open model · General purpose',model:'open-model',configured:true},
 ];
 export const demoOptions: Options = {
   harnesses:[],
-  benchmarks:[{id:'crm',label:'CRM Arena Pro'},{id:'fdabench',label:'FDABench Lite · Reports'}],
+  benchmarks:[{id:'fdabench',label:'FDABench Lite · Reports'}],
   models:modelRows,components:ids.map(id=>({id,name:componentLabels[id]})),
   proposal_only:['model_provider','runtime_env','file_attachments','tool_return','diagnostic'],
   experimental_fields:['batch_tool','primary_tools','continue_loop_on_deny','mcp_timeout','disable_paste_summary'],
@@ -28,9 +28,9 @@ export const demoOptions: Options = {
 };
 const parameters = Object.fromEntries(demoOptions.parameters.map(p=>[p.key,p.default]));
 export const demoPreview: Preview = {
-  benchmark:'crm',benchmark_selection:'crm',
-  model_selection:{execution:'gpt-execution',analysis:'gpt-analysis'},
-  models:{execution:{model:'gpt-execution'},analysis:{model:'gpt-analysis'}},
+  benchmark:'fdabench',benchmark_selection:'fdabench',
+  model_selection:{execution:'glm-execution',analysis:'glm-analysis'},
+  models:{execution:{model:'glm-execution'},analysis:{model:'glm-analysis'}},
   components:{allowed:ids,denied:[],experimental_fields:[],proposal_only:demoOptions.proposal_only},parameters,
   dataset:{domain:'all',train_count:8,test_count:5},initial_harness:'',full_evaluation:true,readiness:'ready',business_agent:false,mode:'train',
 };
@@ -147,7 +147,7 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
     if(body.action==='create') {
       if(found) throw new Error('This demo experiment already exists.');
       const selected=body.settings?.dataset;
-      if(selected){const available=demoDatasetOptions(body.settings.benchmark || 'crm').domains.find(row=>row.id===selected.domain);
+      if(selected){const available=demoDatasetOptions(body.settings.benchmark || 'fdabench').domains.find(row=>row.id===selected.domain);
         if(!available || !Number.isInteger(selected.train_count) || selected.train_count<5 || selected.train_count>available.train_available || !Number.isInteger(selected.test_count) || selected.test_count<1 || selected.test_count>available.test_available)throw new Error('Choose valid dataset counts for this domain.');}
 
       if(!/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(body.run_id || '')) throw new Error('Invalid demo experiment ID.');
@@ -161,7 +161,7 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
     }
     writeStore(store);return clone({ok:true,run_id:body.run_id});
   }
-  if(params.get('dataset')==='1') return clone(demoDatasetOptions(params.get('benchmark') || 'crm'));
+  if(params.get('dataset')==='1') return clone(demoDatasetOptions(params.get('benchmark') || 'fdabench'));
   if(params.get('options')==='1') return clone(demoOptions);
   if(params.get('profiles')==='1') return clone(params.has('name')?demoPreview:['demo-agent.toml']);
   const runs=store.runs.map(r=>materializeDemoRun(store,r));
@@ -170,10 +170,10 @@ export async function demoRequest<T>(query='',init?:RequestInit):Promise<T> {
 }
 
 export function demoDatasetOptions(benchmark:string):DatasetOptions {
-  const crm=benchmark==='crm' || benchmark==='knowledge-qa-13';
-  const pools=crm ? [8,5] : benchmark==='service-operations' ? [40,20] : [70,35];
-  return {benchmark,cell:benchmark,grouping:crm?'benchmark':'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
+  const compact=benchmark==='knowledge-qa-13';
+  const pools=compact ? [8,5] : benchmark==='service-operations' ? [40,20] : [70,35];
+  return {benchmark,cell:benchmark,grouping:compact?'benchmark':'domain',minimum_train_count:5,train_available:pools[0],test_available:pools[1],
     domains:[{id:'all',label:'All task groups',train_available:pools[0],test_available:pools[1]},
-      ...(crm?[]:[      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},
+      ...(compact?[]:[      {id:'group:reporting',label:'Reporting',train_available:Math.max(5,Math.floor(pools[0]*.6)),test_available:Math.max(1,Math.floor(pools[1]*.6))},
       {id:'group:operations',label:'Operations',train_available:pools[0]-Math.max(5,Math.floor(pools[0]*.6)),test_available:pools[1]-Math.max(1,Math.floor(pools[1]*.6))}])]};
 }

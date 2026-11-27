@@ -30,7 +30,7 @@ test('browser-local lifecycle never invokes fetch and deletion stays deleted',as
  const original=globalThis.fetch;let networkCalls=0;
  globalThis.fetch=(()=>{networkCalls++;throw new Error('Unexpected network');}) as typeof fetch;
  try {
-  const settings:Settings={models:{execution:'open-model',analysis:'gpt-analysis'},benchmark:'data-analysis',components:{allowed:['skills'],denied:[],experimental_fields:[],proposal_only:['diagnostic']},parameters:{HAI_TOTAL_CREATION_BUDGET:52},initial_harness:'',full_evaluation:false};
+  const settings:Settings={models:{execution:'open-model',analysis:'glm-analysis'},benchmark:'data-analysis',components:{allowed:['skills'],denied:[],experimental_fields:[],proposal_only:['diagnostic']},parameters:{HAI_TOTAL_CREATION_BUDGET:52},initial_harness:'',full_evaluation:false};
   const send=(body:unknown)=>demoRequest('',{method:'POST',body:JSON.stringify(body)});
   await send({action:'create',run_id:'mock-lifecycle',settings});
   await send({action:'start',run_id:'mock-lifecycle'});

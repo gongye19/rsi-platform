@@ -487,7 +487,7 @@ def test_mcp_transport_adds_exact_tool_and_parameter_editable_points():
     points = _mcp_editable_points(
         {
             "environment": {
-                "tool_transport": {"kind": "mcp", "server_id": "tau2"},
+                "tool_transport": {"kind": "mcp", "server_id": "probe"},
                 "tools": [
                     {
                         "name": "modify_order",
@@ -508,7 +508,7 @@ def test_mcp_transport_accepts_compact_public_parameter_catalog():
     points = _mcp_editable_points(
         {
             "environment": {
-                "tool_transport": {"kind": "mcp", "server_id": "bird"},
+                "tool_transport": {"kind": "mcp", "server_id": "probe"},
                 "tools": [
                     {
                         "name": "execute_sql",
@@ -564,7 +564,7 @@ def test_harness_query_requires_predefined_mcp_targets_verbatim():
         {
             "id": "mcp_tool_description",
             "base_channel_id": "tool_description",
-            "server_id": "tau2",
+            "server_id": "probe",
             "targets": ["modify_order"],
         }
     ]
@@ -575,7 +575,7 @@ def test_harness_query_requires_predefined_mcp_targets_verbatim():
             {
                 "id": "mcp_tool_description",
                 "base_channel_id": "tool_description",
-                "server_id": "tau2",
+                "server_id": "probe",
                 "targets": ["wrong_tool"],
                 "status": "conditional",
                 "reason": "No workspace edit path is available.",
@@ -952,9 +952,9 @@ def test_harness_query_model_payload_hides_controller_managed_mcp_points():
             {"id": "runtime:mcp-workspace-bridge"},
         ],
         "public_runtime": {
-            "benchmark_kind": "bird",
+            "benchmark_kind": "probe",
             "task_tool_names": ["execute_sql"],
-            "tool_transport": {"kind": "mcp", "server_id": "bird"},
+            "tool_transport": {"kind": "mcp", "server_id": "probe"},
         },
     }
 
@@ -964,7 +964,7 @@ def test_harness_query_model_payload_hides_controller_managed_mcp_points():
     assert model_payload["controller_managed_mcp"]["connected"] is True
     assert model_payload["surface_hypotheses"] == [{"id": "skills"}]
     assert model_payload["evidence_catalog"] == [{"id": "probe:version"}]
-    assert model_payload["public_runtime"] == {"benchmark_kind": "bird"}
+    assert model_payload["public_runtime"] == {"benchmark_kind": "probe"}
 
 
 def test_harness_query_fallback_only_demotes_unproven_surfaces():

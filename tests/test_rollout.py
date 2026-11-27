@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -30,6 +31,19 @@ from harnesslens.evaluation.rollout_bridge import (
     _summarize,
     validate_native_rollout_interactions,
 )
+
+
+def _fdabench_repo(tmp_path):
+    """RolloutModule 默认 cell=fdabench：临时 repo 需要 split 配置才能构造。"""
+    configs = tmp_path / "configs"
+    configs.mkdir(exist_ok=True)
+    (configs / "fdabench_split.json").write_text(
+        json.dumps(
+            {"train": [str(index) for index in range(30)], "test": ["holdout"]}
+        ),
+        encoding="utf-8",
+    )
+    return tmp_path
 
 
 def test_rollout_pass_at_1_uses_all_independent_trials():
@@ -195,7 +209,7 @@ def test_channel_preflight_uses_one_task_and_one_repeat(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=10, baseline_used=0),
     )
@@ -236,7 +250,7 @@ def test_pair_rollout_uses_exact_non_v0_parent_with_matching_offset(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -297,7 +311,7 @@ def test_fresh_seed_confirmation_runs_an_exact_v0_parent(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -359,7 +373,7 @@ def test_pair_rollout_accepts_controller_confirmation_task_override(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -425,7 +439,7 @@ def test_exact_pair_retries_only_invalid_trial_with_original_slot(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -499,7 +513,7 @@ def test_v0_screen_retries_only_invalid_trials_with_original_slots(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -561,7 +575,7 @@ def test_v0_screen_never_reviews_an_infrastructure_invalid_retry(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -651,7 +665,7 @@ def test_residual_pair_propagates_the_smaller_controller_minimum(
         encoding="utf-8",
     )
     module = RolloutModule(
-        repo_root=tmp_path,
+        repo_root=_fdabench_repo(tmp_path),
         run_root=run_root,
         budget=CreationBudget(run_root / "budget.json", total=100, baseline_used=0),
     )
@@ -696,7 +710,7 @@ def test_paired_rollout_resumes_launched_jobs_without_a_second_budget_reservatio
         budget.reserve_job(job_id, creation_count=4)
         budget.claim_launch(job_id)
         budget.mark_launched(job_id)
-    module = RolloutModule(repo_root=tmp_path, run_root=run_root, budget=budget)
+    module = RolloutModule(repo_root=_fdabench_repo(tmp_path), run_root=run_root, budget=budget)
     calls = []
     monkeypatch.setattr(
         module,
@@ -747,7 +761,7 @@ def test_rollout_version_reuses_and_settles_its_launched_job(tmp_path, monkeypat
     monkeypatch.setattr(
         "harnesslens.evolution.rollout.TrainRolloutService", FakeService
     )
-    module = RolloutModule(repo_root=tmp_path, run_root=run_root, budget=budget)
+    module = RolloutModule(repo_root=_fdabench_repo(tmp_path), run_root=run_root, budget=budget)
 
     result = module.run_version(
         task_ids=("0", "1", "2", "3", "4"),
@@ -776,24 +790,6 @@ def test_rollout_runtime_limits_match_the_reused_runtime():
     }
 
 
-def test_tau2_timeout_per_turn_can_be_configured(monkeypatch):
-    from harnesslens.evaluation.rollout_bridge import tau2_timeout_per_turn_s
-
-    monkeypatch.setenv("HAI_TAU2_TIMEOUT_PER_TURN_S", "360")
-
-    assert tau2_timeout_per_turn_s() == 360
-
-
-@pytest.mark.parametrize("value", ["0", "invalid"])
-def test_tau2_timeout_per_turn_rejects_invalid_values(monkeypatch, value):
-    from harnesslens.evaluation.rollout_bridge import tau2_timeout_per_turn_s
-
-    monkeypatch.setenv("HAI_TAU2_TIMEOUT_PER_TURN_S", value)
-
-    with pytest.raises(ValueError, match="must be a positive integer"):
-        tau2_timeout_per_turn_s()
-
-
 def test_rollout_group_workspace_cleanup_removes_empty_scaffolding(
     tmp_path, monkeypatch
 ):
@@ -811,7 +807,7 @@ def test_native_candidate_repository_materializes_cumulative_harness_snapshot(
     tmp_path, harness
 ):
     repository = CellHarnessRepository(
-        cell="retail",
+        cell="fdabench",
         repo_root=tmp_path,
         run_id="run",
         evidence_root=tmp_path / "evidence",
@@ -863,7 +859,7 @@ def test_native_candidate_repository_materializes_cumulative_harness_snapshot(
         / "evidence"
         / "run"
         / "versions_percell"
-        / "retail"
+        / "fdabench"
         / second
         / "harness"
         / harness
@@ -878,7 +874,7 @@ def test_candidate_repository_replaces_editor_workspace_and_inherits_manifest(
     tmp_path, harness
 ):
     repository = CellHarnessRepository(
-        cell="retail",
+        cell="fdabench",
         repo_root=tmp_path,
         run_id="run",
         evidence_root=tmp_path / "evidence",
@@ -920,7 +916,7 @@ def test_candidate_repository_replaces_editor_workspace_and_inherits_manifest(
 @pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
 def test_workspace_candidate_merges_controller_mcp_manifest_delta(tmp_path, harness):
     repository = CellHarnessRepository(
-        cell="retail",
+        cell="fdabench",
         repo_root=tmp_path,
         run_id="run",
         evidence_root=tmp_path / "evidence",
@@ -948,7 +944,7 @@ def test_native_candidate_repositories_do_not_share_versions(tmp_path):
     snapshots = {}
     for harness in ("pi", "codex"):
         repository = CellHarnessRepository(
-            cell="retail",
+            cell="fdabench",
             repo_root=tmp_path,
             run_id="run",
             evidence_root=tmp_path / "evidence",
@@ -965,12 +961,15 @@ def test_native_candidate_repositories_do_not_share_versions(tmp_path):
     assert snapshots["codex"]["prompt_appends"] == ["codex"]
 
 
-@pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
-def test_native_rollout_dispatches_to_same_harness_with_version_manifest(
-    tmp_path, monkeypatch, harness
+def test_rollout_dispatches_with_the_version_manifest(
+    business_benchmark, monkeypatch
 ):
+    # 受支持 benchmark 都经 adapter 走 OpenCode 运行时；版本 manifest
+    # 必须取自对应 cell 的候选快照并透传给 run_batch。
+    tmp_path, cell = business_benchmark
+    harness = "opencode"
     repository = CellHarnessRepository(
-        cell="retail",
+        cell=cell,
         repo_root=tmp_path,
         run_id="run",
         evidence_root=tmp_path / "evidence",
@@ -979,19 +978,16 @@ def test_native_rollout_dispatches_to_same_harness_with_version_manifest(
     repository.materialize_candidate(
         base_version="v0",
         candidate_label="candidate-01",
-        delta={"tool_desc_patches": {"lookup": {"desc": f"{harness} patch"}}},
+        delta={"tool_desc_patches": {"lookup": {"desc": "probe patch"}}},
     )
     captured = {}
 
-    def fake_native_rollout_worker(**kwargs):
+    def fake_run_batch(**kwargs):
         captured.update(kwargs)
         return {"per_task": {}, "records": [], "metrics": {}}
 
-    monkeypatch.setattr(
-        rollout_bridge, "_run_native_tau2_worker", fake_native_rollout_worker
-    )
     service = TrainRolloutService(
-        cell="retail",
+        cell=cell,
         repo_root=tmp_path,
         run_id="run",
         artifact_root=tmp_path / "artifacts",
@@ -1001,6 +997,7 @@ def test_native_rollout_dispatches_to_same_harness_with_version_manifest(
         workspace_root=tmp_path / "workspaces",
         harness=harness,
     )
+    monkeypatch.setattr(service.adapter, "run_batch", fake_run_batch)
     request = RolloutRequest(
         request_id="request",
         run_id="run",
@@ -1014,117 +1011,15 @@ def test_native_rollout_dispatches_to_same_harness_with_version_manifest(
 
     service._run_group(request, ["0"], 1)
 
-    assert captured["payload"]["harness"] == harness
-    assert captured["payload"]["request"]["scope"] == "TRAIN"
-    assert captured["payload"]["harness_manifest"]["tool_desc_patches"] == {
-        "lookup": {"desc": f"{harness} patch"}
-    }
-
-
-@pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
-def test_bird_rollout_dispatches_every_target_harness(monkeypatch, tmp_path, harness):
-    captured = {}
-    monkeypatch.setattr(
-        rollout_bridge,
-        "run_bird_batch",
-        lambda **kwargs: captured.update(kwargs)
-        or {"trajectory_root": "unused", "per_task": {}, "records": [], "metrics": {}},
-    )
-    service = TrainRolloutService(
-        cell="bird_mini_dev_challenging",
-        repo_root=tmp_path,
-        run_id="run",
-        artifact_root=tmp_path / "artifacts",
-        train_task_ids=["0"],
-        initial_budget=1,
-        evidence_root=tmp_path / "evidence",
-        workspace_root=tmp_path / "workspaces",
-        harness=harness,
-    )
-    request = RolloutRequest(
-        request_id="request",
-        run_id="run",
-        scope="TRAIN",
-        harness_version="v0",
-        task_repeats={"0": 1},
-        max_concurrency=1,
-        purpose="bird harness dispatch",
-        pairing_offsets={"0": 0},
-    )
-
-    service._run_group(request, ["0"], 1)
-
     assert captured["harness"] == harness
-    expected = {
-        "config_patch": {},
-        "files": [],
-        "instructions": [],
-        "prompt_appends": [],
-        "tool_desc_patches": {},
-    }
-    assert {
-        key: captured["harness_manifest"][key] for key in expected
-    } == expected
-    assert captured["harness_manifest"]["_workspace"] == {
-        "schema": 1,
-        "files": [],
-    }
-
-
-@pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
-def test_terminal_rollout_dispatches_every_target_harness(
-    monkeypatch, tmp_path, harness
-):
-    captured = {}
-    monkeypatch.setattr(
-        rollout_bridge,
-        "run_terminal_batch",
-        lambda **kwargs: captured.update(kwargs)
-        or {"trajectory_root": "unused", "per_task": {}, "records": [], "metrics": {}},
-    )
-    service = TrainRolloutService(
-        cell="terminal_bench",
-        repo_root=tmp_path,
-        run_id="run",
-        artifact_root=tmp_path / "artifacts",
-        train_task_ids=["task"],
-        initial_budget=1,
-        evidence_root=tmp_path / "evidence",
-        workspace_root=tmp_path / "workspaces",
-        harness=harness,
-    )
-    request = RolloutRequest(
-        request_id="request",
-        run_id="run",
-        scope="TRAIN",
-        harness_version="v0",
-        task_repeats={"task": 1},
-        max_concurrency=1,
-        purpose="terminal harness dispatch",
-        pairing_offsets={"task": 0},
-    )
-
-    service._run_group(request, ["task"], 1)
-
-    assert captured["harness"] == harness
-    expected = {
-        "config_patch": {},
-        "files": [],
-        "instructions": [],
-        "prompt_appends": [],
-        "tool_desc_patches": {},
-    }
-    assert {
-        key: captured["harness_manifest"][key] for key in expected
-    } == expected
-    assert captured["harness_manifest"]["_workspace"] == {
-        "schema": 1,
-        "files": [],
+    assert captured["scope"] == "TRAIN"
+    assert captured["harness_manifest"]["tool_desc_patches"] == {
+        "lookup": {"desc": "probe patch"}
     }
 
 
 @pytest.mark.parametrize("harness", ["pi", "codex"])
-def test_native_rollout_rejects_unknown_benchmark_without_fallback(tmp_path, harness):
+def test_rollout_rejects_adapterless_benchmark_without_fallback(tmp_path, harness):
     service = TrainRolloutService(
         cell="unknown_cell",
         repo_root=tmp_path,
@@ -1147,36 +1042,22 @@ def test_native_rollout_rejects_unknown_benchmark_without_fallback(tmp_path, har
         pairing_offsets={"0": 0},
     )
 
-    with pytest.raises(ValueError, match="not implemented"):
+    with pytest.raises(ValueError, match="unsupported harness"):
         service._run_group(request, ["0"], 1)
 
 
-def test_baseline_fingerprint_records_the_actual_opencode_step_limit():
-    repo_root = Path(__file__).resolve().parents[1]
-    fingerprint = build_baseline_fingerprint(repo_root)
+def test_baseline_fingerprint_records_adapter_runtime_limits(business_benchmark):
+    tmp_path, cell = business_benchmark
+    fingerprint = build_baseline_fingerprint(tmp_path, cell=cell)
 
-    assert fingerprint["rollout"]["max_steps"] == ROLLOUT_RUNTIME_LIMITS[
-        "opencode_steps"
-    ]
-
-
-def test_baseline_fingerprint_separates_target_harnesses():
-    repo_root = Path(__file__).resolve().parents[1]
-
-    fingerprints = {
-        harness: build_baseline_fingerprint(repo_root, harness=harness)
-        for harness in ("opencode", "pi", "codex")
-    }
-
-    assert {item["harness"] for item in fingerprints.values()} == {
-        "opencode",
-        "pi",
-        "codex",
-    }
-    assert len({item["fingerprint_sha256"] for item in fingerprints.values()}) == 3
+    assert fingerprint["rollout"]["max_steps"] == 40
+    # agent.toml 声明的 timeout 进入基线指纹
+    assert fingerprint["rollout"]["timeout_s"] == 10
+    assert fingerprint["target_model"] == "local-probe"
 
 
-def test_rollout_service_reconstructs_completed_retained_batch(tmp_path):
+def test_rollout_service_reconstructs_completed_retained_batch(business_benchmark):
+    tmp_path, cell = business_benchmark
     request = RolloutRequest(
         request_id="candidate-request",
         run_id="run",
@@ -1187,35 +1068,8 @@ def test_rollout_service_reconstructs_completed_retained_batch(tmp_path):
         purpose="test",
         pairing_offsets={"0": 0},
     )
-    root = tmp_path / "artifacts" / "run" / "candidate-request" / "trajectories" / "0"
-    root.mkdir(parents=True)
-    for index, reward in enumerate((1.0, 0.0), start=1):
-        sidecar = root / f"trial_{index:04d}.api_calls.jsonl"
-        sidecar.write_text(
-            json.dumps(
-                {
-                    "request": {"messages": [{"role": "system", "content": "policy"}]},
-                    "response": {"choices": [{"message": {"content": "done"}}]},
-                }
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-        (root / f"trial_{index:04d}.jsonl").write_text(
-            json.dumps(
-                {
-                    "task_id": "0",
-                    "trial": index - 1,
-                    "pairing_slot": index - 1,
-                    "reward": reward,
-                    "api_calls_jsonl": sidecar.name,
-                }
-            )
-            + "\n",
-            encoding="utf-8",
-        )
     service = TrainRolloutService(
-        cell="retail",
+        cell=cell,
         repo_root=tmp_path,
         run_id="run",
         artifact_root=tmp_path / "artifacts",
@@ -1224,6 +1078,39 @@ def test_rollout_service_reconstructs_completed_retained_batch(tmp_path):
         evidence_root=tmp_path / "evidence",
         workspace_root=tmp_path / "workspaces",
     )
+    # business adapter 复用保留轨迹时校验环境指纹与 trace 哈希
+    environment = service.adapter.fingerprint()
+    root = tmp_path / "artifacts" / "run" / "candidate-request" / "trajectories" / "0"
+    root.mkdir(parents=True)
+    for index, reward in enumerate((1.0, 0.0), start=1):
+        sidecar = root / f"trial_{index:04d}.api_calls.jsonl"
+        payload = (
+            json.dumps(
+                {
+                    "request": {"messages": [{"role": "system", "content": "policy"}]},
+                    "response": {"choices": [{"message": {"content": "done"}}]},
+                }
+            )
+            + "\n"
+        )
+        sidecar.write_text(payload, encoding="utf-8")
+        (root / f"trial_{index:04d}.jsonl").write_text(
+            json.dumps(
+                {
+                    "task_id": "0",
+                    "trial": index - 1,
+                    "pairing_slot": index - 1,
+                    "reward": reward,
+                    "api_calls_jsonl": sidecar.name,
+                    "environment_fingerprint": environment,
+                    "api_trace_sha256": hashlib.sha256(
+                        payload.encode("utf-8")
+                    ).hexdigest(),
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
 
     response = service.recover_retained(request)
 
@@ -1253,7 +1140,10 @@ def test_recovered_rollout_settles_stale_active_job(tmp_path):
     assert record["usage"]["details"]["recovered_from_retained_trials"] is True
 
 
-def test_rollout_service_identifies_the_exact_corrupt_retained_trial(tmp_path):
+def test_rollout_service_identifies_the_exact_corrupt_retained_trial(
+    business_benchmark,
+):
+    tmp_path, cell = business_benchmark
     request = RolloutRequest(
         request_id="candidate-request",
         run_id="run",
@@ -1264,6 +1154,17 @@ def test_rollout_service_identifies_the_exact_corrupt_retained_trial(tmp_path):
         purpose="test",
         pairing_offsets={"0": 0},
     )
+    service = TrainRolloutService(
+        cell=cell,
+        repo_root=tmp_path,
+        run_id="run",
+        artifact_root=tmp_path / "artifacts",
+        train_task_ids=["0"],
+        initial_budget=1,
+        evidence_root=tmp_path / "evidence",
+        workspace_root=tmp_path / "workspaces",
+    )
+    environment = service.adapter.fingerprint()
     root = tmp_path / "artifacts" / "run" / "candidate-request" / "trajectories" / "0"
     root.mkdir(parents=True)
     sidecar = root / "trial_0001.api_calls.jsonl"
@@ -1276,20 +1177,12 @@ def test_rollout_service_identifies_the_exact_corrupt_retained_trial(tmp_path):
                 "trial": 0,
                 "reward": 0.0,
                 "api_calls_jsonl": sidecar.name,
+                "environment_fingerprint": environment,
+                "api_trace_sha256": hashlib.sha256(b"{broken\n").hexdigest(),
             }
         )
         + "\n",
         encoding="utf-8",
-    )
-    service = TrainRolloutService(
-        cell="retail",
-        repo_root=tmp_path,
-        run_id="run",
-        artifact_root=tmp_path / "artifacts",
-        train_task_ids=["0"],
-        initial_budget=1,
-        evidence_root=tmp_path / "evidence",
-        workspace_root=tmp_path / "workspaces",
     )
 
     with pytest.raises(IncompleteRolloutTraceError) as error:

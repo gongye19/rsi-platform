@@ -14,7 +14,6 @@ from harnesslens.harnesses.channel_preflight import PREFLIGHT_REPEAT_COUNT
 from harnesslens.evaluation.rollout_bridge import (
     IncompleteRolloutTraceError,
     RolloutRequest,
-    TAU2_TIMEOUT_PER_TURN_S,
     TrainRolloutService,
 )
 from harnesslens.core.train_protocol import TRAIN_ROLLOUT_REPEATS
@@ -26,7 +25,7 @@ ROLLOUT_RUNTIME_LIMITS = {
     "opencode_steps": 10,
     "max_turns": 40,
     "max_tool_calls": 60,
-    "timeout_per_turn_s": TAU2_TIMEOUT_PER_TURN_S,
+    "timeout_per_turn_s": 180,
     "trial_timeout_s": 7200,
 }
 PAIRED_RETRY_REVIEW_RESERVE = 7
@@ -71,7 +70,7 @@ class RolloutModule:
         run_root: str | Path,
         budget: CreationBudget,
         harness: str = "opencode",
-        cell: str = "retail",
+        cell: str = "fdabench",
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.run_root = Path(run_root).resolve()

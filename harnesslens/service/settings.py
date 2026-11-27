@@ -19,7 +19,7 @@ PARAMETERS = {
     'HAI_MAX_ROLLOUT_CONCURRENCY': ('Task concurrency', 4, 1, 30),
     'HAI_MAX_ANALYSIS_CONCURRENCY': ('Analysis concurrency', 2, 1, 20),
     'HAI_PROVIDER_MAX_CONCURRENCY': ('Model request concurrency', 4, 1, 64),
-    'HAI_CRM_TIMEOUT_S': ('Native execution timeout (s)', 900, 30, 7200),
+    'HAI_FDABENCH_TIMEOUT_S': ('Native execution timeout (s)', 900, 30, 7200),
     'HAI_INTELLIGENT_TIMEOUT_S': ('Analysis timeout (s)', 1200, 30, 7200),
     'HAI_PROVIDER_HTTP_TIMEOUT_S': ('Model request timeout (s)', 180, 1, 7200),
     'HAI_PROVIDER_REQUEST_BUDGET_S': ('Request retry deadline (s)', 420, 1, 7200),
@@ -205,12 +205,9 @@ def snapshot_profile(source, settings, directory, profiles):
         if type(number) is not int or not minimum <= number <= maximum:
             raise ValueError(f'{key} must be an integer between {minimum} and {maximum}')
     raw.setdefault('environment', {}).update(parameters)
-    # The generic rollout cap must also bound the CRM adapter's own cap.
+    # 通用并发上限同时约束 FDABench 适配器自身的并发。
     if 'HAI_MAX_ROLLOUT_CONCURRENCY' in parameters:
-        raw['environment']['HAI_CRM_MAX_CONCURRENCY'] = parameters['HAI_MAX_ROLLOUT_CONCURRENCY']
         raw['environment']['HAI_FDABENCH_MAX_CONCURRENCY'] = parameters['HAI_MAX_ROLLOUT_CONCURRENCY']
-    if 'HAI_CRM_TIMEOUT_S' in parameters:
-        raw['environment']['HAI_FDABENCH_TIMEOUT_S'] = parameters['HAI_CRM_TIMEOUT_S']
     if 'initial_harness' in settings:
         if not isinstance(settings['initial_harness'], str): raise ValueError('initial_harness must be a path')
         from .library import selected_harness

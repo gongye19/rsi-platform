@@ -26,7 +26,6 @@ which are ignored by Git.
 | `OPENCODE_PREFIX` / `HAI_OPENCODE_BIN` | Locate OpenCode |
 | `PI_AGENT_BIN` / `PI_BIN` | Locate Pi |
 | `HAI_CODEX_MODELS_CACHE` | Seed the isolated Codex model cache |
-| `TAU2_DATA_DIR` | Override the tau2 data directory |
 | `TB_DOCKER` | Override the Docker executable |
 
 Executables already available on `PATH` take precedence where applicable.
@@ -55,21 +54,20 @@ released code and paper rather than being duplicated in the README.
 | `HAI_CONFIRMATION_MODE` | Require or disable independent confirmation before promotion |
 | `HAI_BASELINE_REUSE_POLICY` | Control compatibility checks for reused baseline evidence |
 | `HAI_KEEP_TRAJECTORY_WORKSPACE` | Retain task workspaces for debugging |
-| `HAI_TAU2_TIMEOUT_PER_TURN_S` | Override tau2 per-turn timeout |
 
 Disabling confirmation produces exploratory runs and should not be treated as
 the reported protocol.
 
 ## Environment-specific settings
 
-Banking Knowledge uses `HAI_TAU2_RETRIEVAL_CONFIG`. Terminal-Bench Docker,
-network, image, and proxy settings use `DOCKER_HOST`, `HAI_DOCKER_*`, and
-`TB_*`. See [benchmarks.md](benchmarks.md) for the required external files.
+FDABench-specific settings use `HAI_FDABENCH_*`; see the
+[FDABench guide](FDABENCH.zh-CN.md). Docker and proxy settings use
+`DOCKER_HOST`, `HAI_DOCKER_*`, and `TB_*`.
 
 ## Validate configuration
 
 ```bash
-.venv/bin/python scripts/check_env.py --cell retail --harness opencode
+.venv/bin/python scripts/check_env.py --cell fdabench --harness opencode
 ```
 
 The checker resolves the selected environment rather than testing a generic

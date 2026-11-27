@@ -39,11 +39,11 @@ event 在这里一律不可用**——路径常量变了，指纹必然不同。
 cell 名不在别名表里。报错会直接列出合法值：
 
 ```
-error: argument --cell: unknown benchmark cell 'retial';
-expected one of: retail | banking | terminal-bench | bird
+error: argument --cell: unknown benchmark cell 'fdabnch';
+expected one of: fdabench | /path/to/benchmark.toml
 ```
 
-每个 cell 都有多个别名（`tau2-retail`、`bird-mini-dev` 等），完整表在
+每个 cell 都有多个别名（`fdabench-lite-report` 等），完整表在
 `harnesslens/benchmarks/cell_config.py` 的 `_ALIASES`。这是 argparse 阶段的校验，
 不会等到 run 开始才失败。
 
@@ -58,38 +58,11 @@ expected one of: retail | banking | terminal-bench | bird
 
 **处理**：装 opencode，或把 `OPENCODE_PREFIX` / `HAI_OPENCODE_BIN` 指对。
 
-### `Terminal-Bench task definition is unavailable: <task-id>`
-
-`third_party/terminal-bench/original-tasks/<task-id>/` 下既没有 `task.yaml`，
-也没有 `task.toml` + `instruction.md`。多半是 sparse checkout 没拉全。
-
-**处理**：补齐该任务目录，并核对 commit 是否为
-[benchmarks_zh.md](benchmarks_zh.md) 里固定的那个。
-
-### `Terminal-Bench verifier is unavailable: <task-id>`
-
-任务目录里没有 `run-tests.sh`，`assets/terminal_task_assets/<task-id>/` 里也没有
-兜底文件。
-
-**处理**：如果上游确实不带 verifier，按 `headless-terminal` 的样子在
-`assets/terminal_task_assets/` 下补一份，并写清 `SOURCE.md` 出处。
-
 ### `bubblewrap is required for isolated Harness Editor calls`
 
 Harness Editor 在隔离沙箱里改文件，需要 `bwrap`。
 
 **处理**：`apt install bubblewrap`（或发行版对应包）。
-
-### `banking retrieval_config must be non-empty`
-
-**处理**：`HAI_TAU2_RETRIEVAL_CONFIG=bm25`。
-
-### `ModuleNotFoundError: No module named 'tau2'`
-
-这是 tau2 checkout 自带的包，从 `third_party/tau3-bench/.venv` 里加载。
-
-**处理**：按 [benchmarks_zh.md](benchmarks_zh.md) 建好那个 venv。注意不是装进
-编排器的 venv——rollout worker 用的是基准自己的解释器。
 
 ---
 
@@ -154,30 +127,6 @@ Harness Editor 在隔离沙箱里改文件，需要 `bwrap`。
 `HAI_PROVIDER_MAX_CONCURRENCY`。所有 cell 共用同一个 `DEEPSEEK_API_KEY`，
 所以并行跑多个实验时限流是叠加的——要么错开跑，要么把并发降下来。
 
-### 上一次 run 被强杀后留下大量容器
-
-容器由 `finally:` 里的 `docker compose down` 销毁，而 `SIGKILL` 会跳过 `finally:`；
-容器又不在编排器的进程树里，所以没有别的东西会回收它。表现是一批 `Exited (137)`
-的 `tb_*` 容器持续占盘。
-
-**处理**：每个容器都带创建它的 pid 与 boot id 标签，所以可以精确判断归属：
-
-```bash
-.venv/bin/python scripts/reap_containers.py            # 先看会删哪些
-.venv/bin/python scripts/reap_containers.py --remove   # 真的删
-```
-
-`run_terminal_batch` 每次启动也会自动回收一次。活跃 run 的容器（owner pid 还在、
-boot id 一致）永远不会被碰，镜像也从不删除。
-
-### `rootless docker host and state directory disagree`
-
-socket 指向的位置不在状态目录里。这样起出来的守护进程会用错误的存储服务正确的
-socket，`docker images` / `docker ps -a` 全空——看起来就像数据没了（其实没丢）。
-
-**处理**：把 `HAI_DOCKER_ROOT` 设成真正存着镜像的那个目录，让 socket 由它推导；
-或者两者都显式设成一致的值。
-
 ### 进程被杀后预算账本对不上
 
 **处理**：直接用同一个 run-id 重新执行。控制器启动时会调用
@@ -187,11 +136,6 @@ socket，`docker images` / `docker ps -a` 全空——看起来就像数据没�
 ---
 
 ## 测试
-
-### `test_owned_splits_match_the_canonical_inputs` 被 skip
-
-`third_party/tau3-bench` 不存在。属于预期行为——没有 tau2 checkout 时这项校验
-无法进行。
 
 ### `test_query_receives_bounded_documentation_content[pi-...]` 被 skip
 

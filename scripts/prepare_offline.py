@@ -20,7 +20,7 @@ def main():
     output = (args.output or ROOT / "offline" / ("linux-" + args.arch)).resolve()
     output.mkdir(parents=True, exist_ok=True)
     requirements = output / "requirements.lock.txt"
-    subprocess.run(["uv", "export", "--locked", "--extra", "crm", "--extra", "tau2", "--extra", "dev",
+    subprocess.run(["uv", "export", "--locked", "--extra", "dev",
         "--no-emit-project", "--no-header", "--output-file", str(requirements)], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
     # pip's cross-platform wheel selection does not execute target code/builds.
     command = [sys.executable, "-m", "pip", "download", "--disable-pip-version-check", "--require-hashes", "--only-binary=:all:",

@@ -214,19 +214,19 @@ TRAIN 与 TEST 是两棵完全独立的树。控制器只写 `train/`，只读 `
 
 支持的 harness 恰好是 `--harness` 开放的三个，没有别的：
 
-| harness | 适配器 | tau2 驱动 | BIRD 驱动 |
-| --- | --- | --- | --- |
-| opencode | `opencode_harness.py` / `opencode_runtime.py` | `opencode_tau2.py` | `bird_eval.py` |
-| codex | `harness_query_adapters.py` | `codex_tau2.py` + `codex_responses_proxy.py` | `bird_eval.py` |
-| pi | `harness_query_adapters.py` | `pi_tau2.py` + `pi_compact_runner.mjs` | `bird_eval.py` |
+| harness | 适配器 |
+| --- | --- |
+| opencode | `opencode_harness.py` / `opencode_runtime.py` |
+| codex | `harness_query_adapters.py` |
+| pi | `harness_query_adapters.py` |
 
-### 两个共享驱动层
+### 共享驱动层
 
-跨 harness 的 benchmark 执行由两个共享驱动层承载：
+跨 harness 的 benchmark 执行由共享驱动层承载：
 
 | 模块 | 谁依赖它 | 它做什么 |
 | --- | --- | --- |
-| `tau2_driver.py` | retail / banking × 三个 harness | tau2 环境装配、工具定义、user simulator socket、trial 行读写 |
-| `native_harness_driver.py` | BIRD | 拉起 harness 二进制、运行 provider 代理，并把各家 session 格式解析成 `HarnessTurn` |
+| `benchmarks/native_runtime.py` | FDABench 等原生 OpenCode 生命周期 | harness 准备、进程执行与消息提取 |
+| `harnesses/native_harness_driver.py` | 原生 benchmark | 拉起 harness 二进制、运行 provider 代理，并把各家 session 格式解析成 `HarnessTurn` |
 
-两个模块都参与对应 benchmark 的 runtime fingerprint。
+这些模块参与对应 benchmark 的 runtime fingerprint。

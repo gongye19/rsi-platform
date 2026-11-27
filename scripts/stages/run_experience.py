@@ -20,7 +20,7 @@ def main() -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--baseline-event", required=True, type=Path)
     parser.add_argument("--label", default="baseline")
-    parser.add_argument("--cell", default="retail", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
+    parser.add_argument("--cell", default="fdabench", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
     parser.add_argument("--harness", choices=("opencode", "pi", "codex"), default="opencode")
     parser.add_argument("--task-id", action="append", default=[])
     parser.add_argument("--no-publish", action="store_true")

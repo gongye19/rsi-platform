@@ -25,7 +25,7 @@ def load_profile(path):
     mode = raw.get("mode", "train")
     if mode not in {"train", "test_baseline", "test_candidate"}:
         raise ValueError("Unsupported experiment mode")
-    benchmark = raw.get("benchmark", "crm")
+    benchmark = raw.get("benchmark", "fdabench")
     if not isinstance(benchmark, str):
         raise ValueError("benchmark must be a name or TOML path")
     if benchmark.endswith(".toml"):
@@ -108,7 +108,7 @@ def invocation(profile, identity):
     binary = ROOT / "runtime/opencode-1.18.32/bin/opencode"
     if binary.is_file():
         env.setdefault("HAI_OPENCODE_BIN", str(binary))
-        env.setdefault("HAI_CRM_RUNTIME_ROOT", str(binary.parent.parent))
+        env.setdefault("HAI_NATIVE_RUNTIME_ROOT", str(binary.parent.parent))
     env.setdefault("HAI_OPENCODE_VERSION", "1.18.32")
     entry = {"train": "run_e2e.py", "test_baseline": "run_test_baseline.py", "test_candidate": "run_test_candidate.py"}[profile["mode"]]
     flag = "--cell" if profile["mode"] == "train" else "--benchmark"

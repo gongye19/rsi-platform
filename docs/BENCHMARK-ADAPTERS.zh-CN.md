@@ -10,8 +10,7 @@ OpenCode 组件目录、业务调用、trace、加载预检、版本交付也不
 | 执行生命周期 | `harnesslens/evaluation/business_runtime.py` | Harness 文件交付、配对 seed、超时、评分调用、缓存与证据校验 |
 | Benchmark 适配 | `harnesslens/benchmarks/adapters.py` | 公开输入、环境准备、资源生命周期、宿主评分、拆分和指纹 |
 
-CRM 的数据库、只读代理、官方评分器保留在 CRM 适配层。JSONL 是另一种 benchmark，复用同一业务执行生命周期。
-原有 tau2、BIRD、Terminal-Bench 的原生执行路径继续保留；交互式任务不能直接当成单轮问答包装。
+FDABench 的数据库、检索工具与官方评分器保留在 FDABench 适配层。JSONL 是另一种 benchmark，复用同一业务执行生命周期。
 
 ## 接入 JSONL 问答 benchmark
 
@@ -105,15 +104,15 @@ JSONL 入口适用于已有 Python/HTTP Agent 的单轮问答任务。数据库�
 - `loading_contract()`：提供真实加载器和工具事实，不预设模型的编辑结论。
 
 继承 `BusinessBenchmark` 即可复用 Python/HTTP 执行、配对、恢复和 trace 校验，再在 benchmark 注册处接入。
-原生运行器可实现 `run_batch()`，CRM 就采用这种方式。新增运行环境仍需要开发和验证对应适配器，
+原生运行器可实现 `run_batch()`，FDABench 就采用这种方式。新增运行环境仍需要开发和验证对应适配器，
 不能声称任意 benchmark 只改一个路径就能运行。
 
 ## 验证范围
 
 新增 JSONL benchmark 已用本地模拟模型验证 Python 与 HTTP 两种调用：TRAIN、候选指令生效预检、TEST、
 独立命令行基线/候选入口、跨进程配置解析、缓存零新增请求和指纹变化拒绝复用。
-它不启动 CRM 服务，也不向业务输入暴露参考答案或 grader。
-CRM 原生 OpenCode、Python、HTTP 路径另做回归。以上工程验证不代表真实解题收益，也没有启动付费进化实验。
+它不向业务输入暴露参考答案或 grader。
+以上工程验证不代表真实解题收益，也没有启动付费进化实验。
 
 ## 连续评分
 

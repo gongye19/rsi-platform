@@ -12,7 +12,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from harnesslens.core.artifacts import write_json
 from harnesslens.benchmarks.adapters import sha
-from harnesslens.benchmarks.crm_eval import (
+from harnesslens.benchmarks.native_runtime import (
     prepare_harness,
     run_process,
     _messages,

@@ -98,7 +98,7 @@ def connection(role, env=None):
         raise ValueError(f"{prefix}_API must be chat_completions or responses")
     configured = any(env.get(f"{prefix}_{field}") for field in ("MODEL", "BASE_URL", "API_KEY", "API"))
     base = env.get(f"{prefix}_BASE_URL", "") if configured else (env.get("DEEPSEEK_BASE_URL") or env.get("DEEPSEEK_URL") or "https://api.deepseek.com/v1")
-    return {"model": env.get(f"{prefix}_MODEL") or env.get("HAI_MODEL" if role == "analysis" else "HAI_CRM_MODEL", ""),
+    return {"model": env.get(f"{prefix}_MODEL") or env.get("HAI_MODEL", ""),
             "base_url": clean_base_url(base) if base else "",
             "api_key": env.get(f"{prefix}_API_KEY", "") if configured else env.get("DEEPSEEK_API_KEY", ""), "api": api}
 

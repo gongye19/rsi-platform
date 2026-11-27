@@ -377,7 +377,7 @@ class NativeIntelligentAdapter:
         shell_enabled = "bash" in self.allowed_builtin_tools
         shell_flag = "true" if shell_enabled else "false"
         sandbox_mode = "workspace-write" if tools_enabled else "read-only"
-        configured_model = self.model.split("/", 1)[-1] if connection("analysis")["api"] == "responses" else "gpt-5.4"
+        configured_model = self.model.split("/", 1)[-1] or "deepseek-v4-flash"
         config_path.write_text(
             f"""model = "{configured_model}"
 model_provider = "deepseek"

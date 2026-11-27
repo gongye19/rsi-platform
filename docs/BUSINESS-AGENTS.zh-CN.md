@@ -2,7 +2,7 @@
 
 HarnessLens 现在可以通过配置调用现有 Python 函数或同步 HTTP POST/JSON 接口，业务源码无需引入 HarnessLens。
 调用适配位于 `harnesslens/harnesses/business_agent.py`，通用执行生命周期位于 `harnesslens/evaluation/business_runtime.py`。
-CRM 和配置驱动的 JSONL benchmark 共用训练、候选预检、评分、独立测试和恢复路径。
+FDABench 和配置驱动的 JSONL benchmark 共用训练、候选预检、评分、独立测试和恢复路径。
 新增问答题库可按 [通用 benchmark 接入](BENCHMARK-ADAPTERS.zh-CN.md) 配置；特殊交互环境需实现 benchmark 适配器。
 
 `--harness opencode` 仍指定优化器用于分析、编辑等工作的运行时；实际解题的业务 agent 由 `--agent-config` 独立指定。
@@ -96,7 +96,7 @@ HTTP 超时只代表客户端停止等待，不能保证远端任务已取消。
 返回字段支持 `data.answer` 这样的路径，以及 `items.0.text` 这样的列表索引。`answer_path=""` 表示整个返回值就是答案。
 
 远程服务应接收 `{harness_files}`，不能直接读取客户端的 `{harness_dir}`。
-CRM 的数据库工具需要在业务 agent 的环境中可用；远程机器不能直接使用本机 localhost 的数据库代理。
+业务侧的数据库等工具需要在业务 agent 的环境中可用；远程机器不能直接使用本机 localhost 的代理。
 
 ## 轨迹、用量和加载证据
 
@@ -217,16 +217,18 @@ if errors:
   --prompt "你的公开测试问题" --harness-dir /path/to/harness --output ./runs/agent-check-new
 ```
 
-接入同一套 CRM 10/3 拆分：
+接入自定义 JSONL benchmark（描述文件路径作为 `--cell` / `--benchmark`）：
 
 ```bash
-.venv/bin/python scripts/check_env.py --cell crm --harness opencode --agent-config /path/to/agent.toml
-scripts/run_e2e.sh --run-id crm-business-001 --cell crm --harness opencode --agent-config /path/to/agent.toml
+.venv/bin/python scripts/check_env.py --cell /absolute/path/my-benchmark/benchmark.toml \
+  --harness opencode --agent-config /path/to/agent.toml
+scripts/run_e2e.sh --run-id my-biz-001 --cell /absolute/path/my-benchmark/benchmark.toml \
+  --harness opencode --agent-config /path/to/agent.toml
 
-.venv/bin/python run_test_baseline.py --run-id crm-business-test --benchmark dab-crmarenapro \
+.venv/bin/python run_test_baseline.py --run-id my-biz-test --benchmark /absolute/path/my-benchmark/benchmark.toml \
   --agent-config /path/to/agent.toml
-.venv/bin/python run_test_candidate.py --run-id crm-business-test --benchmark dab-crmarenapro \
-  --agent-config /path/to/agent.toml --patch-json runs/train/crm-business-001/submission/final.json
+.venv/bin/python run_test_candidate.py --run-id my-biz-test --benchmark /absolute/path/my-benchmark/benchmark.toml \
+  --agent-config /path/to/agent.toml --patch-json runs/train/my-biz-001/submission/final.json
 ```
 
 也可使用环境变量 `HAI_AGENT_CONFIG`。恢复同一次实验必须使用相同配置、源码、数据和拆分；改变设置应新建 run-id。

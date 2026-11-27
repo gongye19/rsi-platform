@@ -16,7 +16,7 @@ from harnesslens.service.store import Store
 
 def test_default_empty_v0_and_export_roundtrip(tmp_path):
     run = tmp_path / "runs/train/empty"
-    frozen = freeze_initial_harness(run_root=run, cell="crmarenapro")
+    frozen = freeze_initial_harness(run_root=run, cell="fdabench")
     assert frozen["empty"] and frozen["workspace"]["files"] == []
     record = json.loads((run / "initial_harness.json").read_text())
     assert record["source"] is None
@@ -33,30 +33,30 @@ def test_nonempty_frozen_v0_inheritance_and_no_source_overwrite(tmp_path):
     skill.parent.mkdir(parents=True)
     skill.write_text("---\nname: a\ndescription: Initial skill\n---\nOriginal skill body")
     run = tmp_path / "runs/train/nonempty"
-    frozen = freeze_initial_harness(run_root=run, cell="crmarenapro", source=source)
+    frozen = freeze_initial_harness(run_root=run, cell="fdabench", source=source)
     assert not frozen["empty"]
-    repo = CellHarnessRepository(cell="crmarenapro", repo_root=tmp_path, run_id="nonempty", evidence_root=run / "rollout_evidence")
+    repo = CellHarnessRepository(cell="fdabench", repo_root=tmp_path, run_id="nonempty", evidence_root=run / "rollout_evidence")
     child = repo.materialize_candidate(base_version="v0", candidate_label="candidate-01", delta={"instructions": ["Candidate rule"]})
     assert repo.read_workspace_snapshot(child) == frozen["workspace"]
     assert repo.read_candidate_snapshot(child)["instructions"] == ["Candidate rule"]
     assert (source / "AGENTS.md").read_text() == "Initial rules"
     (source / "AGENTS.md").write_text("Edited outside experiment")
     # Omitted on resume: load the frozen v0. Explicit changed input: reject.
-    assert freeze_initial_harness(run_root=run, cell="crmarenapro") == frozen
+    assert freeze_initial_harness(run_root=run, cell="fdabench") == frozen
     with pytest.raises(ValueError, match="changed"):
-        freeze_initial_harness(run_root=run, cell="crmarenapro", source=source)
+        freeze_initial_harness(run_root=run, cell="fdabench", source=source)
 
 
 def test_explicit_changed_initial_and_corrupted_frozen_snapshot_reject(tmp_path):
     source = tmp_path / "source"; source.mkdir()
     (source / "AGENTS.md").write_text("Before")
     run = tmp_path / "runs/train/one"
-    freeze_initial_harness(run_root=run, cell="crmarenapro", source=source)
+    freeze_initial_harness(run_root=run, cell="fdabench", source=source)
     record = json.loads((run / "initial_harness.json").read_text())
     workspace = Path(record["snapshot_path"]) / "harness/opencode/workspace.json"
     workspace.write_text('{"files": []}')
     with pytest.raises(ValueError, match="changed"):
-        freeze_initial_harness(run_root=run, cell="crmarenapro")
+        freeze_initial_harness(run_root=run, cell="fdabench")
 
 
 @pytest.mark.parametrize("kind", ["symlink", "secret", "binary"])
@@ -83,7 +83,7 @@ def test_scoped_directory_and_exported_package_retain_files(tmp_path):
 
 def test_profile_optional_initial_and_queue_detects_input_changes(tmp_path, model_tables):
     path = tmp_path / "experiment.toml"
-    base = 'schema="harnesslens.experiment.v1"\nbenchmark="crm"\n'
+    base = 'schema="harnesslens.experiment.v1"\nbenchmark="fdabench"\n'
     path.write_text(base + model_tables)
     profile = load_profile(path)
     assert profile["initial_harness"] == ""
@@ -105,7 +105,7 @@ def test_initial_v0_history_and_final_submission_do_not_become_empty(tmp_path, m
     source = tmp_path / "source"; source.mkdir()
     (source / "AGENTS.md").write_text("Initial baseline survives rollback")
     run = tmp_path / "runs/train/one"
-    frozen = freeze_initial_harness(run_root=run, cell="crmarenapro", source=source)
+    frozen = freeze_initial_harness(run_root=run, cell="fdabench", source=source)
     marker = json.loads((run / "initial_harness.json").read_text())
     submission = run / "submission/final.json"; submission.parent.mkdir()
     submission.write_text(json.dumps({"snapshot_path": marker["snapshot_path"], "selected_version": "v0",

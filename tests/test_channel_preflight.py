@@ -7,7 +7,6 @@ from harnesslens.harnesses.channel_preflight import (
     build_runtime_load_report,
     validate_channel_preflight,
 )
-from harnesslens.benchmarks.pi_tau2 import _PiRpcSession
 
 
 def _decision():
@@ -120,7 +119,8 @@ def test_runtime_load_report_captures_effective_candidate_surfaces(tmp_path):
     )
 
 
-def test_runtime_load_report_patches_tau2_openai_parameter_schema(tmp_path):
+def test_runtime_load_report_patches_openai_parameter_schema(tmp_path):
+    # OpenAI 风格 schema（parameters 字段）与 inputSchema 走同一 patch 路径。
     project = tmp_path / "project"
     project.mkdir()
 
@@ -828,23 +828,3 @@ def test_codex_instruction_preflight_fails_without_request_sidecar(tmp_path):
             output_path=tmp_path / "preflight.json",
         )
 
-
-def test_pi_rpc_skill_inventory_uses_runtime_get_commands(monkeypatch):
-    session = object.__new__(_PiRpcSession)
-    monkeypatch.setattr(
-        session,
-        "_send_and_wait",
-        lambda payload, timeout_s: {
-            "success": True,
-            "data": {
-                "commands": [
-                    {"name": "skill:account-check", "source": "skill"},
-                    {"name": "help", "source": "extension"},
-                ]
-            },
-        },
-    )
-
-    assert session.skills_available(timeout_s=10) == [
-        {"name": "account-check", "n_calls": 0, "source": "pi_rpc"}
-    ]

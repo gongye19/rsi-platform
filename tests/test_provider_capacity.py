@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-
 import pytest
 
-from harnesslens.benchmarks.pi_tau2 import _run_with_provider_trial_slot
 from harnesslens.infrastructure.provider_capacity import (
     provider_trial_concurrency,
     provider_trial_slot,
@@ -30,29 +27,3 @@ def test_provider_trial_slot_waits_outside_the_trial(monkeypatch, tmp_path):
 
     with provider_trial_slot(timeout_s=0.05) as second:
         assert second["slot"] == 0
-
-
-def test_tau2_runner_starts_only_after_trial_capacity_is_acquired(monkeypatch):
-    state = {"acquired": False}
-
-    @contextmanager
-    def fake_slot():
-        state["acquired"] = True
-        yield {"slot": 3, "waited_s": 1.25, "max_concurrency": 8}
-        state["acquired"] = False
-
-    def runner(**kwargs):
-        assert state["acquired"] is True
-        return {"task_id": kwargs["task_id"], "reward": 1.0}
-
-    monkeypatch.setattr(
-        "harnesslens.benchmarks.pi_tau2.provider_trial_slot", fake_slot
-    )
-
-    result = _run_with_provider_trial_slot(runner, task_id="12")
-
-    assert result["provider_capacity"] == {
-        "slot": 3,
-        "waited_s": 1.25,
-        "max_concurrency": 8,
-    }

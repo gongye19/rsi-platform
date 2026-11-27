@@ -79,7 +79,7 @@ class IterationController:
         repo_root: str | Path,
         run_id: str,
         harness: str = "opencode",
-        cell: str = "retail",
+        cell: str = "fdabench",
         incumbent_submissions: tuple[str | Path, ...] = (),
         promotion_metric: str | None = None,
         analysis_source_run: str | Path | None = None,

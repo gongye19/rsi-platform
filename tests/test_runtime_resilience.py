@@ -16,7 +16,7 @@ import pytest
 import harnesslens.infrastructure.chat_completions_proxy as proxy
 from harnesslens.infrastructure.trace_watch import ProviderTraceWatch
 from harnesslens.harnesses.opencode_runtime import _start_proxy, _stop_process, _stream_process
-from harnesslens.benchmarks.crm_eval import run_process, crm_workers
+from harnesslens.benchmarks.native_runtime import run_process
 
 
 @pytest.fixture
@@ -118,7 +118,8 @@ def test_sse_done_is_logged_without_waiting_for_tcp_eof(local_proxy, tmp_path):
     assert row["response"] and row["usage"]["total_tokens"] == 3
 
 
-def test_crm_monitor_allows_retry_notices(local_proxy, upstream, tmp_path):
+def test_run_process_allows_retry_notices(local_proxy, upstream, tmp_path):
+    # 子进程经代理重试后成功，run_process 不应把重试日志当失败。
     workspace = tmp_path / "workspace"; workspace.mkdir()
     code = "import urllib.request,sys,time;print(urllib.request.urlopen(urllib.request.Request(sys.argv[1],b'{\"case\":\"rate\"}')).read());time.sleep(.5)"
     _, error, status = run_process([sys.executable, "-c", code, local_proxy], cwd=workspace, env=os.environ.copy(), timeout_s=3)
@@ -170,10 +171,3 @@ def test_global_provider_cap_is_shared_by_real_proxy_processes(upstream, monkeyp
         assert sum(len((tmp_path / str(index) / "api_calls.jsonl").read_text().splitlines()) for index in range(2)) == 8
     finally:
         for child in processes: _stop_process(child)
-
-
-def test_crm_concurrency_honors_configured_cap(monkeypatch):
-    monkeypatch.setenv("HAI_CRM_MAX_CONCURRENCY", "4")
-    assert crm_workers(10, 10) == 4
-    assert crm_workers(1, 10) == 1
-    assert crm_workers(4, 2) == 2

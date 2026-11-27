@@ -4,14 +4,47 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 from .config import ROOT, invocation, load_profile, run_id
 from harnesslens.core.artifacts import write_json
 
 
+def execute(command, env, stage, directory):
+    from harnesslens.core.artifacts import write_json
+    from harnesslens.service.worker import process_identity, stop_owned
+    print(f"[{stage}] starting", flush=True)
+    write_json(directory / "stage.json", {"stage": stage, "status": "running", "command": command})
+    with (directory / "launcher.log").open("a") as log:
+        try:
+            process = subprocess.Popen(command, env=env, cwd=ROOT, stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        except OSError:
+            write_json(directory / "stage.json", {"stage": stage, "status": "failed", "error": "process could not start"})
+            raise
+        token = process_identity(process.pid)
+        try:
+            for line in process.stdout:
+                print(line, end="", flush=True)
+                log.write(line); log.flush()
+            code = process.wait()
+        except BaseException:
+            if process.poll() is None:
+                stop_owned(process.pid, token)
+                try:
+                    process.wait(timeout=45)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=10)
+            write_json(directory / "stage.json", {"stage": stage, "status": "interrupted"})
+            raise
+    write_json(directory / "stage.json", {"stage": stage, "status": "succeeded" if code == 0 else "failed", "returncode": code})
+    if code:
+        raise RuntimeError(f"{stage} failed. Inspect {directory / 'launcher.log'}; no later stages were started.")
+
+
 def run(profile_path, identity):
     # The same bounded process/stop handling as the existing local launcher.
-    from scripts.run_crm_experiment import execute
     run_id(identity + "-test")
     profile = load_profile(profile_path)
     # Preserve the same frozen TRAIN/TEST selection across all three subprocesses.

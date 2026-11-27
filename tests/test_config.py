@@ -62,9 +62,9 @@ def test_cell_aliases_survive_the_argparse_validator():
     """The validator must not narrow --cell to the canonical names only."""
     from harnesslens.benchmarks.cell_config import benchmark_cell, normalize_benchmark_cell
 
-    for alias in ("retail", "tau2-retail", "banking", "terminal-bench", "bird-mini-dev"):
-        assert benchmark_cell(alias) == alias
-        assert normalize_benchmark_cell(alias)
+    assert benchmark_cell("fdabench") == "fdabench"
+    # 别名归一到规范 cell，argparse 校验不应拒绝
+    assert normalize_benchmark_cell("fdabench-lite-report") == "fdabench"
 
 
 def test_removed_cells_are_rejected():
@@ -87,6 +87,7 @@ FRAMEWORK_OWNED = {
     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
     "XDG_STATE_HOME", "XDG_RUNTIME_DIR", "LOGURU_LEVEL",
     "T_BENCH_TASK_LOGS_PATH", "T_BENCH_TASK_AGENT_LOGS_PATH",
+    "TB_CONTAINER_PROXY_URL", "TB_ENABLE_CONTAINER_CLASH",
     "HERMES_HOME", "TEST_DIR",
 }
 
@@ -144,7 +145,6 @@ def test_pi_is_resolved_the_same_way_everywhere():
     only looked in .pi-agent, so a run rolled out fine and then failed at
     Discovery with the baseline already paid for.
     """
-    from harnesslens.benchmarks import pi_tau2
     from harnesslens.harnesses import native_intelligent_runtime
     from harnesslens.core.config import pi_binary
 
@@ -158,9 +158,8 @@ def test_pi_is_resolved_the_same_way_everywhere():
     ]
     assert duplicates == [], f"pi lookup duplicated in {duplicates}"
 
-    # both call sites must be thin delegations to the shared resolver
-    for module in (native_intelligent_runtime, pi_tau2):
-        assert hasattr(module, "_pi_binary")
+    # 调用点必须是共享解析器的薄封装
+    assert hasattr(native_intelligent_runtime, "_pi_binary")
     assert callable(pi_binary)
 
 

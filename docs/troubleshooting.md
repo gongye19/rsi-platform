@@ -19,19 +19,7 @@ Generate a fresh baseline instead of forcing reuse.
 ## Runtime is unavailable
 
 If OpenCode, Codex, or Pi cannot be found, install the selected runtime and
-verify the path variables in [configuration.md](configuration.md). For tau2,
-`ModuleNotFoundError: tau2` usually means the checkout-local virtualenv was not
-created or the checkout is at the wrong path.
-
-## Terminal-Bench and Docker
-
-If the Docker socket is missing, run the environment checker and verify
-`DOCKER_HOST` or `HAI_DOCKER_ROOT`. A mismatch between the rootless state
-directory and socket is rejected deliberately to prevent the run from using an
-empty daemon state.
-
-Interrupted Terminal-Bench runs may leave containers behind. Inspect first,
-then use `scripts/reap_containers.py` to remove HarnessLens-owned orphans.
+verify the path variables in [configuration.md](configuration.md).
 
 ## Candidate is not promoted
 

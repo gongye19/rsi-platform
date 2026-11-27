@@ -184,8 +184,8 @@ def test_codex_query_uses_codex_native_instruction_and_mcp_surfaces():
     assert "subagents" in schema["external_agent_import_fields"]
     assert "baseInstructions" in schema["thread_start_fields"]
     assert "collaborationMode" in schema["turn_start_fields"]
+    # codex 0.163.0 的 schema 已移除 HookHandlerType 枚举；hook 事件本身仍可发现。
     assert "sessionStart" in schema["hook_events"]
-    assert set(schema["hook_handler_types"]) == {"agent", "command", "prompt"}
 
 
 def test_codex_probe_gates_optional_native_surfaces():
@@ -377,15 +377,12 @@ def test_environment_mcp_points_can_form_an_analyzer_candidate(harness):
         _assert_candidate_closes_contract(harness, contract)
 
 
-@pytest.mark.parametrize(
-    "cell",
-    ["retail", "banking", "terminal", "bird"],
-)
 @pytest.mark.parametrize("harness", ["opencode", "pi", "codex"])
 def test_harness_query_exposes_correct_editable_surfaces_for_every_task_kind(
-    tmp_path, cell, harness
+    tmp_path, business_benchmark, harness
 ):
-    config = benchmark_config(REPO_ROOT, cell)
+    root, cell = business_benchmark
+    config = benchmark_config(root, cell)
     task_id = config.train_task_ids[0]
     baseline = BaselineDataset(
         task_ids=(task_id,),
@@ -395,12 +392,17 @@ def test_harness_query_exposes_correct_editable_surfaces_for_every_task_kind(
         source_event="test",
     )
     task_input = benchmark_task_explorer_input(
-        repo_root=REPO_ROOT,
+        repo_root=root,
         baseline=baseline,
         cell=cell,
     )
+    # 模拟暴露 MCP 工具的 benchmark 环境，验证可编辑工具面被发现
+    task_input["environment"]["tool_transport"] = {"kind": "mcp", "server_id": "probe"}
+    task_input["environment"]["tools"] = [
+        {"name": "lookup", "parameters": {"type": "object", "properties": {"item_id": {"type": "string"}}}}
+    ]
     module = DiscoveryModule(
-        repo_root=REPO_ROOT,
+        repo_root=root,
         run_root=tmp_path / harness / config.cell,
         budget=object(),
         harness=harness,
@@ -419,15 +421,12 @@ def test_harness_query_exposes_correct_editable_surfaces_for_every_task_kind(
     loader_ref = workspace_contract["runtime_loading_evidence_ref"]
     assert loader_ref in {item["id"] for item in payload["evidence_catalog"]}
     points = payload["predefined_mcp_editable_points"]
-    if config.kind == "terminal_bench":
-        assert points == []
-    else:
-        assert {point["id"] for point in points} == {
-            "mcp_tool_description",
-            "mcp_tool_parameter_description",
-        }
-        assert all(point["status"] == "modifiable" for point in points)
-        assert all(
-            point["edit_contract"]["path"] == ".harness-autoiter/mcp-tool-patches.json"
-            for point in points
-        )
+    assert {point["id"] for point in points} == {
+        "mcp_tool_description",
+        "mcp_tool_parameter_description",
+    }
+    assert all(point["status"] == "modifiable" for point in points)
+    assert all(
+        point["edit_contract"]["path"] == ".harness-autoiter/mcp-tool-patches.json"
+        for point in points
+    )

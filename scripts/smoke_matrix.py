@@ -6,10 +6,9 @@ TrainRolloutService dispatch a real run uses, so it exercises the benchmark
 executor, the harness driver, the provider proxy and the trial-row writer.
 Unit tests cannot cover any of that.
 
-    python scripts/smoke_matrix.py --cell retail --cell bird --harness opencode
+    python scripts/smoke_matrix.py --cell fdabench --harness opencode
 
-Costs one trial per combination. Terminal-Bench is excluded unless asked for by
-name, because each of its tasks builds and runs a container.
+Costs one trial per combination.
 """
 from __future__ import annotations
 
@@ -80,8 +79,8 @@ def main() -> int:
     parser.add_argument("--cell", action="append", default=[])
     parser.add_argument("--harness", action="append", default=[])
     args = parser.parse_args()
-    cells = args.cell or ["retail", "banking", "bird"]
-    harnesses = args.harness or ["opencode", "pi", "codex"]
+    cells = args.cell or ["fdabench"]
+    harnesses = args.harness or ["opencode"]
 
     root = repo_root()
     load_repo_env(root)

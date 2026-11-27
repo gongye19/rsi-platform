@@ -24,44 +24,10 @@ class BenchmarkSplit:
 
 _SPECS: Mapping[str, Mapping[str, Any]] = {
     "fdabench-lite-report": {"cell":"fdabench", "config":"fdabench_split.json", "local_rootless_rollout":False},
-    "dab-crmarenapro": {"cell": "crmarenapro", "config": "crmarenapro_split.json", "local_rootless_rollout": False},
-    "retail": {
-        "cell": "retail",
-        "config": "retail_split.json",
-        "local_rootless_rollout": True,
-    },
-    "banking": {
-        "cell": "banking_knowledge",
-        "config": "banking_knowledge_split.json",
-        "local_rootless_rollout": True,
-    },
-    "terminal-bench": {
-        "cell": "terminal_bench",
-        "config": "terminal_bench_split.json",
-        "local_rootless_rollout": False,
-    },
-    "bird-mini-dev-challenging": {
-        "cell": "bird_mini_dev_challenging",
-        "config": "bird_mini_dev_challenging_split.json",
-        "local_rootless_rollout": False,
-    },
 }
 
 _ALIASES = {
     "fdabench":"fdabench-lite-report", "fdabench-lite-report":"fdabench-lite-report",
-    "crm": "dab-crmarenapro", "crmarenapro": "dab-crmarenapro", "dab-crmarenapro": "dab-crmarenapro",
-    "retail": "retail",
-    "tau2-retail": "retail",
-    "banking": "banking",
-    "banking_knowledge": "banking",
-    "terminal": "terminal-bench",
-    "terminal_bench": "terminal-bench",
-    "terminal-bench": "terminal-bench",
-    "bird": "bird-mini-dev-challenging",
-    "bird_minidev": "bird-mini-dev-challenging",
-    "bird-mini-dev": "bird-mini-dev-challenging",
-    "bird_mini_dev_challenging": "bird-mini-dev-challenging",
-    "bird-mini-dev-challenging": "bird-mini-dev-challenging",
 }
 
 

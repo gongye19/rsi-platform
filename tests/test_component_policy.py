@@ -86,7 +86,7 @@ def test_discovery_receives_all_sixteen_without_stale_disabled_overrides(tmp_pat
     monkeypatch.setattr(adapter, "architecture_probe", lambda: {"harness_id": "opencode", "harness_version": "1.18.32"})
     monkeypatch.setattr(adapter, "query_evidence_catalog", lambda _: [])
     monkeypatch.setattr("harnesslens.evolution.discovery.harness_query_adapter", lambda *a, **k: adapter)
-    module = DiscoveryModule(repo_root=Path(__file__).resolve().parents[1], run_root=tmp_path, budget=None, cell="crm")
+    module = DiscoveryModule(repo_root=Path(__file__).resolve().parents[1], run_root=tmp_path, budget=None, cell="fdabench")
     tools = [{"name": "bash", "description": "Actual native Bash", "parameters": {"type": "object", "properties": {"command": {"type": "string"}}}}]
     payload = module._harness_query_input({"environment": {"native_tools": tools,
         "runtime_contract": runtime_contract(loader_facts={"implemented_lane": "native16", "fixed_config": ["model"], "disabled_features": []})}})
@@ -102,7 +102,9 @@ def test_discovery_receives_all_sixteen_without_stale_disabled_overrides(tmp_pat
     assert next(v for v in payload["surface_hypotheses"] if v["id"] == "custom_tools")["policy_status"] == "forbidden"
 
 
-def test_baseline_tool_catalog_contains_no_answers_or_other_request_content(tmp_path, monkeypatch):
+def test_baseline_tool_catalog_contains_no_answers_or_other_request_content(
+    tmp_path, monkeypatch, business_benchmark
+):
     from types import SimpleNamespace
     from harnesslens.benchmarks.task_data import BaselineDataset, benchmark_task_explorer_input
     tools = [{"type": "function", "function": {"name": "business_lookup", "description": "Native tool", "parameters": {"type": "object"}}}]
@@ -112,7 +114,8 @@ def test_baseline_tool_catalog_contains_no_answers_or_other_request_content(tmp_
     trajectory = tmp_path / "trial.jsonl"; trajectory.write_text(json.dumps({"task_id": "train", "api_calls_jsonl": str(api)}))
     baseline = BaselineDataset(("train",), (str(trajectory),), {"train": (str(trajectory),)}, {}, "fixture")
     monkeypatch.setattr("harnesslens.benchmarks.adapters.benchmark_adapter", lambda *a: SimpleNamespace(explorer_input=lambda ids: {"environment": {}}))
-    result = benchmark_task_explorer_input(repo_root=Path(__file__).resolve().parents[1], baseline=baseline, cell="crm")
+    _, cell = business_benchmark
+    result = benchmark_task_explorer_input(repo_root=tmp_path, baseline=baseline, cell=cell)
     assert result["environment"]["native_tools"][0]["name"] == "business_lookup"
     assert "PRIVATE_PROMPT_SENTINEL" not in json.dumps(result)
     assert "ANSWER_SENTINEL" not in json.dumps(result)
@@ -238,7 +241,7 @@ def test_discovery_receives_selected_declaration_categories(tmp_path, monkeypatc
     monkeypatch.setattr(adapter, 'query_evidence_catalog', lambda _: [])
     monkeypatch.setattr('harnesslens.evolution.discovery.harness_query_adapter', lambda *a, **k: adapter)
     monkeypatch.setenv('HAI_COMPONENT_POLICY', json.dumps({'proposal_only':['diagnostic']}))
-    module = DiscoveryModule(repo_root=Path(__file__).resolve().parents[1], run_root=tmp_path, budget=None, cell='crm')
+    module = DiscoveryModule(repo_root=Path(__file__).resolve().parents[1], run_root=tmp_path, budget=None, cell='fdabench')
     payload = module._harness_query_input({'environment':{'runtime_contract':runtime_contract()}})
     hypotheses = {row['id']:row for row in payload['surface_hypotheses']}
     assert hypotheses['diagnostic']['declaration_enabled'] is True

@@ -19,7 +19,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--baseline-event", required=True, type=Path)
-    parser.add_argument("--cell", default="retail", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
+    parser.add_argument("--cell", default="fdabench", type=benchmark_cell, help=f"benchmark cell: {supported_cell_help()}")
     parser.add_argument(
         "--harness",
         choices=("opencode", "pi", "codex"),

@@ -10,7 +10,6 @@ from harnesslens.benchmarks.benchmark_splits import (
     load_benchmark_split,
     supported_test_benchmarks,
 )
-from harnesslens.infrastructure.rootless_docker import DEFAULT_DOCKER_HOST
 from harnesslens.core.config import load_repo_env, repo_root
 from harnesslens.evaluation.blind_test_eval import (
     BASELINE_MAX_CONCURRENCY,
@@ -32,14 +31,12 @@ def main() -> int:
     parser.add_argument("--models-config", type=Path, help="TOML containing explicit models.execution and models.analysis")
     parser.add_argument("--agent-config", type=Path, help="Python/HTTP business-agent adapter TOML")
     parser.add_argument("--initial-harness", type=Path, help="Optional initial OpenCode directory/package; omitted means empty v0")
-    parser.add_argument("--retrieval-config", default="bm25")
     parser.add_argument("--repeats", type=int, choices=(1, 2), default=BASELINE_REPEATS)
     parser.add_argument(
         "--task-id",
         action="append",
         help="Run pass@k for one or more canonical TEST tasks; omit for the full TEST split.",
     )
-    parser.add_argument("--docker-host", default=DEFAULT_DOCKER_HOST)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--repo-root", type=Path, default=repo_root())
     parser.add_argument('--train-count',type=int,help='TRAIN task count; 0 uses the entire available pool')
@@ -61,8 +58,6 @@ def main() -> int:
     from harnesslens.harnesses.business_agent import select_config
     select_config(args.agent_config)
     split = load_benchmark_split(args.benchmark)
-    if split.cell == "terminal_bench":
-        os.environ["DOCKER_HOST"] = args.docker_host
     if args.dry_run:
         print(
             json.dumps(
@@ -75,17 +70,7 @@ def main() -> int:
                     "selected_test_task_ids": args.task_id or list(split.test),
                     "max_concurrency": runtime_limits(split, repeats=args.repeats)["max_concurrency"],
                     "runtime_limits": runtime_limits(split, repeats=args.repeats),
-                    "docker_host": (
-                        os.environ.get("DOCKER_HOST", "")
-                        if split.cell == "terminal_bench"
-                        else ""
-                    ),
                     "model_network": "direct",
-                    "retrieval_config": (
-                        args.retrieval_config
-                        if split.cell == "banking_knowledge"
-                        else None
-                    ),
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -100,7 +85,6 @@ def main() -> int:
         repo_root=root,
         run_id=args.run_id,
         benchmark=args.benchmark,
-        retrieval_config=args.retrieval_config,
         task_ids=args.task_id,
         repeats=args.repeats,
         harness=args.harness,

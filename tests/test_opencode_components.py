@@ -10,8 +10,8 @@ from harnesslens.harnesses.opencode_components import (
 from harnesslens.harnesses.opencode_harness import OpencodeHarnessAdapter
 from harnesslens.evolution.discovery import _enforce_native_channel_admission
 from harnesslens.harnesses.native_candidate_runtime import attach_candidate_workspace
-from harnesslens.benchmarks.crm_eval import prepare_harness, CrmLimits
-from harnesslens.benchmarks.crm_business import prepare_harness as prepare_business
+from harnesslens.benchmarks.native_runtime import prepare_harness, RunLimits
+from harnesslens.evaluation.business_runtime import prepare_harness as prepare_business
 
 
 def test_protocol_catalog_has_16_components_and_original_5_proposal_only():
@@ -58,11 +58,11 @@ def test_fields_have_one_semantic_owner(path, owner):
     {"permission": {"bash": "allow"}}, {"tools": {"webfetch": True}}, {"mcp": {}},
     {"tool_output": {"max_bytes": 1}}, {"attachment": {}}, {"experimental": {"anything": True}},
 ])
-def test_crm_rejects_config_outside_explicit_prompt_only_experiment_policy(tmp_path, monkeypatch, config):
+def test_native_rejects_config_outside_explicit_prompt_only_experiment_policy(tmp_path, monkeypatch, config):
     monkeypatch.setenv("HAI_COMPONENT_POLICY", json.dumps({"allowed": sorted(CRM_EDITABLE)}))
     manifest = attach_candidate_workspace({}, {"files": [{"scope": "project", "path": "opencode.json", "content": json.dumps(config)}]})
     with pytest.raises(ValueError, match="non-editable"):
-        prepare_harness(tmp_path, manifest, 12345, CrmLimits())
+        prepare_harness(tmp_path, manifest, 12345, RunLimits())
 
 
 def test_business_preserves_native_prompt_separate_from_resident_instructions(tmp_path, monkeypatch):
@@ -87,9 +87,9 @@ def test_business_declared_channels_limit_all_candidate_file_paths(tmp_path, mon
     assert runtime_contract(business={"capabilities": {"channels": ["instructions_rules"]}})["declared_channels"] == ["instructions_rules"]
 
 
-def test_baseline_empty_config_still_starts_with_fixed_crm_runtime(tmp_path):
+def test_baseline_empty_config_still_starts_with_fixed_native_runtime(tmp_path):
     (tmp_path / "workspace").mkdir()
-    _, config, _ = prepare_harness(tmp_path, {}, 12345, CrmLimits())
+    _, config, _ = prepare_harness(tmp_path, {}, 12345, RunLimits())
     assert config["agent"]["build"]["steps"] == 40
     assert config["mcp"] == {}
 

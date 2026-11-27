@@ -107,11 +107,11 @@ experimental_fields = ["primary_tools", "continue_loop_on_deny", "mcp_timeout"]
 ## 本次验证
 
 测试覆盖：启动边界、模型探索不被四类白名单替换、真实基线工具目录、原五类仅提案、字段归属、未知/固定配置拒绝、父版本保留及内容包校验。
-本地综合集成使用真实 OpenCode 1.18.32、CRM数据库、原生工具、stdio MCP与本地模拟模型：原生、Python和HTTP三种路径均逐项通过16类预检；另有模型/权限越界及错误参数的故障注入。
+本地综合集成使用真实 OpenCode 1.18.32、本地数据源、原生工具、stdio MCP与本地模拟模型：原生、Python和HTTP三种路径均逐项通过16类预检；另有模型/权限越界及错误参数的故障注入。
 还实际检查了子Agent、权限拒绝、工具截断、Command、插件Hook、自定义工具和MCP调用；未调用真实付费模型，不构成解题成绩或进化效果证明。
 实现依据为 [1.18.32配置源码](https://github.com/anomalyco/opencode/blob/v1.18.32/packages/core/src/v1/config/config.ts) 和 [插件API源码](https://github.com/anomalyco/opencode/blob/v1.18.32/packages/plugin/src/index.ts)，每个候选仍需本次运行证据。
 
-2026-11-27 修复：CRM 8/5 实验两个多行 system_prompt 候选已经出现在真实请求，
+2026-11-27 修复：早期 8/5 任务实验两个多行 system_prompt 候选已经出现在真实请求，
 但旧原生检查器对序列化 JSON 搜索原文，错误判为未加载。原始 trace 重放后两者
 均通过接入检查。新增转义文本、content 文本块、Responses 与错误角色反例的回归；
 真实本地 OpenCode 的多行 prompt 和原生/Python/HTTP 16 通道集成也通过。

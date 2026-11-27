@@ -47,7 +47,7 @@ runtime fingerprints still match the recorded source.
 | `evolution/rollout.py` / `evaluation/rollout_bridge.py` | Run matched incumbent/candidate trials and retain evidence |
 
 Harness adapters map the common workflow onto OpenCode, Codex CLI, and Pi.
-Benchmark adapters provide tau2, Terminal-Bench, and BIRD execution and grading.
+Benchmark adapters provide FDABench and custom JSONL benchmark execution and grading.
 
 ## Verification and promotion
 

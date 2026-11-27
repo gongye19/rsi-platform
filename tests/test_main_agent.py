@@ -1024,7 +1024,7 @@ def test_promotion_portfolio_requires_failed_task_headroom():
             "side": "adjustment",
             "candidate": {"id": "failed-target"},
             "evidence_profile": {
-                "all_failed_task_ids": ["bird_1"],
+                "all_failed_task_ids": ["task_1"],
                 "failed_trial_count": 1,
             },
         },
@@ -1122,7 +1122,7 @@ def test_possibly_related_pass_gain_is_an_uncertain_recovery():
         "primary_problem": {
             "task_assessments": [
                 {
-                    "task_id": "bird_1",
+                    "task_id": "task_1",
                     "status": "recovered",
                     "relation": "possibly_related",
                     "outcome_summary": {
@@ -1131,7 +1131,7 @@ def test_possibly_related_pass_gain_is_an_uncertain_recovery():
                     },
                 },
                 {
-                    "task_id": "bird_2",
+                    "task_id": "task_2",
                     "status": "recovered",
                     "relation": "not_attributed",
                     "outcome_summary": {
@@ -1143,7 +1143,7 @@ def test_possibly_related_pass_gain_is_an_uncertain_recovery():
         }
     }
 
-    assert uncertain_recovery_task_ids(adjustment) == {"bird_1"}
+    assert uncertain_recovery_task_ids(adjustment) == {"task_1"}
 
 
 def test_possibly_related_recovery_is_not_promotion_evidence():
@@ -1264,7 +1264,7 @@ def test_final_review_can_route_a_post_analyzer_replan_candidate():
         "evidence": {
             "recovered_task_ids": [],
             "uncertain_recovery_task_ids": [],
-            "preserved_task_ids": ["bird_1"],
+            "preserved_task_ids": ["task_1"],
             "attributable_regression_task_ids": [],
             "unresolved_findings": ["Replan around entity cardinality."],
         },
@@ -1278,7 +1278,7 @@ def test_final_review_can_route_a_post_analyzer_replan_candidate():
     }
     reusable = {
         "preservation": {
-            "preserved_task_ids": ["bird_1"],
+            "preserved_task_ids": ["task_1"],
             "attributable_regressions": [],
         }
     }
@@ -1287,7 +1287,7 @@ def test_final_review_can_route_a_post_analyzer_replan_candidate():
             "recommendation": "refine",
             "task_assessments": [
                 {
-                    "task_id": "bird_1",
+                    "task_id": "task_1",
                     "status": "still_failing",
                     "relation": "not_attributed",
                 }
@@ -1300,7 +1300,7 @@ def test_final_review_can_route_a_post_analyzer_replan_candidate():
         output,
         candidate_version="candidate-01",
         base_version="v0",
-        task_ids=("bird_1",),
+        task_ids=("task_1",),
         reusable=reusable,
         adjustment=adjustment,
         budget_status={"remaining": 31},

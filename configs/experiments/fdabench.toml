@@ -13,14 +13,14 @@ train_count = 0
 test_count = 0
 
 [models.execution]
-model = "execution/your-execution-model"
+model = "glm/glm-5.3"
 api = "chat_completions"
 base_url_env = "HAI_EXECUTION_BASE_URL"
 api_key_env = "HAI_EXECUTION_API_KEY"
 
 [models.analysis]
-model = "analysis/your-analysis-model"
-api = "responses"
+model = "glm/glm-5.3"
+api = "chat_completions"
 base_url_env = "HAI_ANALYSIS_BASE_URL"
 api_key_env = "HAI_ANALYSIS_API_KEY"
 
