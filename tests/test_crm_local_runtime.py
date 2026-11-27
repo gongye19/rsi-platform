@@ -74,7 +74,7 @@ def test_real_opencode_crm_tools_and_candidate_delivery(monkeypatch, with_initia
     repository = CellHarnessRepository(cell="crmarenapro", repo_root=ROOT, run_id=run_id, evidence_root=evidence)
     version = repository.materialize_workspace_candidate(base_version="v0", candidate_label="candidate", workspace={"files": [
         {"scope": "project", "path": "AGENTS.md", "content": "CRM_INSTRUCTION_SENTINEL"},
-        {"scope": "project", "path": "opencode.json", "content": json.dumps({"agent": {"build": {"prompt": "CRM_SYSTEM_SENTINEL"}}})},
+        {"scope": "project", "path": "opencode.json", "content": json.dumps({"agent": {"build": {"prompt": 'CRM_SYSTEM_SENTINEL\n\nVerify "evidence" at C:\\data; preserve literal \\n.'}}})},
         {"scope": "project", "path": ".opencode/skills/crm-probe/SKILL.md", "content": "---\nname: crm-probe\ndescription: CRM_SKILL_DESCRIPTION_SENTINEL\n---\nCRM_SKILL_BODY_SENTINEL"},
     ]})
     results = {}

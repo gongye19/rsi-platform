@@ -71,10 +71,11 @@ def check_components(channels, candidate, context, row):
     if trace.is_file():
         for line in trace.read_text().splitlines():
             entry = json.loads(line)
-            if isinstance(entry.get("request"), dict): requests.append(entry["request"])
-    text = json.dumps(requests, ensure_ascii=False)
-    messages = [m for r in requests for m in r.get("messages", []) if isinstance(m, dict)]
-    system = json.dumps([m for m in messages if m.get("role") in {"system", "developer"}], ensure_ascii=False)
+            if isinstance(entry.get("request"), dict) and entry.get("role") != "user_sim":
+                requests.append(entry["request"])
+    from .channel_preflight import _request_strings
+    text = "\n".join(value for request in requests for value in _request_strings(request))
+    system = "\n".join(value for request in requests for value in _request_strings(request, system_only=True))
     tools = {t.get("name"): t for t in context.get("tool_definitions", [])}
     tool_names = {t.get("function", t).get("name") for r in requests for t in r.get("tools", [])}
     actual_files = {(i.get("scope", "project"), i.get("path")): i.get("content") for i in context.get("candidate_files", [])}

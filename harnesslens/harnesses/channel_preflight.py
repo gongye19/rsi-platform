@@ -776,13 +776,19 @@ def _model_request_text(row: Mapping[str, Any], *, system_only: bool = False) ->
             continue
         request = entry.get("request")
         if isinstance(request, Mapping):
-            if system_only:
-                messages = request.get("messages", request.get("input", []))
-                request = {"system": request.get("system", ""), "instructions": request.get("instructions", ""),
-                           "messages": [m for m in messages if isinstance(m, Mapping) and m.get("role") in {"system", "developer"}]
-                           if isinstance(messages, list) else []}
-            request_strings.extend(_nested_request_strings(request))
+            request_strings.extend(_request_strings(request, system_only=system_only))
     return "\n".join(request_strings)
+
+
+def _request_strings(request: Mapping[str, Any], *, system_only: bool = False) -> list[str]:
+    """Inspect decoded request values, not their JSON-escaped representation."""
+    if system_only:
+        messages = request.get("messages", request.get("input", []))
+        request = {"system": request.get("system", ""), "instructions": request.get("instructions", ""),
+                   "messages": [m.get("content", "") for m in messages
+                                if isinstance(m, Mapping) and m.get("role") in {"system", "developer"}]
+                   if isinstance(messages, list) else []}
+    return _nested_request_strings(request)
 
 
 def _nested_request_strings(value: Any) -> list[str]:

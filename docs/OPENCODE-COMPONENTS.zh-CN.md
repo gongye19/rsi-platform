@@ -93,6 +93,10 @@ experimental_fields = ["primary_tools", "continue_loop_on_deny", "mcp_timeout"]
 
 系统提示词保存在原生配置中，不合并到 AGENTS.md。预检检查模型请求中的 system/developer 部分，
 把相同文本放在用户消息里不能通过系统提示词验证。
+匹配必须读取解码后的请求文本，保留换行、引号、反斜杠和 Unicode；不能在
+`json.dumps(request)` 的转义结果中搜索原文。原生组件预检与通用预检共用这条
+文本提取路径，兼容 messages/content 文本块及 Responses 的 instructions/input，
+并排除 user_sim 请求，避免将模拟用户的文本当作业务 Agent 的生效证据。
 业务返回的加载回执须匹配 request_id、session_id、Harness版本、文件摘要、OpenCode版本和组件协议；
 回执还需结合真实模型请求和生效检查，不能单独作为已触发证明。
 
@@ -106,3 +110,9 @@ experimental_fields = ["primary_tools", "continue_loop_on_deny", "mcp_timeout"]
 本地综合集成使用真实 OpenCode 1.18.32、CRM数据库、原生工具、stdio MCP与本地模拟模型：原生、Python和HTTP三种路径均逐项通过16类预检；另有模型/权限越界及错误参数的故障注入。
 还实际检查了子Agent、权限拒绝、工具截断、Command、插件Hook、自定义工具和MCP调用；未调用真实付费模型，不构成解题成绩或进化效果证明。
 实现依据为 [1.18.32配置源码](https://github.com/anomalyco/opencode/blob/v1.18.32/packages/core/src/v1/config/config.ts) 和 [插件API源码](https://github.com/anomalyco/opencode/blob/v1.18.32/packages/plugin/src/index.ts)，每个候选仍需本次运行证据。
+
+2026-11-27 修复：CRM 8/5 实验两个多行 system_prompt 候选已经出现在真实请求，
+但旧原生检查器对序列化 JSON 搜索原文，错误判为未加载。原始 trace 重放后两者
+均通过接入检查。新增转义文本、content 文本块、Responses 与错误角色反例的回归；
+真实本地 OpenCode 的多行 prompt 和原生/Python/HTTP 16 通道集成也通过。
+历史实验记录不回写为“采用”或“有收益”，修复后的检查通过不替代 TRAIN 效果评测。
